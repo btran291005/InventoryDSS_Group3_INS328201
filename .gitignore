@@ -1,0 +1,14 @@
+# --- Environment & secrets ---
+.env
+.env.*
+!.env.example
+*.key
+*_secret*
+
+# --- PHP dependencies (if using Composer) ---
+/vendor/
+composer.phar
+
+# --- Logs ---
+*.log
+/logs/
