@@ -84,9 +84,20 @@ class Auth
     /**
      * Thực hiện đăng nhập.
      *
+     * @param int|null $expectedRoleId Role được chọn ở UI (tab Admin/Manager/Store Staff
+     *        trên login.php - FR-SYS-01). Nếu truyền vào và KHÁC role_id thật của account
+     *        trong DB -> từ chối đăng nhập, KHÔNG tạo session, dù username/password đúng.
+     *        Truyền null (mặc định) để bỏ qua kiểm tra này (giữ hành vi cũ).
+     *
+     *        Lưu ý bảo mật: kiểm tra này được đặt SAU password_verify(), không phải trước.
+     *        Nếu check trước, kẻ tấn công có thể dò ra "username X thuộc role nào" chỉ bằng
+     *        cách thử các tab role khác nhau mà không cần biết mật khẩu đúng - vi phạm
+     *        nguyên tắc "không tiết lộ thông tin tài khoản" đã áp dụng ở nhánh !$account
+     *        và nhánh password sai bên dưới.
+     *
      * @return array{success: bool, message: string, role_id?: int}
      */
-    public static function login(string $username, string $password): array
+    public static function login(string $username, string $password, ?int $expectedRoleId = null): array
     {
         self::start();
 
@@ -120,6 +131,22 @@ class Auth
 
             if (!password_verify($password, $account['password_hash'])) {
                 return ['success' => false, 'message' => 'Tên đăng nhập hoặc mật khẩu không đúng.'];
+            }
+
+            // Đã xác thực đúng username/password ở trên -> giờ mới kiểm tra role đã chọn
+            // trên UI có khớp role thật của account không (BR-19, NFR-03).
+            if ($expectedRoleId !== null && (int) $account['role_id'] !== $expectedRoleId) {
+                Logger::log(
+                    (int) $account['account_id'],
+                    'LOGIN_ROLE_MISMATCH',
+                    'accounts',
+                    (int) $account['account_id']
+                );
+
+                return [
+                    'success' => false,
+                    'message' => 'Tài khoản này không thuộc vai trò bạn đã chọn. Vui lòng chọn đúng vai trò hoặc liên hệ Admin.',
+                ];
             }
 
             // Chống session fixation: cấp session ID mới sau khi xác thực thành công

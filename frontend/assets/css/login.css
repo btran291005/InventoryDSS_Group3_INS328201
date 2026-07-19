@@ -1,0 +1,232 @@
+/**
+ * File: frontend/assets/css/login.css
+ * Purpose: Style riêng cho trang login. Chỉ chứa phần Bootstrap 5 KHÔNG có sẵn
+ * (gradient thương hiệu, hiệu ứng "network node" trên hero panel, backdrop-blur
+ * card). Layout, spacing, form control, button... dùng thẳng utility class của
+ * Bootstrap ngay trong login.php, không lặp lại ở đây.
+ */
+
+:root {
+    --brand-primary: #1e3a5f;
+    --brand-primary-dark: #16304d;
+}
+
+body {
+    background: radial-gradient(circle at 15% 15%, #eef2ff 0%, #f8fafc 45%, #eef2f7 100%);
+    min-height: 100vh;
+}
+
+/* Chấm trang trí rải rác trên nền - thuần CSS, không ảnh */
+body::before,
+body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle, #c7d2fe 1.5px, transparent 1.5px);
+    background-size: 90px 90px;
+    opacity: .35;
+    pointer-events: none;
+    z-index: 0;
+}
+body::after {
+    background-size: 130px 130px;
+    background-position: 45px 45px;
+    opacity: .2;
+}
+
+/* ---------------------------------------------------------- */
+/* Thương hiệu (logo mark) - gradient riêng, Bootstrap không có */
+/* ---------------------------------------------------------- */
+.brand-mark {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
+    box-shadow: 0 8px 18px -6px rgba(30, 58, 95, .5);
+}
+
+/* ---------------------------------------------------------- */
+/* Hero panel - gradient + hiệu ứng "network node" gợi AI/predictive  */
+/* analytics. Đây là phần signature, không có class Bootstrap tương  */
+/* đương nên giữ custom CSS.                                          */
+/* ---------------------------------------------------------- */
+.hero-panel {
+    position: relative;
+    min-height: 420px;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 78% 12%, rgba(125, 211, 252, .5), transparent 42%),
+        linear-gradient(160deg, rgba(30, 58, 95, .6), rgba(10, 16, 32, .85)),
+        linear-gradient(135deg, #7dd3fc 0%, #6d83c9 45%, #24345c 100%);
+    box-shadow: 0 30px 60px -20px rgba(30, 58, 95, .4);
+}
+
+.hero-panel-glow {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse at 30% 18%, rgba(255, 255, 255, .4), transparent 52%),
+        radial-gradient(ellipse at 82% 70%, rgba(59, 130, 246, .3), transparent 50%);
+}
+
+.hero-panel-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(255, 255, 255, .09) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, .09) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(ellipse 70% 55% at 50% 30%, #000 40%, transparent 85%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 30%, #000 40%, transparent 85%);
+}
+
+.hero-panel-nodes {
+    position: absolute;
+    inset: 0;
+}
+
+.hero-panel-nodes circle {
+    fill: #ffffff;
+}
+
+.hero-card {
+    position: absolute;
+    left: 20px;
+    right: 20px;
+    bottom: 20px;
+    background: rgba(255, 255, 255, .14);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    border: 1px solid rgba(255, 255, 255, .25);
+}
+
+.hero-card h2 {
+    text-shadow: 0 2px 14px rgba(0, 0, 0, .15);
+}
+
+.hero-badge {
+    background: rgba(255, 255, 255, .95);
+    color: var(--brand-primary);
+    box-shadow: 0 4px 10px -4px rgba(0, 0, 0, .25);
+}
+
+.hero-badge .dot-icon {
+    width: 8px;
+    height: 8px;
+    background: var(--brand-primary);
+}
+
+/* ---------------------------------------------------------- */
+/* Form panel                                                   */
+/* ---------------------------------------------------------- */
+
+/* Bootstrap nav-pills không có sẵn kiểu "segmented control nền xám,
+   tab active nổi trắng + shadow" nên giữ lại phần này. */
+.role-tabs {
+    background: #eef2f7;
+}
+
+.role-tab {
+    color: #6b7280;
+    transition: background .15s, color .15s, box-shadow .15s;
+}
+
+.role-tab:hover {
+    color: var(--brand-primary);
+}
+
+.role-tab.active {
+    background: #ffffff;
+    color: var(--brand-primary);
+    box-shadow: 0 6px 16px -6px rgba(30, 58, 95, .35), 0 0 0 1px rgba(30, 58, 95, .06);
+}
+
+.login-card {
+    box-shadow: 0 24px 48px -20px rgba(15, 23, 42, .22), 0 1px 2px rgba(15, 23, 42, .04);
+}
+
+/* Input với icon lồng bên trong - Bootstrap input-group đổi border-radius
+   theo cách khác với thiết kế pill/rounded ở đây nên tự canh icon bằng absolute */
+.field-wrap {
+    position: relative;
+}
+
+.field-wrap .field-icon {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 17px;
+    height: 17px;
+    color: #9ca3af;
+    pointer-events: none;
+}
+
+.field-wrap .form-control {
+    padding-left: 40px;
+    background: #f9fafb;
+}
+
+.field-wrap .form-control:focus {
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(30, 58, 95, .1);
+    border-color: var(--brand-primary);
+}
+
+.toggle-pw {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+    background: none;
+    border: none;
+    padding: 2px;
+    line-height: 0;
+}
+.toggle-pw:hover {
+    color: #374151;
+}
+.toggle-pw svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Nút submit - gradient thương hiệu, Bootstrap btn-primary mặc định phẳng */
+.btn-brand {
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
+    color: #fff;
+    box-shadow: 0 10px 24px -10px rgba(30, 58, 95, .55);
+    transition: box-shadow .15s, transform .1s, filter .15s;
+}
+.btn-brand:hover {
+    color: #fff;
+    filter: brightness(1.06);
+    box-shadow: 0 14px 28px -10px rgba(30, 58, 95, .6);
+    transform: translateY(-1px);
+}
+.btn-brand:active {
+    transform: translateY(1px);
+    box-shadow: 0 6px 14px -8px rgba(30, 58, 95, .5);
+}
+
+.dot-live {
+    width: 7px;
+    height: 7px;
+    background: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, .18);
+}
+
+.demo-table code {
+    background: #f3f4f6;
+    font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+.role-admin { color: var(--brand-primary); }
+.role-manager { color: #166534; }
+.role-staff { color: #92400e; }
+
+@media (max-width: 767.98px) {
+    .hero-panel {
+        min-height: 260px;
+    }
+}
