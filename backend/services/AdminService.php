@@ -276,6 +276,10 @@ class AdminService
      * FR-ADM-01 / FR-ADM-05: tạo sản phẩm mới. category_id bắt buộc (đã được
      * DB enforce qua NOT NULL, nhưng validate sớm ở đây để trả lỗi rõ ràng
      * thay vì để PDOException).
+     *
+     * @param array $data Bao gồm 'unit_cost' (giá nhập từ NCC, dùng để tính
+     *                     giá trị đơn đặt hàng - PO Amount). Nếu không truyền,
+     *                     Product::create() mặc định 0.
      */
     public function createProduct(array $data, int $actorId): array
     {
@@ -288,6 +292,9 @@ class AdminService
         if (empty($data['supplier_id'])) {
             return ['success' => false, 'message' => 'Sản phẩm phải gán nhà cung cấp.'];
         }
+        if (isset($data['unit_cost']) && (float) $data['unit_cost'] < 0) {
+            return ['success' => false, 'message' => 'Giá nhập (unit_cost) không được là số âm.'];
+        }
 
         $result = $this->productModel->create($data);
 
@@ -298,8 +305,16 @@ class AdminService
         return $result;
     }
 
+    /**
+     * @param array $data Có thể bao gồm 'unit_cost' (giá nhập) - Product::update()
+     *                     chỉ ghi các field có mặt trong $data (partial update).
+     */
     public function updateProduct(int $productId, array $data, int $actorId): array
     {
+        if (isset($data['unit_cost']) && (float) $data['unit_cost'] < 0) {
+            return ['success' => false, 'message' => 'Giá nhập (unit_cost) không được là số âm.'];
+        }
+
         $ok = $this->productModel->update($productId, $data);
 
         if ($ok) {
@@ -692,15 +707,18 @@ class AdminService
     // 8. KPI COMPARISON REPORT (FR-ADM-08)
     // =====================================================================
     // ⚠️ GHI CHÚ QUAN TRỌNG: 3 chỉ số yêu cầu (stock-out rate, turnover, forecast
-    // error) hiện KHÔNG THỂ tính đầy đủ với schema/data hiện có:
-    //   - stock-out rate: có thể ước lượng gián tiếp qua stock_movements/shortage_incidents.
-    //   - turnover (vòng quay tồn kho): cần dữ liệu GIÁ TRỊ bán ra (COGS/doanh thu),
-    //     nhưng products/sales_transaction_details KHÔNG có cột giá (đã ghi chú ở
-    //     Product.php/Sales.php) -> chỉ tính được theo SỐ LƯỢNG, không phải giá trị.
-    //   - forecast error: cần so sánh demand_forecasts.suggested_qty với sales thực
-    //     tế SAU đó cùng kỳ - có thể làm được vì demand_forecasts đã có trong DB.
+    // error) tính với data hiện có như sau:
+    //   - stock-out rate: ước lượng gián tiếp qua shortage_incidents (chưa có
+    //     bảng đo trực tiếp số lần chạm 0 tồn kho).
+    //   - turnover (vòng quay tồn kho): products.unit_cost (giá NHẬP/giá vốn)
+    //     đã có trong schema -> tính được COGS = SUM(quantity_sold × unit_cost)
+    //     đúng chuẩn kế toán (turnover luôn dùng giá VỐN, không dùng giá bán,
+    //     nên KHÔNG cần cột giá bán lẻ để tính chỉ số này).
+    //   - forecast error: so sánh demand_forecasts.suggested_qty với sales thực
+    //     tế SAU đó cùng kỳ - tính theo SỐ LƯỢNG (MAE), vì demand_forecasts
+    //     cũng không lưu giá trị tiền, chỉ lưu suggested_qty.
     // Hàm dưới đây trả về approximation tốt nhất có thể với data hiện tại, kèm
-    // ghi chú rõ trong kết quả trả về; KHÔNG bịa thêm cột giá không có trong schema.
+    // ghi chú rõ trong kết quả trả về.
 
     /**
      * FR-ADM-08: so sánh KPI giữa 2 khoảng thời gian.
@@ -719,8 +737,9 @@ class AdminService
         return [
             'period_1' => $this->calculateKpisForPeriod($period1From, $period1To),
             'period_2' => $this->calculateKpisForPeriod($period2From, $period2To),
-            'note'     => 'Turnover hiện tính theo SỐ LƯỢNG bán/tồn kho trung bình '
-                        . '(schema chưa có cột giá bán để tính theo giá trị - xem ghi chú trong Product.php/Sales.php).',
+            'note'     => 'Turnover tính theo GIÁ TRỊ (COGS = SL bán × unit_cost) / giá trị tồn kho '
+                        . 'trung bình hiện tại. Forecast MAE vẫn theo số lượng vì demand_forecasts '
+                        . 'không lưu giá trị tiền.',
         ];
     }
 
@@ -743,22 +762,28 @@ class AdminService
 
         $stockoutRate = $totalActive > 0 ? round(($shortageCount / $totalActive) * 100, 1) : 0.0;
 
-        // Turnover xấp xỉ theo SỐ LƯỢNG: tổng số lượng bán ra / tồn kho trung bình
-        // hiện tại (không có snapshot tồn kho đầu/cuối kỳ trong schema, nên dùng
-        // tồn kho hiện tại làm mẫu số tham khảo, không phải turnover chuẩn kế toán).
-        $soldQtyStmt = $pdo->prepare(
-            "SELECT COALESCE(SUM(std.quantity_sold), 0) AS total_sold
+        // Turnover theo GIÁ TRỊ: COGS (SL bán × unit_cost mỗi SP) / giá trị tồn
+        // kho hiện tại (SL tồn × unit_cost) - không có snapshot tồn kho đầu/cuối
+        // kỳ trong schema, nên dùng giá trị tồn kho hiện tại làm mẫu số tham
+        // khảo (không phải turnover chuẩn kế toán dùng tồn kho trung bình đầu-cuối kỳ).
+        $cogsStmt = $pdo->prepare(
+            "SELECT COALESCE(SUM(std.quantity_sold * p.unit_cost), 0) AS total_cogs
              FROM sales_transaction_details std
              JOIN sales_transactions st ON st.transaction_id = std.transaction_id
+             JOIN products p ON p.product_id = std.product_id
              WHERE st.transaction_time BETWEEN :from_date AND :to_date"
         );
-        $soldQtyStmt->execute([':from_date' => $fromDate, ':to_date' => $toDate]);
-        $totalSold = (int) $soldQtyStmt->fetch()['total_sold'];
+        $cogsStmt->execute([':from_date' => $fromDate, ':to_date' => $toDate]);
+        $totalCogs = (float) $cogsStmt->fetch()['total_cogs'];
 
-        $currentStockStmt = $pdo->query("SELECT COALESCE(SUM(quantity_on_hand), 0) AS total_stock FROM stock");
-        $currentStock = (int) $currentStockStmt->fetch()['total_stock'];
+        $currentStockValueStmt = $pdo->query(
+            "SELECT COALESCE(SUM(s.quantity_on_hand * p.unit_cost), 0) AS total_stock_value
+             FROM stock s
+             JOIN products p ON p.product_id = s.product_id"
+        );
+        $currentStockValue = (float) $currentStockValueStmt->fetch()['total_stock_value'];
 
-        $turnoverRatio = $currentStock > 0 ? round($totalSold / $currentStock, 2) : 0.0;
+        $turnoverRatio = $currentStockValue > 0 ? round($totalCogs / $currentStockValue, 2) : 0.0;
 
         // Forecast error: so sánh demand_forecasts.suggested_qty (api_status='success')
         // với tổng thực bán của cùng sản phẩm trong kỳ - MAE đơn giản theo số lượng.

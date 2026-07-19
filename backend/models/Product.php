@@ -14,7 +14,7 @@
  *
  * Bảng liên quan (đã có trong DB, xem db.sql):
  *   products(product_id, sku_code, product_name, category_id, supplier_id, unit,
- *            shelf_life_days, is_active)
+ *            shelf_life_days, unit_cost, is_active)
  *   categories(category_id, category_name, category_type, requires_fefo)
  *   reorder_rules(rule_id, category_id NULL, product_id NULL, min_stock, max_stock,
  *                 safety_stock, reorder_point, updated_by, updated_at)
@@ -23,10 +23,12 @@
  *       (xem seed data: rule riêng cho SKU bán chạy ghi đè rule chung của category).
  *
  * LƯU Ý QUAN TRỌNG (đã kiểm tra lại db.sql):
- *   - products KHÔNG có cột current_stock / price. Tồn kho nằm ở bảng `stock`
- *     (per warehouse) do Inventory.php quản lý; giá bán hiện KHÔNG có trong schema
- *     -> các báo cáo "doanh thu" (revenue) sẽ cần bổ sung cột giá ở Phase sau
- *     nếu muốn tính toán, Model này không tự bịa ra cột.
+ *   - products KHÔNG có cột current_stock. Tồn kho nằm ở bảng `stock` (per
+ *     warehouse) do Inventory.php quản lý.
+ *   - products.unit_cost = giá NHẬP từ nhà cung cấp (dùng để tính giá trị đơn
+ *     đặt hàng - PO Amount). Đây KHÔNG phải giá bán lẻ - hệ thống hiện chưa có
+ *     giá bán lẻ (sales_transaction_details chưa có unit_price), nên "doanh
+ *     thu" (revenue) vẫn KHÔNG tính được, chỉ giá trị NHẬP HÀNG mới tính được.
  *   - products KHÔNG có created_at/updated_at.
  */
 
@@ -104,14 +106,22 @@ class Product
      * BR-01: sku_code là UNIQUE KEY trong DB. Nếu trùng, PDO ném PDOException
      * mã lỗi 23000 -> bắt lại và trả về thông báo rõ ràng thay vì để lộ lỗi SQL thô.
      *
+     * unit_cost (giá nhập từ NCC) bắt buộc >= 0 - dùng để tính giá trị đơn đặt
+     * hàng (PO Amount) ở PurchaseOrderService/AdminService, KHÔNG phải giá bán lẻ.
+     *
      * @return array{success: bool, product_id?: string, message: string}
      */
     public function create(array $data): array
     {
+        $unitCost = (float) ($data['unit_cost'] ?? 0);
+        if ($unitCost < 0) {
+            return ['success' => false, 'message' => 'Giá nhập (unit_cost) không được là số âm.'];
+        }
+
         $sql = "INSERT INTO {$this->table}
-                    (sku_code, product_name, category_id, supplier_id, unit, shelf_life_days, is_active)
+                    (sku_code, product_name, category_id, supplier_id, unit, shelf_life_days, unit_cost, is_active)
                 VALUES
-                    (:sku_code, :product_name, :category_id, :supplier_id, :unit, :shelf_life_days, :is_active)";
+                    (:sku_code, :product_name, :category_id, :supplier_id, :unit, :shelf_life_days, :unit_cost, :is_active)";
 
         try {
             $stmt = $this->conn->prepare($sql);
@@ -122,6 +132,7 @@ class Product
                 ':supplier_id'     => $data['supplier_id'],
                 ':unit'            => $data['unit'],
                 ':shelf_life_days' => $data['shelf_life_days'] ?? null,
+                ':unit_cost'       => $unitCost,
                 ':is_active'       => $data['is_active'] ?? true,
             ]);
 
@@ -139,9 +150,10 @@ class Product
         }
     }
 
+    /** $allowed field 'unit_cost': giá nhập từ NCC - PHẢI ép kiểu float >= 0 nếu có mặt trong $data (validate ở Service trước khi gọi). */
     public function update(int $productId, array $data): bool
     {
-        $allowed = ['sku_code', 'product_name', 'category_id', 'supplier_id', 'unit', 'shelf_life_days', 'is_active'];
+        $allowed = ['sku_code', 'product_name', 'category_id', 'supplier_id', 'unit', 'shelf_life_days', 'unit_cost', 'is_active'];
 
         $fields = [];
         $params = [':id' => $productId];
@@ -149,7 +161,7 @@ class Product
         foreach ($allowed as $field) {
             if (array_key_exists($field, $data)) {
                 $fields[] = "{$field} = :{$field}";
-                $params[":{$field}"] = $data[$field];
+                $params[":{$field}"] = $field === 'unit_cost' ? (float) $data[$field] : $data[$field];
             }
         }
 

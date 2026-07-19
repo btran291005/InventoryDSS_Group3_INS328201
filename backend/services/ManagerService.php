@@ -63,10 +63,10 @@ class ManagerService
      * cảnh báo tồn thấp. NFR-02: hàm này chỉ chạy các query đơn giản/đã có
      * index qua PK-FK, để đáp ứng yêu cầu load ≤ 3 giây với ~500-1000 SKU.
      *
-     * ⚠️ "Revenue" trong User Story gốc (Decision Support dashboard) KHÔNG thể
-     * tính được - products/sales_transaction_details không có cột giá (đã ghi
-     * rõ trong Product.php/Sales.php). Dashboard ở đây trả về SỐ LƯỢNG bán,
-     * không phải doanh thu bằng tiền, cho tới khi schema được bổ sung cột giá.
+     * ⚠️ "Revenue" (doanh thu BÁN HÀNG) trong User Story gốc vẫn KHÔNG tính
+     * được - products.unit_cost là giá NHẬP (dùng để tính giá trị đơn đặt
+     * hàng PO), KHÔNG phải giá BÁN LẺ. sales_transaction_details vẫn chưa có
+     * cột giá bán -> dashboard trả về SỐ LƯỢNG bán, chưa có doanh thu bằng tiền.
      */
     public function getDashboardSummary(): array
     {
@@ -79,7 +79,8 @@ class ManagerService
                 date('Y-m-d 23:59:59')
             ),
             'pending_po_count'       => count($this->orderModel->getPendingApproval()),
-            'note_revenue'           => 'Schema hiện chưa có cột giá bán - dashboard hiển thị theo số lượng, chưa có doanh thu.',
+            'note_revenue'           => 'products.unit_cost là giá nhập (dùng cho giá trị PO), '
+                                      . 'chưa có giá bán lẻ nên dashboard hiển thị theo số lượng, chưa có doanh thu.',
         ];
     }
 
@@ -389,7 +390,7 @@ class ManagerService
     {
         $pdo = Database::getConnection();
 
-        $sql = "SELECT p.product_id, p.sku_code, p.product_name,
+        $sql = "SELECT p.product_id, p.sku_code, p.product_name, p.unit_cost,
                        COALESCE(SUM(std.quantity_sold), 0) AS total_quantity_sold,
                        COALESCE(stock_total.total_stock, 0) AS current_stock
                 FROM products p
@@ -403,7 +404,7 @@ class ManagerService
                     GROUP BY product_id
                 ) stock_total ON stock_total.product_id = p.product_id
                 WHERE p.is_active = 1
-                GROUP BY p.product_id, p.sku_code, p.product_name, stock_total.total_stock
+                GROUP BY p.product_id, p.sku_code, p.product_name, p.unit_cost, stock_total.total_stock
                 ORDER BY total_quantity_sold DESC";
 
         $stmt = $pdo->prepare($sql);
@@ -411,9 +412,20 @@ class ManagerService
         $rows = $stmt->fetchAll();
 
         foreach ($rows as &$row) {
-            $sold = (int) $row['total_quantity_sold'];
-            $stock = (int) $row['current_stock'];
+            $sold      = (int) $row['total_quantity_sold'];
+            $stock     = (int) $row['current_stock'];
+            $unitCost  = (float) $row['unit_cost'];
+
+            // Turnover theo SỐ LƯỢNG - giữ lại để tương thích ngược với UI/báo cáo cũ.
             $row['turnover_ratio_approx'] = $stock > 0 ? round($sold / $stock, 2) : null;
+
+            // Turnover theo GIÁ TRỊ (COGS ÷ giá trị tồn kho) - nhất quán với công
+            // thức đã dùng ở AdminService::calculateKpisForPeriod().
+            $cogs = $sold * $unitCost;
+            $stockValue = $stock * $unitCost;
+            $row['cogs_value']            = $cogs;
+            $row['stock_value']           = $stockValue;
+            $row['turnover_value_ratio']  = $stockValue > 0 ? round($cogs / $stockValue, 2) : null;
         }
         unset($row);
 
@@ -421,8 +433,9 @@ class ManagerService
             'from_date' => $fromDate,
             'to_date'   => $toDate,
             'products'  => $rows,
-            'note'      => 'total_quantity_sold thay cho doanh thu (schema chưa có cột giá); '
-                          . 'turnover_ratio_approx = số lượng bán ÷ tồn kho hiện tại (không phải turnover chuẩn kế toán).',
+            'note'      => 'unit_cost là giá NHẬP (giá vốn), chưa có giá bán lẻ nên vẫn KHÔNG tính '
+                          . 'được doanh thu bán hàng. turnover_ratio_approx = số lượng bán ÷ tồn kho hiện tại; '
+                          . 'turnover_value_ratio = COGS (SL bán × unit_cost) ÷ giá trị tồn kho hiện tại.',
         ];
     }
 

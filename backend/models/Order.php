@@ -61,11 +61,18 @@ class Order
 
     /**
      * FR-MGR-06 / FR-ADM-06: danh sách PO, lọc theo status/created_by nếu cần.
+     * total_amount = tổng giá trị NHẬP HÀNG của cả đơn (SUM approved_qty × unit_cost
+     * từng dòng) - đây là giá trị đặt hàng với NCC, KHÔNG phải doanh thu bán
+     * (schema chưa có giá bán lẻ, xem ghi chú trong Product.php).
      */
     public function getAll(?string $status = null, ?int $createdBy = null): array
     {
         $sql = "SELECT po.po_id, s.supplier_name, po.status, po.created_at, po.approved_at,
-                       creator.full_name AS created_by_name
+                       creator.full_name AS created_by_name,
+                       (SELECT COALESCE(SUM(pod.approved_qty * p.unit_cost), 0)
+                        FROM purchase_order_details pod
+                        JOIN products p ON p.product_id = pod.product_id
+                        WHERE pod.po_id = po.po_id) AS total_amount
                 FROM {$this->table} po
                 JOIN suppliers s ON s.supplier_id = po.supplier_id
                 JOIN accounts creator ON creator.account_id = po.created_by
@@ -94,11 +101,18 @@ class Order
         return $this->getAll('Pending');
     }
 
+    /**
+     * FR-STF-05/07 / FR-ADM-06: chi tiết dòng PO, kèm unit_cost (giá nhập) và
+     * line_cost (approved_qty × unit_cost) đã tính sẵn - dùng để hiển thị/tính
+     * tổng "Amount" của cả đơn PO ở AdminService::getPurchaseOrderDetail() và
+     * PurchaseOrderService, tránh lặp phép tính ở nhiều nơi.
+     */
     public function getDetails(int $poId): array
     {
         $stmt = $this->conn->prepare(
             "SELECT pod.po_detail_id, pod.po_id, pod.product_id, p.product_name, p.sku_code,
-                    pod.suggested_qty, pod.approved_qty, pod.received_qty, pod.discrepancy_reason
+                    p.unit_cost, pod.suggested_qty, pod.approved_qty, pod.received_qty,
+                    pod.discrepancy_reason, (pod.approved_qty * p.unit_cost) AS line_cost
              FROM purchase_order_details pod
              JOIN products p ON p.product_id = pod.product_id
              WHERE pod.po_id = :po_id"
