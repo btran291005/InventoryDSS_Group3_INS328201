@@ -209,13 +209,6 @@ body::after {
     box-shadow: 0 6px 14px -8px rgba(30, 58, 95, .5);
 }
 
-.dot-live {
-    width: 7px;
-    height: 7px;
-    background: #16a34a;
-    box-shadow: 0 0 0 3px rgba(22, 163, 74, .18);
-}
-
 .demo-table code {
     background: #f3f4f6;
     font-family: "SFMono-Regular", Consolas, monospace;

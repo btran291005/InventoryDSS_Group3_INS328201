@@ -201,11 +201,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <path d="M5 12h14M13 6l6 6-6 6"/>
                             </svg>
                         </button>
-
-                        <div class="d-flex align-items-center gap-2 mt-3 pt-3 border-top small text-muted">
-                            <span class="dot-live rounded-circle"></span>
-                            Node: GS-HQ-01 ACTIVE &middot; TLS 1.3 Secured
-                        </div>
                     </form>
 
                     <div class="mt-4 pt-3 border-top border-dashed">
