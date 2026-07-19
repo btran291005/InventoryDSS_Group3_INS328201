@@ -65,6 +65,7 @@ CREATE TABLE products (
     supplier_id INT NOT NULL,
     unit VARCHAR(20) NOT NULL,
     shelf_life_days INT NULL,
+    unit_cost DECIMAL(12,2) NOT NULL DEFAULT 0,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     FOREIGN KEY (category_id) REFERENCES categories(category_id),
     FOREIGN KEY (supplier_id) REFERENCES suppliers(supplier_id)
@@ -312,46 +313,46 @@ INSERT INTO suppliers (supplier_id, supplier_name, contact_phone, avg_lead_time_
 
 -- 4. PRODUCTS (40 SKUs thực tế thường thấy ở GS25)
 
-INSERT INTO products (product_id, sku_code, product_name, category_id, supplier_id, unit, shelf_life_days) VALUES 
+INSERT INTO products (product_id, sku_code, product_name, category_id, supplier_id, unit, shelf_life_days, unit_cost) VALUES 
 -- Fresh Food (Hạn sử dụng ngắn, áp dụng FEFO)
-(1, 'RTE-GB-001', 'Gimbap Bò Bulgogi GS25', 2, 2, 'Cuộn', 2),
-(2, 'RTE-GB-002', 'Gimbap Xúc Xích Phô Mai GS25', 2, 2, 'Cuộn', 2),
-(3, 'RTE-TB-001', 'Tteokbokki Cay Ngọt Truyền Thống', 2, 2, 'Hộp', 3),
-(4, 'RTE-ON-001', 'Cơm Nắm Cá Ngừ Mayonnaise', 2, 2, 'Cái', 2),
-(5, 'RTE-SW-001', 'Sandwich Gà Teriyaki', 2, 2, 'Gói', 3),
-(6, 'RTE-BM-001', 'Bánh Mì Que Thịt Bằm', 2, 2, 'Cái', 3),
-(7, 'RTE-BB-001', 'Bánh Bao Xá Xíu Trứng Muối', 2, 2, 'Cái', 2),
+(1, 'RTE-GB-001', 'Gimbap Bò Bulgogi GS25', 2, 2, 'Cuộn', 2, 18000),
+(2, 'RTE-GB-002', 'Gimbap Xúc Xích Phô Mai GS25', 2, 2, 'Cuộn', 2, 16000),
+(3, 'RTE-TB-001', 'Tteokbokki Cay Ngọt Truyền Thống', 2, 2, 'Hộp', 3, 22000),
+(4, 'RTE-ON-001', 'Cơm Nắm Cá Ngừ Mayonnaise', 2, 2, 'Cái', 2, 12000),
+(5, 'RTE-SW-001', 'Sandwich Gà Teriyaki', 2, 2, 'Gói', 3, 15000),
+(6, 'RTE-BM-001', 'Bánh Mì Que Thịt Bằm', 2, 2, 'Cái', 3, 8000),
+(7, 'RTE-BB-001', 'Bánh Bao Xá Xíu Trứng Muối', 2, 2, 'Cái', 2, 10000),
 -- Nhập khẩu Hàn / Nhãn riêng YouUs
-(8, 'KOR-YU-001', 'Nước ép dưa hấu YouUs 270ml', 3, 1, 'Chai', 180),
-(9, 'KOR-YU-002', 'Snack Tteokbokki YouUs', 3, 1, 'Gói', 180),
-(10, 'KOR-SY-001', 'Mì gà cay Samyang Carbonara 130g', 3, 7, 'Gói', 360),
-(11, 'KOR-SY-002', 'Mì gà cay Samyang Phô Mai 130g', 3, 7, 'Gói', 360),
-(12, 'KOR-BG-001', 'Sữa chuối Binggrae 200ml', 3, 10, 'Hộp', 180),
-(13, 'KOR-BG-002', 'Sữa dâu Binggrae 200ml', 3, 10, 'Hộp', 180),
-(14, 'KOR-PD-001', 'Mì xào tương đen Jjajangmen Paldo', 3, 9, 'Gói', 360),
-(15, 'KOR-LT-001', 'Nước ép nha đam Lotte 500ml', 3, 11, 'Chai', 360),
+(8, 'KOR-YU-001', 'Nước ép dưa hấu YouUs 270ml', 3, 1, 'Chai', 180, 9000),
+(9, 'KOR-YU-002', 'Snack Tteokbokki YouUs', 3, 1, 'Gói', 180, 11000),
+(10, 'KOR-SY-001', 'Mì gà cay Samyang Carbonara 130g', 3, 7, 'Gói', 360, 13000),
+(11, 'KOR-SY-002', 'Mì gà cay Samyang Phô Mai 130g', 3, 7, 'Gói', 360, 13000),
+(12, 'KOR-BG-001', 'Sữa chuối Binggrae 200ml', 3, 10, 'Hộp', 180, 9500),
+(13, 'KOR-BG-002', 'Sữa dâu Binggrae 200ml', 3, 10, 'Hộp', 180, 9500),
+(14, 'KOR-PD-001', 'Mì xào tương đen Jjajangmen Paldo', 3, 9, 'Gói', 360, 14000),
+(15, 'KOR-LT-001', 'Nước ép nha đam Lotte 500ml', 3, 11, 'Chai', 360, 16000),
 -- Sữa (Cần FEFO)
-(16, 'DAI-VN-001', 'Sữa tươi Vinamilk không đường 180ml', 5, 12, 'Hộp', 180),
-(17, 'DAI-TH-001', 'Sữa chua uống TH True Yogurt Dâu', 5, 13, 'Chai', 45),
+(16, 'DAI-VN-001', 'Sữa tươi Vinamilk không đường 180ml', 5, 12, 'Hộp', 180, 6500),
+(17, 'DAI-TH-001', 'Sữa chua uống TH True Yogurt Dâu', 5, 13, 'Chai', 45, 8500),
 -- Nước giải khát
-(18, 'BEV-SP-001', 'Pepsi Không Calo 320ml', 4, 4, 'Lon', 360),
-(19, 'BEV-SP-002', 'Trà Ô Long Tea+ Plus 455ml', 4, 4, 'Chai', 360),
-(20, 'BEV-SP-003', 'Nước tăng lực Sting Dâu 330ml', 4, 4, 'Chai', 360),
-(21, 'BEV-CC-001', 'Coca-Cola Plus 320ml', 4, 5, 'Lon', 360),
-(22, 'BEV-CC-002', 'Nước khoáng Dasani 500ml', 4, 5, 'Chai', 360),
-(23, 'BEV-NS-001', 'Cà phê rang xay Nescafe Lon', 4, 14, 'Lon', 360),
-(24, 'BEV-HK-001', 'Bia Heineken Silver 330ml', 4, 20, 'Lon', 360),
+(18, 'BEV-SP-001', 'Pepsi Không Calo 320ml', 4, 4, 'Lon', 360, 6000),
+(19, 'BEV-SP-002', 'Trà Ô Long Tea+ Plus 455ml', 4, 4, 'Chai', 360, 7500),
+(20, 'BEV-SP-003', 'Nước tăng lực Sting Dâu 330ml', 4, 4, 'Chai', 360, 6500),
+(21, 'BEV-CC-001', 'Coca-Cola Plus 320ml', 4, 5, 'Lon', 360, 6000),
+(22, 'BEV-CC-002', 'Nước khoáng Dasani 500ml', 4, 5, 'Chai', 360, 4000),
+(23, 'BEV-NS-001', 'Cà phê rang xay Nescafe Lon', 4, 14, 'Lon', 360, 9000),
+(24, 'BEV-HK-001', 'Bia Heineken Silver 330ml', 4, 20, 'Lon', 360, 14000),
 -- FMCG / Đồ khô
-(25, 'FMC-MS-001', 'Mì Omachi Xốt Spaghetti', 1, 3, 'Gói', 150),
-(26, 'FMC-MS-002', 'Mì ly Kokomi Tôm Chua Cay', 1, 3, 'Ly', 150),
-(27, 'FMC-AC-001', 'Mì Hảo Hảo Chua Cay', 1, 8, 'Gói', 180),
-(28, 'FMC-OR-001', 'Snack khoai tây Ostar Tảo Biển', 6, 6, 'Gói', 180),
-(29, 'FMC-OR-002', 'Bánh Chocopie hộp 12 cái', 6, 6, 'Hộp', 360),
-(30, 'FMC-MD-001', 'Bánh quy Oreo Vani', 6, 15, 'Thanh', 360),
+(25, 'FMC-MS-001', 'Mì Omachi Xốt Spaghetti', 1, 3, 'Gói', 150, 7000),
+(26, 'FMC-MS-002', 'Mì ly Kokomi Tôm Chua Cay', 1, 3, 'Ly', 150, 8000),
+(27, 'FMC-AC-001', 'Mì Hảo Hảo Chua Cay', 1, 8, 'Gói', 180, 3500),
+(28, 'FMC-OR-001', 'Snack khoai tây Ostar Tảo Biển', 6, 6, 'Gói', 180, 6000),
+(29, 'FMC-OR-002', 'Bánh Chocopie hộp 12 cái', 6, 6, 'Hộp', 360, 32000),
+(30, 'FMC-MD-001', 'Bánh quy Oreo Vani', 6, 15, 'Thanh', 360, 5500),
 -- Personal Care
-(31, 'PER-UL-001', 'Kem đánh răng P/S Trà Xanh 100g', 7, 16, 'Tuýp', 1080),
-(32, 'PER-RH-001', 'Sữa rửa mặt Acnes 100g', 7, 17, 'Tuýp', 1080),
-(33, 'PER-KA-001', 'Băng vệ sinh Laurier Dày', 7, 18, 'Gói', 1080);
+(31, 'PER-UL-001', 'Kem đánh răng P/S Trà Xanh 100g', 7, 16, 'Tuýp', 1080, 15000),
+(32, 'PER-RH-001', 'Sữa rửa mặt Acnes 100g', 7, 17, 'Tuýp', 1080, 38000),
+(33, 'PER-KA-001', 'Băng vệ sinh Laurier Dày', 7, 18, 'Gói', 1080, 28000);
 
 -- 5. REORDER RULES (20 Rules - Mix giữa rule cho Nhóm và rule cho SKU lẻ)
 
