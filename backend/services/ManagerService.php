@@ -9,16 +9,14 @@
  *       method getStockoutRisk(). Keep this formula isolated and documented —
  *       it is the most likely requirement to change after user testing.
  *
- * PHẠM VI CỦA FILE NÀY (đã thống nhất với nhóm trước khi viết Phase 4):
- *   - KHÔNG bao gồm công thức gợi ý số lượng đặt hàng theo BR-05 (min/max/
- *     safety_stock/reorder_point) - phần đó thuộc về ReorderService.php, hiện
- *     vẫn là file trống (0 dòng), sẽ code ở phase sau. Bất kỳ chỗ nào trong
- *     file này cần số lượng gợi ý (VD: chuẩn bị dữ liệu tạo PO), Manager sẽ
- *     TỰ NHẬP số lượng, hoặc code sẽ gọi ReorderService::suggestQuantity()
- *     như một PLACEHOLDER (hàm CHƯA TỒN TẠI - sẽ lỗi Fatal nếu gọi trước khi
- *     ReorderService được code) - có ghi chú TODO rõ ràng ở đúng vị trí.
- *   - KHÔNG gọi IntegrationService/ForecastAPI/NotificationAPI - cả 3 đều là
- *     stub trống, để dành phase IntegrationService riêng.
+ * PHẠM VI CỦA FILE NÀY:
+ *   - Công thức gợi ý số lượng đặt hàng theo BR-05 (min/max/safety_stock/
+ *     reorder_point) thuộc về ReorderService.php (đã code) - file này chỉ gọi
+ *     qua ReorderService::suggestQuantity() ở getReorderSuggestions().
+ *   - Gợi ý từ AI Demand Forecast API (FR-MGR-10) + fallback rule-based
+ *     (BR-18) thuộc về IntegrationService.php (đã code) - file này chỉ gọi
+ *     qua IntegrationService::getForecastForProduct() ở getForecastSuggestion(),
+ *     KHÔNG tự lặp lại logic gọi ForecastAPI/xử lý fallback ở đây.
  *
  * QUY ƯỚC CHUNG: giống AdminService.php - Service không tự check role (đã
  * chặn ở Middleware trước khi vào Controller), input được ép kiểu trước khi
@@ -254,16 +252,16 @@ class ManagerService
      * FR-MGR-10: gợi ý bổ sung từ Demand Forecast API, hiển thị TÁCH BIỆT với
      * gợi ý theo rule (BR-05) để Manager so sánh 2 nguồn.
      *
-     * ⚠️ PLACEHOLDER: phụ thuộc IntegrationService (bọc ForecastAPI.php +
-     * logic fallback BR-18) - cả 2 hiện là stub trống, chưa code ở phase này
-     * (đã thống nhất với nhóm: IntegrationService để dành phase sau).
+     * IntegrationService::getForecastForProduct() tự xử lý fallback BR-18
+     * (API lỗi/timeout -> rule-based qua ReorderService) và tự ghi audit vào
+     * demand_forecasts - Service này chỉ cần gọi thẳng, không lặp lại logic.
      */
     public function getForecastSuggestion(int $productId): array
     {
-        return [
-            'success' => false,
-            'message' => 'Chức năng gợi ý từ Demand Forecast API chưa sẵn sàng - IntegrationService.php chưa được code (Phase sau).',
-        ];
+        require_once __DIR__ . '/IntegrationService.php';
+        $integrationService = new IntegrationService();
+
+        return $integrationService->getForecastForProduct($productId);
     }
 
     /**
