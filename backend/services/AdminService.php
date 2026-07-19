@@ -704,6 +704,125 @@ class AdminService
     }
 
     // =====================================================================
+    // 7B. SYSTEM OVERVIEW / DASHBOARD SUMMARY (FR-ADM-01, FR-ADM-06, FR-ADM-07,
+    //     FR-SYS-02, FR-MGR-12 dùng chung khái niệm "low stock")
+    // =====================================================================
+    // ⚠️ GHI CHÚ: các con số ở đây là AGGREGATE (COUNT/SUM) đơn thuần, không có
+    // Model riêng nào expose sẵn — Product/Account/Supplier/Order Model hiện tại
+    // chỉ có getAll() (trả full rows). Query trực tiếp qua PDO tại đây để tránh
+    // phải SELECT full rows rồi count() ở PHP (tốn bộ nhớ không cần thiết), giống
+    // đúng pattern getAuditLogs() ở trên (query thẳng, không qua Model).
+
+    /**
+     * FR-ADM-01/06/07: tổng hợp số liệu cho trang "System Overview" (Admin Dashboard).
+     * Gồm: KPI đếm nhanh (users/products/suppliers/pending PO), danh sách cảnh báo
+     * tồn kho thấp (BR-04: stock <= reorder_point) ưu tiên theo doanh số gần nhất
+     * (BR-13), PO đang chờ duyệt (rút gọn, không kèm chi tiết dòng - dùng cho card
+     * tóm tắt, khác với listPendingApprovals() ở trên vốn kèm details() đầy đủ để
+     * duyệt), và hoạt động gần đây (audit log mới nhất).
+     *
+     * @return array{
+     *   kpi: array{active_users:int, total_products:int, total_suppliers:int, pending_pos:int, transactions_30d:int},
+     *   low_stock_alerts: array,
+     *   pending_orders: array,
+     *   recent_activity: array
+     * }
+     */
+    public function getSystemSummary(): array
+    {
+        $pdo = Database::getConnection();
+
+        // --- KPI đếm nhanh ---
+        $activeUsers    = (int) $pdo->query(
+            "SELECT COUNT(*) FROM accounts WHERE status = 'active'"
+        )->fetchColumn();
+
+        $totalProducts  = (int) $pdo->query(
+            "SELECT COUNT(*) FROM products WHERE is_active = 1"
+        )->fetchColumn();
+
+        $totalSuppliers = (int) $pdo->query(
+            "SELECT COUNT(*) FROM suppliers"
+        )->fetchColumn();
+
+        $pendingPos     = (int) $pdo->query(
+            "SELECT COUNT(*) FROM purchase_orders WHERE status = 'Pending'"
+        )->fetchColumn();
+
+        // "Transactions" = số phiếu bán hàng (sales_transactions) trong 30 ngày gần nhất -
+        // dùng làm chỉ số hoạt động bán hàng tổng quan trên dashboard.
+        $transactions30d = (int) $pdo->query(
+            "SELECT COUNT(*) FROM sales_transactions WHERE transaction_time >= (NOW() - INTERVAL 30 DAY)"
+        )->fetchColumn();
+
+        // --- BR-04 / BR-13: sản phẩm chạm/dưới Reorder Point, ưu tiên sản phẩm bán
+        // chạy (sales_volume 30 ngày gần nhất) lên đầu danh sách cảnh báo. Reorder
+        // point lấy theo rule riêng của product nếu có, fallback về rule theo category
+        // (đúng thiết kế "effective rule" của Product::getEffectiveReorderRule(), viết
+        // lại thành 1 câu SQL duy nhất ở đây để không phải loop N+1 query theo từng sản phẩm).
+        //
+        // ⚠️ HAVING dùng lại NGUYÊN VẸN biểu thức COALESCE(...) thay vì alias
+        // "reorder_point" trần - vì rule_product.reorder_point VÀ
+        // rule_category.reorder_point đều có mặt trong GROUP BY (cùng tên cột,
+        // khác bảng nguồn), nên MySQL báo lỗi 1052 "column is ambiguous" nếu
+        // HAVING chỉ ghi "reorder_point" (không tự suy ra đó là alias SELECT).
+        $lowStockSql = "
+            SELECT
+                p.product_id, p.sku_code, p.product_name,
+                COALESCE(SUM(st.quantity_on_hand), 0) AS current_stock,
+                COALESCE(rule_product.reorder_point, rule_category.reorder_point, 0) AS reorder_point,
+                COALESCE(rule_product.safety_stock, rule_category.safety_stock, 0) AS safety_stock,
+                COALESCE(sold.qty_sold_30d, 0) AS qty_sold_30d
+            FROM products p
+            LEFT JOIN stock st ON st.product_id = p.product_id
+            LEFT JOIN (
+                SELECT product_id, reorder_point, safety_stock FROM reorder_rules WHERE product_id IS NOT NULL
+            ) AS rule_product ON rule_product.product_id = p.product_id
+            LEFT JOIN (
+                SELECT category_id, reorder_point, safety_stock FROM reorder_rules WHERE category_id IS NOT NULL
+            ) AS rule_category ON rule_category.category_id = p.category_id
+            LEFT JOIN (
+                SELECT std.product_id, SUM(std.quantity_sold) AS qty_sold_30d
+                FROM sales_transaction_details std
+                JOIN sales_transactions t ON t.transaction_id = std.transaction_id
+                WHERE t.transaction_time >= (NOW() - INTERVAL 30 DAY)
+                GROUP BY std.product_id
+            ) AS sold ON sold.product_id = p.product_id
+            WHERE p.is_active = 1
+            GROUP BY p.product_id, p.sku_code, p.product_name, rule_product.reorder_point,
+                     rule_category.reorder_point, rule_product.safety_stock, rule_category.safety_stock,
+                     sold.qty_sold_30d
+            HAVING COALESCE(SUM(st.quantity_on_hand), 0) <= COALESCE(rule_product.reorder_point, rule_category.reorder_point, 0)
+            ORDER BY qty_sold_30d DESC, current_stock ASC
+            LIMIT 8";
+
+        $lowStockAlerts = $pdo->query($lowStockSql)->fetchAll();
+
+        // --- FR-ADM-06: PO đang chờ duyệt, bản rút gọn (không kèm details dòng)
+        // cho card tóm tắt trên dashboard. Muốn xem đầy đủ dòng sản phẩm để duyệt
+        // -> dùng listPendingApprovals() ở trang PO Approval riêng.
+        $pendingOrders = $this->orderModel->getPendingApproval();
+        $pendingOrders = array_slice($pendingOrders, 0, 6);
+
+        // --- FR-ADM-07: hoạt động gần đây (audit log mới nhất) ---
+        $recentActivity = $this->getAuditLogs();
+        $recentActivity = array_slice($recentActivity, 0, 6);
+
+        return [
+            'kpi' => [
+                'active_users'     => $activeUsers,
+                'total_products'   => $totalProducts,
+                'total_suppliers'  => $totalSuppliers,
+                'pending_pos'      => $pendingPos,
+                'transactions_30d' => $transactions30d,
+            ],
+            'low_stock_alerts' => $lowStockAlerts,
+            'pending_orders'   => $pendingOrders,
+            'recent_activity'  => $recentActivity,
+        ];
+    }
+
+    // =====================================================================
     // 8. KPI COMPARISON REPORT (FR-ADM-08)
     // =====================================================================
     // ⚠️ GHI CHÚ QUAN TRỌNG: 3 chỉ số yêu cầu (stock-out rate, turnover, forecast

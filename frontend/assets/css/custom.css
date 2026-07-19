@@ -1,0 +1,534 @@
+/**
+ * File: frontend/assets/css/custom.css
+ * Purpose: Layout & component style dùng chung cho toàn bộ khu vực ĐÃ ĐĂNG NHẬP
+ * (Admin/Manager/Staff) - khung sườn app-shell (sidebar + content), header,
+ * footer, và các component tái sử dụng nhiều nơi (KPI card, panel card,
+ * activity list, badge, stock-pill...).
+ *
+ * Quy ước: dùng thẳng utility class của Bootstrap 5 (grid, spacing, flex...)
+ * ngay trong PHP; file này CHỈ chứa phần Bootstrap không có sẵn - đúng quy ước
+ * đã áp dụng ở login.css (xem comment đầu file đó).
+ *
+ * Include sau theme_variables.css (file này dùng các biến --brand-*, --color-*
+ * định nghĩa ở đó).
+ */
+
+body {
+    background: var(--surface-page-bg);
+    color: var(--text-secondary);
+}
+
+/* =========================================================================
+   1. APP SHELL - khung sườn 2 cột: sidebar cố định bên trái + content bên phải
+   ========================================================================= */
+
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+.app-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-width: 0; /* tránh tràn ngang khi bảng dữ liệu quá rộng */
+    margin-left: var(--sidebar-width);
+}
+
+/* =========================================================================
+   2. SIDEBAR
+   ========================================================================= */
+
+.app-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: var(--sidebar-width);
+    background: var(--brand-primary);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+    overflow-y: auto;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 22px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, .12);
+}
+
+.sidebar-logo {
+    width: 34px;
+    height: 34px;
+    object-fit: contain;
+    border-radius: 8px;
+    background: #fff;
+    padding: 3px;
+    flex-shrink: 0;
+}
+
+.sidebar-brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+    min-width: 0;
+}
+
+.sidebar-brand-title {
+    color: #fff;
+    font-weight: 700;
+    font-size: .98rem;
+}
+
+.sidebar-brand-role {
+    color: rgba(255, 255, 255, .6);
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+.sidebar-nav {
+    flex: 1 1 auto;
+    padding: 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    color: rgba(255, 255, 255, .72);
+    text-decoration: none;
+    font-size: .89rem;
+    font-weight: 500;
+    transition: background .15s, color .15s;
+}
+
+.sidebar-link:hover {
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+}
+
+.sidebar-link.active {
+    background: rgba(255, 255, 255, .14);
+    color: #fff;
+    font-weight: 600;
+}
+
+.sidebar-link-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    background: currentColor;
+    opacity: .0; /* icon set thật (VD: lucide/feather) sẽ thay ở Phase sau; giữ chỗ layout trước */
+    position: relative;
+}
+
+/* Chấm tròn nhỏ tạm thay icon thật, để menu không bị "trống" khi chưa gắn icon font/SVG */
+.sidebar-link-icon::before {
+    content: '';
+    position: absolute;
+    inset: 6px;
+    border-radius: 3px;
+    background: currentColor;
+    opacity: .85;
+}
+
+.sidebar-link-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar-footer {
+    padding: 14px 20px;
+    border-top: 1px solid rgba(255, 255, 255, .12);
+}
+
+.sidebar-logout {
+    color: rgba(255, 255, 255, .6);
+    font-size: .82rem;
+    text-decoration: none;
+}
+
+.sidebar-logout:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+/* =========================================================================
+   3. HEADER
+   ========================================================================= */
+
+.app-header {
+    position: sticky;
+    top: 0;
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: var(--header-height);
+    padding: 0 28px;
+    background: var(--surface-card-bg);
+    border-bottom: 1px solid var(--surface-border);
+}
+
+.app-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.app-header-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.app-header-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .78rem;
+    color: var(--text-muted);
+}
+
+.app-header-breadcrumbs .crumb-sep {
+    color: #cbd5e1;
+}
+
+.app-header-breadcrumbs .crumb-current {
+    color: var(--brand-primary);
+    font-weight: 600;
+}
+
+.app-header-right {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-shrink: 0;
+}
+
+.app-header-user {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.25;
+}
+
+.app-header-user-name {
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.app-header-user-role {
+    font-size: .72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+.app-header-logout {
+    font-size: .82rem;
+    color: var(--color-danger);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.app-header-logout:hover {
+    text-decoration: underline;
+}
+
+/* =========================================================================
+   4. MAIN CONTENT AREA
+   ========================================================================= */
+
+.app-main {
+    flex: 1 1 auto;
+    padding: 28px;
+}
+
+.page-heading {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.page-subheading {
+    font-size: .9rem;
+    color: var(--text-muted);
+}
+
+/* =========================================================================
+   5. FOOTER
+   ========================================================================= */
+
+.app-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 28px;
+    font-size: .78rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--surface-border);
+    background: var(--surface-card-bg);
+}
+
+.app-footer-sep {
+    color: #cbd5e1;
+}
+
+/* =========================================================================
+   6. KPI CARD (dashboard)
+   ========================================================================= */
+
+.kpi-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 18px 20px;
+    background: var(--surface-card-bg);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    height: 100%;
+}
+
+.kpi-card-warn {
+    border-color: #fde68a;
+    background: linear-gradient(180deg, #fffbeb 0%, var(--surface-card-bg) 60%);
+}
+
+.kpi-label {
+    font-size: .74rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--text-muted);
+}
+
+.kpi-value {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* =========================================================================
+   7. PANEL CARD (khối nội dung có tiêu đề - low stock, pending PO, activity...)
+   ========================================================================= */
+
+.panel-card {
+    background: var(--surface-card-bg);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+    padding: 20px 22px;
+}
+
+.panel-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.panel-card-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: .98rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.panel-card-note {
+    font-size: .76rem;
+    color: var(--text-muted);
+}
+
+.panel-card-link {
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--brand-primary);
+    text-decoration: none;
+}
+
+.panel-card-link:hover {
+    text-decoration: underline;
+}
+
+.badge-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--color-info-bg);
+    color: var(--color-info);
+    font-size: .74rem;
+    font-weight: 700;
+}
+
+.badge-count-warn {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+}
+
+.empty-state {
+    padding: 24px 8px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: .86rem;
+}
+
+/* --- Bảng dữ liệu gọn trong panel-card --- */
+.data-table thead th {
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--surface-border-soft);
+    padding-bottom: 10px;
+}
+
+.data-table tbody td {
+    padding-top: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--surface-border-soft);
+    font-size: .87rem;
+}
+
+.data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.stock-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: .82rem;
+}
+
+.stock-pill-warn {
+    background: var(--color-warning-bg);
+    color: var(--color-warning);
+}
+
+.stock-pill-critical {
+    background: var(--color-danger-bg);
+    color: var(--color-danger);
+}
+
+/* --- Danh sách hoạt động (pending PO / recent activity) --- */
+.activity-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.activity-item {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--surface-border-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+}
+
+.activity-item:first-child {
+    padding-top: 0;
+}
+
+.activity-item-main {
+    font-size: .87rem;
+    color: var(--text-primary);
+}
+
+.activity-item-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: .76rem;
+    color: var(--text-muted);
+}
+
+.activity-item-time {
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* =========================================================================
+   8. BUTTON - gradient thương hiệu (đồng bộ .btn-brand đã có ở login.css)
+   ========================================================================= */
+
+.btn-brand {
+    background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
+    color: #fff;
+    border: none;
+    box-shadow: 0 6px 16px -8px rgba(30, 58, 95, .55);
+    transition: box-shadow .15s, transform .1s, filter .15s;
+}
+
+.btn-brand:hover {
+    color: #fff;
+    filter: brightness(1.06);
+    box-shadow: 0 10px 20px -8px rgba(30, 58, 95, .6);
+    transform: translateY(-1px);
+}
+
+.btn-brand:active {
+    transform: translateY(1px);
+}
+
+/* =========================================================================
+   9. RESPONSIVE - sidebar thu gọn thành overlay trên màn hình nhỏ
+   ========================================================================= */
+
+@media (max-width: 991.98px) {
+    .app-sidebar {
+        transform: translateX(-100%);
+        transition: transform .2s ease;
+        box-shadow: 0 0 30px rgba(0, 0, 0, .25);
+    }
+
+    .app-sidebar.is-open {
+        transform: translateX(0);
+    }
+
+    .app-content {
+        margin-left: 0;
+    }
+
+    .app-header {
+        padding: 0 16px;
+    }
+
+    .app-main {
+        padding: 18px;
+    }
+}
