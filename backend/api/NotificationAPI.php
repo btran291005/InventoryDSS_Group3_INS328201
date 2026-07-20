@@ -1,33 +1,6 @@
+/** demo code (not official) */
+
 <?php
-/**
- * File: backend/api/NotificationAPI.php
- * Purpose: Low-level client gửi cảnh báo (notification, email/Zalo optional) khi
- *          tồn kho chạm ngưỡng an toàn. KHÔNG chứa logic xác định SẢN PHẨM nào
- *          cần cảnh báo (đó là BR-04/BR-13, đã có ở ManagerService::getLowStockAlerts()) -
- *          file này chỉ nhận payload đã chuẩn bị sẵn và lo việc GỬI đi.
- *
- * Related: FR-SYS-02 ("Alert is triggered within an acceptable time after stock
- *          crosses the threshold; alert reaches the intended channel"), BR-04.
- * Owner: Tran (Infra)
- *
- * QUY ƯỚC KÊNH GỬI:
- *   - 'in_app'  : luôn hoạt động (không cần cấu hình ngoài) - ghi lại một dòng
- *                 audit_log để phía frontend (dashboard) có thể truy vấn ra
- *                 "cảnh báo gần đây" mà không cần bảng notifications riêng
- *                 (schema hiện KHÔNG có bảng notifications - xem ghi chú trong
- *                 db.sql, KHÔNG tự thêm bảng mới ở Phase này).
- *   - 'email'   : optional, đọc SMTP config qua các hằng số trong app_config.php
- *                 (NOTIFICATION_EMAIL_* - CHƯA khai báo, cần Admin bổ sung ở
- *                 app_config.php nếu muốn bật kênh này - mặc định TẮT).
- *   - 'zalo'    : optional, gọi Zalo OA API qua endpoint cấu hình trong
- *                 api_configs (api_name = 'Zalo_OA') - mặc định TẮT nếu chưa
- *                 có dòng cấu hình tương ứng trong DB.
- *
- * Vì email/zalo đều là kênh "optional" theo đúng mô tả gốc trong FR-SYS-02
- * ("email/Zalo in optional"), hàm gửi luôn coi 'in_app' là kênh bắt buộc/luôn
- * thành công (ghi log), còn email/zalo lỗi KHÔNG được làm sập luồng cảnh báo
- * chính - chỉ ghi log lỗi và tiếp tục.
- */
 
 declare(strict_types=1);
 

@@ -1,29 +1,6 @@
-<?php
-/**
- * File: backend/api/ForecastAPI.php
- * Purpose: Low-level HTTP client (cURL) cho AI Demand Forecast API.
- *          KHÔNG chứa logic fallback (BR-18) - phần đó thuộc về IntegrationService.php.
- *          File này chỉ có 2 việc: (1) đọc cấu hình endpoint/api_key từ bảng
- *          api_configs, (2) gọi HTTP POST và trả về kết quả thô (raw), hoặc báo lỗi
- *          rõ ràng nếu timeout/lỗi mạng/response không hợp lệ.
- *
- * Related: FR-SYS-04 (gọi demand-forecast API theo lịch/ theo yêu cầu Manager),
- *          NFR-06 (gracefully handle failures/timeouts).
- *
- * Bảng liên quan (đã có trong DB, xem db.sql):
- *   api_configs(config_id, api_name, endpoint_url, api_key, configured_by)
- *     - Seed data: api_name = 'AI_Demand_Forecast' -> endpoint_url + api_key thật.
- *
- * QUY ƯỚC HỢP ĐỒNG (contract) VỚI API BÊN NGOÀI (giả định, vì chưa có API thật):
- *   Request:  POST {endpoint_url}?  Header: Authorization: Bearer {api_key}
- *             Body JSON: {"product_id": int, "sku_code": string,
- *                         "history_days": int, "current_stock": int}
- *   Response: 200 OK, Body JSON: {"suggested_qty": int, "confidence": float}
- *
- * Nếu API thật có hợp đồng khác, CHỈ cần sửa buildRequestPayload()/parseResponse()
- * bên dưới - phần còn lại (timeout, error handling, đọc config) không đổi.
- */
+/** demo code (not official) */
 
+<?php
 declare(strict_types=1);
 
 require_once __DIR__ . '/../config/app_config.php';
