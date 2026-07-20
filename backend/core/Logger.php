@@ -1,30 +1,12 @@
 <?php
-/**
- * File: backend/core/Logger.php
- * Purpose: Ghi log các hành động nhạy cảm vào bảng audit_logs.
- * Liên quan: FR-SYS-03 (log mọi approval/rule-change), NFR-09 (traceability),
- * BR-06 (log khi Manager override PO), BR-12 (log mọi inventory adjustment).
- *
- * Bảng audit_logs (đã có trong DB):
- *   log_id, account_id, action_type, target_table, target_id, timestamp
- */
-
+ 
 declare(strict_types=1);
 
 require_once __DIR__ . '/../config/database.php';
 
 class Logger
 {
-    /**
-     * Ghi 1 dòng audit log.
-     *
-     * @param int         $accountId   ID tài khoản thực hiện hành động (bắt buộc, NOT NULL trong DB)
-     * @param string      $actionType  Mã hành động, quy ước UPPER_SNAKE_CASE
-     *                                 (VD: 'APPROVE_PO', 'OVERRIDE_PO_QTY', 'UPDATE_REORDER_RULE',
-     *                                 'LOGIN', 'LOGOUT', 'LOCK_ACCOUNT'...)
-     * @param string|null $targetTable Tên bảng bị tác động (nullable, VD: 'purchase_orders')
-     * @param int|null    $targetId    ID bản ghi bị tác động (nullable)
-     */
+    /* Ghi 1 dòng audit log. */
     public static function log(
         int $accountId,
         string $actionType,
@@ -54,10 +36,7 @@ class Logger
         }
     }
 
-    /**
-     * Helper tiện dùng: log hành động của user đang đăng nhập (lấy từ session qua Auth).
-     * Dùng trong Service khi đã chắc chắn có người dùng đăng nhập.
-     */
+    /* Helper: log hành động của user đang đăng nhập (lấy từ session qua Auth). Dùng trong Service khi đã chắc chắn có người dùng đăng nhập. */
     public static function logCurrentUser(
         string $actionType,
         ?string $targetTable = null,

@@ -1,22 +1,4 @@
 <?php
-/**
- * File: backend/core/Middleware.php
- * Purpose: "Chốt chặn" RBAC ở tầng server - đảm bảo mỗi request tới 1 file/route
- * chỉ được xử lý nếu user đã đăng nhập VÀ có đúng role được phép.
- *
- * Đây chính là điểm hiện thực hóa NFR-03: "RBAC is enforced at the server layer
- * (not just hidden UI)" - tức là dù người dùng có gõ thẳng URL của 1 trang thuộc
- * role khác, họ vẫn bị chặn ở đây, KHÔNG chỉ dựa vào việc ẩn link trên menu.
- *
- * Cách dùng chuẩn: đặt ngay dòng đầu tiên (sau require config) của mỗi file
- * frontend/{admin,manager,staff}/*.php:
- *
- *   require_once __DIR__ . '/../../backend/core/Middleware.php';
- *   Middleware::guard([ROLE_ADMIN]); // chỉ Admin được vào trang này
- *
- * Liên quan: BR-19, BR-07 (chỉ Admin approve PO), BR-16 (chỉ Admin sửa reorder rule),
- * FR-SYS-01 (unauthorized routes trả về access-denied).
- */
 
 declare(strict_types=1);
 
@@ -24,12 +6,7 @@ require_once __DIR__ . '/Auth.php';
 
 class Middleware
 {
-    /**
-     * Chặn truy cập nếu user chưa đăng nhập hoặc không thuộc danh sách role cho phép.
-     *
-     * @param int[] $allowedRoles VD: [ROLE_ADMIN], [ROLE_ADMIN, ROLE_MANAGER]
-     * @param string $accessDeniedRedirect Trang chuyển hướng khi bị từ chối truy cập
-     */
+    /* Chặn truy cập nếu user chưa đăng nhập hoặc không thuộc danh sách role cho phép.*/
     public static function guard(array $allowedRoles, string $accessDeniedRedirect = '/access-denied.php'): void
     {
         Auth::start();
@@ -46,12 +23,7 @@ class Middleware
         }
     }
 
-    /**
-     * Biến thể trả JSON 403 thay vì redirect - dùng cho các file trong backend/api/
-     * (VD: ForecastAPI.php, NotificationAPI.php) khi được gọi qua AJAX/fetch.
-     *
-     * @param int[] $allowedRoles
-     */
+    /* Biến thể trả JSON 403 thay vì redirect - dùng cho các file trong backend/api/ (VD: ForecastAPI.php, NotificationAPI.php) khi được gọi qua AJAX/fetch. */
     public static function guardApi(array $allowedRoles): void
     {
         Auth::start();
@@ -65,12 +37,7 @@ class Middleware
         }
     }
 
-    /**
-     * Kiểm tra không exit - dùng khi cần ẩn/hiện 1 phần UI thay vì chặn cả trang
-     * (VD: chỉ Admin mới thấy nút "Duyệt" trên trang PO mà cả Admin/Manager đều xem được).
-     *
-     * @param int[] $allowedRoles
-     */
+    /* Kiểm tra không exit - dùng khi cần ẩn/hiện 1 phần UI thay vì chặn cả trang (VD: chỉ Admin mới thấy nút "Duyệt" trên trang PO mà cả Admin/Manager đều xem được). */
     public static function can(array $allowedRoles): bool
     {
         return Auth::check() && Auth::hasRole(...$allowedRoles);
