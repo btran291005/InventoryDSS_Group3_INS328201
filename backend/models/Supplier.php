@@ -1,23 +1,4 @@
 <?php
-/**
- * File: backend/models/Supplier.php
- * Purpose: CRUD cho bảng suppliers + thống kê hiệu suất nhà cung cấp
- * (tỉ lệ sai lệch giao hàng) dựa trên purchase_orders/purchase_order_details.
- * Related: FR-ADM-01, FR-MGR-11, Vendor Management (User Story)
- *
- * Bảng suppliers (đã có trong DB, xem db.sql):
- *   supplier_id, supplier_name, contact_phone, avg_lead_time_days
- *   (không có created_at/updated_at trong schema hiện tại)
- *
- * LƯU Ý QUAN TRỌNG (đã kiểm tra lại db.sql):
- *   - avg_lead_time_days là cột TĨNH do Admin nhập/cập nhật thủ công (không có
- *     cột delivered_date trên purchase_orders để tự tính lead-time thực tế từ
- *     dữ liệu giao dịch). Vì vậy getPerformanceStats() dùng cột này làm lead-time
- *     tham khảo, và chỉ tự tính được "tỉ lệ sai lệch" (discrepancy rate) từ
- *     purchase_order_details.discrepancy_reason - đây là dữ liệu thực có sẵn.
- *   - Nếu muốn lead-time tính tự động theo từng đơn hàng thực tế, cần bổ sung
- *     cột delivered_at trên purchase_orders ở Phase 1 (báo lại nhóm nếu cần).
- */
 
 declare(strict_types=1);
 
@@ -33,9 +14,7 @@ class Supplier
         $this->conn = Database::getConnection();
     }
 
-    // -------------------------------------------------------------------
     // CRUD
-    // -------------------------------------------------------------------
 
     public function getAll(): array
     {
@@ -87,10 +66,7 @@ class Supplier
         return $stmt->execute($params);
     }
 
-    /**
-     * Xóa cứng. Nếu supplier còn bị tham chiếu bởi products/purchase_orders (FK),
-     * MySQL từ chối -> trả về false.
-     */
+    /* Xóa cứng. Nếu supplier còn bị tham chiếu bởi products/purchase_orders (FK), MySQL từ chối -> trả về false. */
     public function delete(int $supplierId): bool
     {
         try {
@@ -102,14 +78,9 @@ class Supplier
         }
     }
 
-    // -------------------------------------------------------------------
     // FR-MGR-11 / Vendor Management
-    // -------------------------------------------------------------------
 
-    /**
-     * Thống kê hiệu suất 1 nhà cung cấp: lead-time tham khảo (cột tĩnh) +
-     * tỉ lệ đơn hàng có sai lệch (discrepancy) trong số PO đã 'Delivered'.
-     */
+    /* Thống kê hiệu suất 1 nhà cung cấp: lead-time tham khảo (cột tĩnh) + tỉ lệ đơn hàng có sai lệch (discrepancy) trong số PO đã 'Delivered'. */
     public function getPerformanceStats(int $supplierId): array|false
     {
         $sql = "SELECT
@@ -134,11 +105,8 @@ class Supplier
         return $stmt->fetch();
     }
 
-    /**
-     * Vendor Management: gợi ý nhà cung cấp tin cậy nhất khi tạo PO mới -
-     * ưu tiên tỉ lệ sai lệch thấp nhất, sau đó lead-time (tham khảo) thấp nhất.
-     * Chỉ xét các supplier đã có ít nhất 1 đơn 'Delivered' (đủ dữ liệu để đánh giá).
-     */
+    /* Vendor Management: gợi ý nhà cung cấp tin cậy nhất khi tạo PO mới - ưu tiên tỉ lệ sai lệch thấp nhất, sau đó lead-time (tham khảo) thấp nhất.
+     * Chỉ xét các supplier đã có ít nhất 1 đơn 'Delivered' (đủ dữ liệu để đánh giá). */
     public function getMostReliable(int $limit = 5): array
     {
         $sql = "SELECT

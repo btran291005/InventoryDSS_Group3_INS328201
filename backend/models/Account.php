@@ -1,22 +1,4 @@
 <?php
-/**
- * File: backend/models/Account.php
- * Purpose: CRUD cho accounts, roles, permissions, role_permissions.
- * Related: FR-ADM-02 (quản lý tài khoản), FR-ADM-03 (phân quyền), BR-17 (chỉ Admin
- *          tạo/sửa account & phân quyền), BR-19 (user chỉ truy cập đúng role).
- *
- * LƯU Ý: Model này KHÔNG kiểm tra role (BR-17 được enforce ở Middleware/Service,
- * không phải ở đây) và KHÔNG tự ghi Logger - Service tầng trên (AdminService)
- * chịu trách nhiệm gọi Logger::log() sau khi các thao tác nhạy cảm thành công
- * (tạo account, khóa account, đổi quyền...), giống cách Product::upsertReorderRule()
- * đang làm.
- *
- * Bảng liên quan (đã có trong DB, xem db.sql):
- *   roles(role_id, role_name)
- *   permissions(permission_id, permission_code, description)
- *   role_permissions(role_id, permission_id) - composite PK
- *   accounts(account_id, username, password_hash, full_name, role_id, status, created_at)
- */
 
 declare(strict_types=1);
 
@@ -32,14 +14,9 @@ class Account
         $this->conn = Database::getConnection();
     }
 
-    // -------------------------------------------------------------------
     // accounts - lookup dùng cho Auth::login()
-    // -------------------------------------------------------------------
 
-    /**
-     * Lấy 1 account theo username (dùng cho Auth::login()).
-     * @return array{account_id:int,username:string,password_hash:string,full_name:string,role_id:int,status:string}|false
-     */
+    /* Lấy 1 account theo username (dùng cho Auth::login()). */
     public function getByUsername(string $username): array|false
     {
         $stmt = $this->conn->prepare(
@@ -65,9 +42,7 @@ class Account
         return $stmt->fetch();
     }
 
-    /**
-     * FR-ADM-02: danh sách toàn bộ account, kèm role_name, lọc theo role_id/status.
-     */
+    /* FR-ADM-02: danh sách toàn bộ account, kèm role_name, lọc theo role_id/status. */
     public function getAll(?int $roleId = null, ?string $status = null): array
     {
         $sql = "SELECT a.account_id, a.username, a.full_name, a.role_id, r.role_name, a.status, a.created_at
@@ -92,13 +67,8 @@ class Account
         return $stmt->fetchAll();
     }
 
-    /**
-     * FR-ADM-02: tạo account mới. $data['password'] PHẢI là plain text -
-     * hàm này tự hash bằng password_hash(); Service không được tự hash trước.
-     * BR-17: chỉ AdminService (sau khi Middleware::guard([ROLE_ADMIN])) được gọi hàm này.
-     *
-     * @return array{success: bool, account_id?: string, message: string}
-     */
+    /* FR-ADM-02: tạo account mới. $data['password'] PHẢI là plain text - hàm này tự hash bằng password_hash(); Service không được tự hash trước.
+     * BR-17: chỉ AdminService (sau khi Middleware::guard([ROLE_ADMIN])) được gọi hàm này.*/
     public function create(array $data): array
     {
         $sql = "INSERT INTO {$this->table} (username, password_hash, full_name, role_id, status)
@@ -128,11 +98,7 @@ class Account
         }
     }
 
-    /**
-     * FR-ADM-02: cập nhật full_name/role_id. KHÔNG đổi password ở đây -
-     * dùng updatePassword() riêng để tránh vô tình ghi đè bằng chuỗi rỗng
-     * nếu form không gửi password.
-     */
+    /* FR-ADM-02: cập nhật full_name/role_id. KHÔNG đổi password ở đây - dùng updatePassword() riêng để tránh vô tình ghi đè bằng chuỗi rỗng nếu form không gửi password. */
     public function update(int $accountId, array $data): bool
     {
         $allowed = ['full_name', 'role_id'];
@@ -155,7 +121,7 @@ class Account
         return $stmt->execute($params);
     }
 
-    /** Đổi mật khẩu - gọi Auth::validatePasswordStrength() TRƯỚC khi tới đây. */
+    /* Đổi mật khẩu - gọi Auth::validatePasswordStrength() TRƯỚC khi tới đây. */
     public function updatePassword(int $accountId, string $newPlainPassword): bool
     {
         $stmt = $this->conn->prepare(
@@ -167,13 +133,13 @@ class Account
         ]);
     }
 
-    /** FR-ADM-02: khóa tài khoản. */
+    /* FR-ADM-02: khóa tài khoản. */
     public function lock(int $accountId): bool
     {
         return $this->setStatus($accountId, 'locked');
     }
 
-    /** FR-ADM-02: mở khóa tài khoản. */
+    /* FR-ADM-02: mở khóa tài khoản. */
     public function unlock(int $accountId): bool
     {
         return $this->setStatus($accountId, 'active');
@@ -185,9 +151,7 @@ class Account
         return $stmt->execute([':status' => $status, ':id' => $accountId]);
     }
 
-    // -------------------------------------------------------------------
     // roles / permissions / role_permissions (FR-ADM-03)
-    // -------------------------------------------------------------------
 
     public function getAllRoles(): array
     {
@@ -201,7 +165,7 @@ class Account
         )->fetchAll();
     }
 
-    /** Danh sách permission (record đầy đủ) đang gán cho 1 role - dùng cho UI permissions.php. */
+    /* Danh sách permission (record đầy đủ) đang gán cho 1 role - dùng cho UI permissions.php. */
     public function getPermissionsForRole(int $roleId): array
     {
         $stmt = $this->conn->prepare(
@@ -215,18 +179,14 @@ class Account
         return $stmt->fetchAll();
     }
 
-    /**
-     * Danh sách permission_code (string) của 1 role - dùng bởi Middleware khi
-     * cần kiểm tra permission chi tiết (thay vì chỉ check theo role_id).
-     * @return string[] VD: ['FR-ADM-01', 'FR-ADM-04', ...]
-     */
+    /* Danh sách permission_code (string) của 1 role - dùng bởi Middleware khi cần kiểm tra permission chi tiết (thay vì chỉ check theo role_id). */
     public function getRolePermissionCodes(int $roleId): array
     {
         $rows = $this->getPermissionsForRole($roleId);
         return array_column($rows, 'permission_code');
     }
 
-    /** FR-ADM-03: gán 1 permission cho 1 role (bỏ qua nếu đã tồn tại). */
+    /* FR-ADM-03: gán 1 permission cho 1 role (bỏ qua nếu đã tồn tại). */
     public function assignPermissionToRole(int $roleId, int $permissionId): bool
     {
         $stmt = $this->conn->prepare(
@@ -235,7 +195,7 @@ class Account
         return $stmt->execute([':role_id' => $roleId, ':permission_id' => $permissionId]);
     }
 
-    /** FR-ADM-03: thu hồi 1 permission khỏi 1 role. */
+    /* FR-ADM-03: thu hồi 1 permission khỏi 1 role. */
     public function revokePermissionFromRole(int $roleId, int $permissionId): bool
     {
         $stmt = $this->conn->prepare(

@@ -1,26 +1,4 @@
 <?php
-/**
- * File: backend/models/Inventory.php
- * Purpose: CRUD/queries cho stock, stock_batches. Việc trừ kho khi BÁN đã được
- * Sales::createTransaction() xử lý atomic (kèm stock_movements) - Inventory.php
- * KHÔNG lặp lại logic đó, chỉ xử lý 2 luồng còn lại chưa có Model nào đảm nhận:
- * NHẬP KHO (stock_in, khi PO về hàng) và ĐIỀU CHỈNH (adjustment, hư hỏng/hết hạn/
- * thất thoát), cộng với logic chọn lô theo FEFO cho FR-STF-14.
- *
- * Related: FR-STF-01 (xem tồn kho), FR-STF-06 (ghi nhận nhập hàng), FR-STF-08
- *          (điều chỉnh tồn kho), FR-STF-14 (FEFO), BR-03 (không cho tồn kho âm -
- *          DB tự chặn qua CHECK chk_qty_positive, Model vẫn kiểm tra trước để
- *          trả lỗi rõ ràng thay vì để PDOException thô), BR-11 (bắt buộc lý do
- *          khi adjustment).
- *
- * Bảng liên quan (đã có trong DB, xem db.sql):
- *   stock(stock_id, product_id, warehouse_id, quantity_on_hand, last_updated)
- *     - UNIQUE(product_id, warehouse_id), CHECK quantity_on_hand >= 0
- *   stock_batches(batch_id, product_id, received_date, expiry_date, quantity_remaining)
- *   stock_movements(movement_id, product_id, movement_type, quantity_change, reason,
- *                   reference_id, performed_by, created_at)
- *     - CHECK: movement_type != 'adjustment' OR reason IS NOT NULL (BR-11, DB tự chặn)
- */
 
 declare(strict_types=1);
 
@@ -37,14 +15,9 @@ class Inventory
         $this->conn = Database::getConnection();
     }
 
-    // -------------------------------------------------------------------
     // STOCK (tồn kho hiện tại)
-    // -------------------------------------------------------------------
 
-    /**
-     * FR-STF-01: tồn kho hiện tại theo sản phẩm, gộp tất cả warehouse.
-     * Nếu $productId = null, trả về toàn bộ danh sách sản phẩm đang active.
-     */
+    /* FR-STF-01: tồn kho hiện tại theo sản phẩm, gộp tất cả warehouse. Nếu $productId = null, trả về toàn bộ danh sách sản phẩm đang active. */
     public function getStockByProduct(?int $productId = null): array
     {
         $sql = "SELECT p.product_id, p.sku_code, p.product_name, p.category_id,
@@ -67,7 +40,7 @@ class Inventory
         return $stmt->fetchAll();
     }
 
-    /** Tồn kho chi tiết theo từng warehouse - dùng khi goods_receipt/adjustments cần chọn kho cụ thể. */
+    /* Tồn kho chi tiết theo từng warehouse - dùng khi goods_receipt/adjustments cần chọn kho cụ thể. */
     public function getStockByProductAndWarehouse(int $productId, int $warehouseId): array|false
     {
         $stmt = $this->conn->prepare(
@@ -80,18 +53,9 @@ class Inventory
         return $stmt->fetch();
     }
 
-    // -------------------------------------------------------------------
     // NHẬP KHO (stock_in) - FR-STF-06, gọi từ Service sau khi Order::recordReceipt()
-    // -------------------------------------------------------------------
 
-    /**
-     * FR-STF-06: cộng tồn kho khi hàng về (sau khi đã xác nhận số lượng thực
-     * nhận qua PurchaseOrderService/Order model). Atomic: cộng `stock` + ghi
-     * `stock_movements` trong cùng transaction.
-     *
-     * @param int|null $referenceId po_id liên quan (nếu nhập từ PO), null nếu nhập tay
-     * @return array{success: bool, message: string}
-     */
+    /* FR-STF-06: cộng tồn kho khi hàng về (sau khi đã xác nhận số lượng thực nhận qua PurchaseOrderService/Order model). Atomic: cộng `stock` + ghi `stock_movements` trong cùng transaction. */
     public function stockIn(
         int $productId,
         int $warehouseId,
@@ -132,18 +96,10 @@ class Inventory
         }
     }
 
-    // -------------------------------------------------------------------
     // ĐIỀU CHỈNH TỒN KHO (adjustment) - FR-STF-08, BR-11
-    // -------------------------------------------------------------------
 
-    /**
-     * FR-STF-08 / BR-11: điều chỉnh tồn kho (hỏng/hết hạn/thất thoát), bắt buộc
-     * có $reason. $quantityChange có thể âm (hủy hàng) hoặc dương (phát hiện
-     * thừa khi kiểm kê thủ công ngoài phiên stock_count chính thức).
-     * BR-03: nếu $quantityChange âm và làm tồn kho < 0, từ chối giao dịch.
-     *
-     * @return array{success: bool, message: string}
-     */
+    /* FR-STF-08 / BR-11: điều chỉnh tồn kho (hỏng/hết hạn/thất thoát), bắt buộc có $reason. $quantityChange có thể âm (hủy hàng) hoặc dương (phát hiện thừa khi kiểm kê thủ công ngoài phiên stock_count chính thức).
+     * BR-03: nếu $quantityChange âm và làm tồn kho < 0, từ chối giao dịch. */
     public function adjustStock(
         int $productId,
         int $warehouseId,
@@ -158,8 +114,7 @@ class Inventory
         try {
             $this->conn->beginTransaction();
 
-            // Khóa dòng stock trước khi kiểm tra để tránh 2 điều chỉnh đồng thời
-            // cùng đọc thấy đủ hàng rồi cùng trừ âm (giống Sales::createTransaction()).
+            // Khóa dòng stock trước khi kiểm tra để tránh 2 điều chỉnh đồng thời cùng đọc thấy đủ hàng rồi cùng trừ âm (giống Sales::createTransaction()).
             $lockStmt = $this->conn->prepare(
                 "SELECT quantity_on_hand FROM {$this->table}
                  WHERE product_id = :product_id AND warehouse_id = :warehouse_id
@@ -206,11 +161,7 @@ class Inventory
         }
     }
 
-    /**
-     * Cộng/trừ vào dòng `stock` hiện có, hoặc tạo mới dòng (chỉ hợp lệ khi
-     * cộng dương, VD: lần đầu nhập kho 1 sản phẩm tại 1 warehouse chưa từng có).
-     * Hàm private dùng chung cho stockIn() và adjustStock().
-     */
+    /* Cộng/trừ vào dòng `stock` hiện có, hoặc tạo mới dòng (chỉ hợp lệ khi cộng dương, VD: lần đầu nhập kho 1 sản phẩm tại 1 warehouse chưa từng có). Hàm private dùng chung cho stockIn() và adjustStock(). */
     private function upsertStockRow(int $productId, int $warehouseId, int $quantityChange): void
     {
         $existing = $this->getStockByProductAndWarehouse($productId, $warehouseId);
@@ -238,7 +189,7 @@ class Inventory
         ]);
     }
 
-    /** FR-STF-12 (lịch sử điều chỉnh): trả về các dòng movement_type='adjustment' cho 1 sản phẩm. */
+    /* FR-STF-12 (lịch sử điều chỉnh): trả về các dòng movement_type='adjustment' cho 1 sản phẩm. */
     public function getAdjustmentHistory(int $productId): array
     {
         $stmt = $this->conn->prepare(
@@ -252,16 +203,9 @@ class Inventory
         return $stmt->fetchAll();
     }
 
-    // -------------------------------------------------------------------
     // STOCK BATCHES + FEFO (FR-STF-14)
-    // -------------------------------------------------------------------
 
-    /**
-     * FR-STF-14: danh sách lô hàng còn tồn của 1 sản phẩm, SẮP XẾP THEO FEFO -
-     * lô có expiry_date gần nhất lên đầu. Lô không có expiry_date (NULL) xếp
-     * SAU CÙNG (sản phẩm không cần FEFO đáng lẽ không nên có batch, nhưng xử
-     * lý an toàn nếu dữ liệu thiếu sót).
-     */
+    /* danh sách lô hàng còn tồn của 1 sản phẩm, SẮP XẾP THEO FEFO - lô có expiry_date gần nhất lên đầu. Lô không có expiry_date (NULL) xếp SAU CÙNG (sản phẩm không cần FEFO đáng lẽ không nên có batch, nhưng xử lý an toàn nếu dữ liệu thiếu sót). */
     public function getBatchesForFefo(int $productId): array
     {
         $stmt = $this->conn->prepare(
@@ -274,22 +218,14 @@ class Inventory
         return $stmt->fetchAll();
     }
 
-    /**
-     * FR-STF-14: batch_id nên xuất TRƯỚC TIÊN theo FEFO. Trả về null nếu hết batch.
-     * Dùng trong Sales.php trước khi gọi createTransaction() để xác định batch_id
-     * cho từng item (Sales::createTransaction() CHẤP NHẬN batch_id, không tự chọn).
-     */
+    /* batch_id nên xuất TRƯỚC TIÊN theo FEFO. Trả về null nếu hết batch. Dùng trong Sales.php trước khi gọi createTransaction() để xác định batch_id cho từng item (Sales::createTransaction() CHẤP NHẬN batch_id, không tự chọn). */
     public function getNextFefoBatch(int $productId): array|null
     {
         $batches = $this->getBatchesForFefo($productId);
         return $batches[0] ?? null;
     }
 
-    /**
-     * Trừ quantity_remaining của 1 batch cụ thể sau khi bán/xuất hàng theo FEFO.
-     * CHECK constraint chk_batch_qty ở DB là lớp bảo vệ cuối, nhưng kiểm tra ở
-     * đây để trả lỗi rõ ràng hơn thay vì PDOException thô.
-     */
+    /* Trừ quantity_remaining của 1 batch cụ thể sau khi bán/xuất hàng theo FEFO. CHECK constraint chk_batch_qty ở DB là lớp bảo vệ cuối, nhưng kiểm tra ở đây để trả lỗi rõ ràng hơn thay vì PDOException thô. */
     public function deductFromBatch(int $batchId, int $quantity): array
     {
         $stmt = $this->conn->prepare(
@@ -310,7 +246,7 @@ class Inventory
         return ['success' => true, 'message' => 'Đã trừ lô hàng theo FEFO.'];
     }
 
-    /** Ghi nhận 1 lô hàng mới khi nhập kho - gọi từ Service nếu sản phẩm thuộc category requires_fefo. */
+    /* Ghi nhận 1 lô hàng mới khi nhập kho - gọi từ Service nếu sản phẩm thuộc category requires_fefo. */
     public function createBatch(int $productId, string $receivedDate, ?string $expiryDate, int $quantity): string
     {
         $stmt = $this->conn->prepare(
@@ -326,10 +262,7 @@ class Inventory
         return $this->conn->lastInsertId();
     }
 
-    /**
-     * Cảnh báo lô sắp hết hạn trong N giờ tới (dùng EXPIRY_ALERT_WINDOW_HOURS
-     * từ app_config.php làm giá trị mặc định ở Service).
-     */
+    /* Cảnh báo lô sắp hết hạn trong N giờ tới (dùng EXPIRY_ALERT_WINDOW_HOURS từ app_config.php làm giá trị mặc định ở Service). */
     public function getExpiringBatches(int $withinHours): array
     {
         $stmt = $this->conn->prepare(

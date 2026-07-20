@@ -1,24 +1,4 @@
 <?php
-/**
- * File: backend/models/Order.php
- * Purpose: CRUD cho purchase_orders/purchase_order_details, bao gồm luồng
- * chuyển trạng thái (Draft -> Pending -> Approved/Rejected -> Delivered).
- * Related: BR-06 (Manager override số lượng, có audit log), BR-07 (PO chỉ gửi
- *          NCC sau khi Admin duyệt), BR-08/BR-09/BR-10 (đối chiếu nhận hàng,
- *          ghi nhận sai lệch), BR-20 (khóa record khi Pending - chỉ sửa được
- *          approved_qty lúc còn Draft).
- *
- * Theo đúng pattern của Product::upsertReorderRule() (đã có trong repo): các
- * hành động nhạy cảm (submit/approve/reject) TỰ GHI Logger::log() ngay trong
- * Model, không đợi Service gọi riêng - đảm bảo không có đường nào đổi status
- * PO mà quên ghi audit log.
- *
- * Bảng liên quan (đã có trong DB, xem db.sql):
- *   purchase_orders(po_id, supplier_id, created_by, status, approved_by,
- *                    created_at, approved_at)
- *   purchase_order_details(po_detail_id, po_id, product_id, suggested_qty,
- *                           approved_qty, received_qty, discrepancy_reason)
- */
 
 declare(strict_types=1);
 
@@ -30,7 +10,7 @@ class Order
     private PDO $conn;
     private string $table = 'purchase_orders';
 
-    /** BR-20: chỉ các trạng thái này cho phép sửa qty/product của các dòng PO. */
+    /* BR-20: chỉ các trạng thái này cho phép sửa qty/product của các dòng PO. */
     private const EDITABLE_STATUSES = ['Draft'];
 
     public function __construct()
@@ -38,9 +18,7 @@ class Order
         $this->conn = Database::getConnection();
     }
 
-    // -------------------------------------------------------------------
     // purchase_orders - CRUD & truy vấn
-    // -------------------------------------------------------------------
 
     public function getById(int $poId): array|false
     {
@@ -59,12 +37,7 @@ class Order
         return $stmt->fetch();
     }
 
-    /**
-     * FR-MGR-06 / FR-ADM-06: danh sách PO, lọc theo status/created_by nếu cần.
-     * total_amount = tổng giá trị NHẬP HÀNG của cả đơn (SUM approved_qty × unit_cost
-     * từng dòng) - đây là giá trị đặt hàng với NCC, KHÔNG phải doanh thu bán
-     * (schema chưa có giá bán lẻ, xem ghi chú trong Product.php).
-     */
+    /* FR-MGR-06 / FR-ADM-06: danh sách PO, lọc theo status/created_by nếu cần; total_amount = tổng giá trị NHẬP HÀNG của cả đơn (SUM approved_qty × unit_cost từng dòng) - đây là giá trị đặt hàng với NCC, KHÔNG phải doanh thu bán (schema chưa có giá bán lẻ, xem ghi chú trong Product.php). */
     public function getAll(?string $status = null, ?int $createdBy = null): array
     {
         $sql = "SELECT po.po_id, s.supplier_name, po.status, po.created_at, po.approved_at,
@@ -95,18 +68,14 @@ class Order
         return $stmt->fetchAll();
     }
 
-    /** FR-ADM-06: danh sách PO đang chờ Admin duyệt. */
+    /* FR-ADM-06: danh sách PO đang chờ Admin duyệt. */
     public function getPendingApproval(): array
     {
         return $this->getAll('Pending');
     }
 
-    /**
-     * FR-STF-05/07 / FR-ADM-06: chi tiết dòng PO, kèm unit_cost (giá nhập) và
-     * line_cost (approved_qty × unit_cost) đã tính sẵn - dùng để hiển thị/tính
-     * tổng "Amount" của cả đơn PO ở AdminService::getPurchaseOrderDetail() và
-     * PurchaseOrderService, tránh lặp phép tính ở nhiều nơi.
-     */
+    /* FR-STF-05/07 / FR-ADM-06: chi tiết dòng PO, kèm unit_cost (giá nhập) và line_cost (approved_qty × unit_cost) đã tính sẵn.
+     * Dùng để hiển thị/tính tổng "Amount" của cả đơn PO ở AdminService::getPurchaseOrderDetail() và PurchaseOrderService, tránh lặp phép tính ở nhiều nơi. */
     public function getDetails(int $poId): array
     {
         $stmt = $this->conn->prepare(
@@ -121,14 +90,9 @@ class Order
         return $stmt->fetchAll();
     }
 
-    /**
-     * FR-MGR-04: Manager tạo PO mới ở trạng thái 'Draft', kèm chi tiết dòng SP.
-     * $lines: [['product_id'=>int,'suggested_qty'=>int,'approved_qty'=>int], ...]
-     * approved_qty ở bước này là số lượng Manager đã override (BR-06); nếu
-     * không truyền, mặc định = suggested_qty.
-     *
-     * @return array{success: bool, po_id?: string, message: string}
-     */
+    /* FR-MGR-04: Manager tạo PO mới ở trạng thái 'Draft', kèm chi tiết dòng SP.
+     * $lines: [['product_id'=>int,'suggested_qty'=>int,'approved_qty'=>int], ...] approved_qty ở bước này là số lượng Manager đã override 
+     * (BR-06); nếu không truyền, mặc định = suggested_qty. */
     public function createDraft(int $supplierId, int $createdBy, array $lines): array
     {
         if (empty($lines)) {
@@ -170,11 +134,8 @@ class Order
         }
     }
 
-    /**
-     * BR-06: Manager chỉnh sửa approved_qty của 1 dòng PO - chỉ được phép khi
-     * PO còn 'Draft'. Ghi Logger::log('OVERRIDE_PO_QTY') để lưu vết thay đổi
-     * (khớp mẫu đã có trong audit_logs seed data).
-     */
+    /* BR-06: Manager chỉnh sửa approved_qty của 1 dòng PO - chỉ được phép khi PO còn 'Draft'.
+     * Ghi Logger::log('OVERRIDE_PO_QTY') để lưu vết thay đổi (khớp mẫu đã có trong audit_logs seed data). */
     public function updateLineQuantity(int $poId, int $poDetailId, int $newQty, int $updatedBy): array
     {
         $po = $this->getById($poId);
@@ -201,11 +162,8 @@ class Order
         return ['success' => $ok, 'message' => $ok ? 'Đã cập nhật số lượng.' : 'Có lỗi xảy ra khi cập nhật.'];
     }
 
-    /**
-     * FR-MGR-04: Manager submit PO để Admin duyệt - Draft -> Pending.
-     * BR-20: sau bước này, purchase_order_details bị khóa cho tới khi Admin
-     * approve/reject (enforce qua updateLineQuantity() kiểm tra status ở trên).
-     */
+    /* FR-MGR-04: Manager submit PO để Admin duyệt - Draft -> Pending.
+     * BR-20: sau bước này, purchase_order_details bị khóa cho tới khi Admin approve/reject (enforce qua updateLineQuantity() kiểm tra status ở trên). */
     public function submitForApproval(int $poId): array
     {
         $po = $this->getById($poId);
@@ -224,11 +182,8 @@ class Order
         return ['success' => $ok, 'message' => $ok ? 'Đã gửi đơn cho Admin duyệt.' : 'Có lỗi xảy ra.'];
     }
 
-    /**
-     * FR-ADM-06 / BR-07: Admin duyệt PO - Pending -> Approved. Đây là thời
-     * điểm DUY NHẤT PO được phép gửi tới nhà cung cấp về mặt nghiệp vụ (việc
-     * gọi API/gửi thông báo cho NCC thực tế nằm ở Service, không phải Model).
-     */
+    /* FR-ADM-06 / BR-07: Admin duyệt PO - Pending -> Approved.
+     * Đây là thời điểm DUY NHẤT PO được phép gửi tới nhà cung cấp về mặt nghiệp vụ (việc gọi API/gửi thông báo cho NCC thực tế nằm ở Service, không phải Model). */
     public function approve(int $poId, int $approvedBy): array
     {
         $po = $this->getById($poId);
@@ -253,12 +208,8 @@ class Order
         return ['success' => $ok, 'message' => $ok ? 'Đã duyệt đơn đặt hàng.' : 'Có lỗi xảy ra khi duyệt.'];
     }
 
-    /**
-     * FR-ADM-06 / BR-20: Admin từ chối PO - Pending -> Rejected. Sau khi
-     * Rejected, PO KHÔNG tự mở khóa để sửa lại - Manager tạo lại 1 Draft mới
-     * (createDraft()) nếu muốn gửi lại, giữ audit trail rõ ràng (1 po_id =
-     * đúng 1 lần submit).
-     */
+    /* FR-ADM-06 / BR-20: Admin từ chối PO - Pending -> Rejected.
+     * Sau khi Rejected, PO KHÔNG tự mở khóa để sửa lại - Manager tạo lại 1 Draft mới (createDraft()) nếu muốn gửi lại, giữ audit trail rõ ràng (1 po_id = đúng 1 lần submit). */
     public function reject(int $poId, int $rejectedBy): array
     {
         $po = $this->getById($poId);
@@ -283,21 +234,12 @@ class Order
         return ['success' => $ok, 'message' => $ok ? 'Đã từ chối đơn đặt hàng.' : 'Có lỗi xảy ra.'];
     }
 
-    // -------------------------------------------------------------------
     // GOODS RECEIPT - BR-08/BR-09/BR-10 (FR-STF-05/06/07)
-    // -------------------------------------------------------------------
 
-    /**
-     * FR-STF-05/07: ghi nhận số lượng thực nhận cho 1 dòng PO khi hàng về.
-     * BR-08: giả định Staff đã đối chiếu bằng mắt số lượng thực tế với PO ở
-     * UI trước khi gọi hàm này.
-     * BR-09: chỉ received_qty ghi ở đây mới được cộng vào stock - việc cộng
-     * stock (gọi Inventory::stockIn()) PHẢI do Service gọi RIÊNG sau khi hàm
-     * này chạy thành công, để giữ Order.php không phụ thuộc chéo Inventory.php.
-     * BR-10: nếu receivedQty != approved_qty, $discrepancyReason bắt buộc.
-     *
-     * @return array{success: bool, message: string}
-     */
+    /* FR-STF-05/07: ghi nhận số lượng thực nhận cho 1 dòng PO khi hàng về.
+     * BR-08: giả định Staff đã đối chiếu bằng mắt số lượng thực tế với PO ở UI trước khi gọi hàm này.
+     * BR-09: chỉ received_qty ghi ở đây mới được cộng vào stock - việc cộng stock (gọi Inventory::stockIn()) PHẢI do Service gọi RIÊNG sau khi hàm này chạy thành công, để giữ Order.php không phụ thuộc chéo Inventory.php.
+     * BR-10: nếu receivedQty != approved_qty, $discrepancyReason bắt buộc. */
     public function recordReceipt(int $poDetailId, int $receivedQty, ?string $discrepancyReason): array
     {
         $stmt = $this->conn->prepare(
@@ -331,10 +273,7 @@ class Order
         return ['success' => $ok, 'message' => $ok ? 'Đã ghi nhận số lượng thực nhận.' : 'Có lỗi xảy ra.'];
     }
 
-    /**
-     * FR-MGR-06: sau khi toàn bộ dòng của 1 PO đã có received_qty, Service gọi
-     * hàm này để đóng đơn - Approved -> Delivered.
-     */
+    /* FR-MGR-06: sau khi toàn bộ dòng của 1 PO đã có received_qty, Service gọi hàm này để đóng đơn - Approved -> Delivered. */
     public function markDelivered(int $poId): array
     {
         $po = $this->getById($poId);

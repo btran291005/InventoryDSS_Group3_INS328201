@@ -1,36 +1,4 @@
 <?php
-/**
- * File: backend/models/Product.php
- * Purpose: CRUD cho bảng products, categories (read-only helper), và reorder_rules.
- * Đây là tầng data-access thuần (query DB) - các công thức nghiệp vụ như
- * "Top 10 stock-out risk", "low-stock ưu tiên" thuộc về Service layer (Phase 4,
- * xem ManagerService::getStockoutRisk() / StaffService), vì chúng cần JOIN thêm
- * dữ liệu từ Inventory.php (bảng stock) và Sales.php (sales_transaction_details).
- *
- * Related: BR-01 (SKU duy nhất, thuộc đúng 1 category), BR-05 (công thức reorder
- * dựa trên reorder_point/safety_stock), BR-16 (chỉ Admin cấu hình reorder rule -
- * việc kiểm tra role thực hiện ở Middleware/Service, KHÔNG kiểm tra ở Model),
- * FR-ADM-01, FR-ADM-04, FR-ADM-05.
- *
- * Bảng liên quan (đã có trong DB, xem db.sql):
- *   products(product_id, sku_code, product_name, category_id, supplier_id, unit,
- *            shelf_life_days, unit_cost, is_active)
- *   categories(category_id, category_name, category_type, requires_fefo)
- *   reorder_rules(rule_id, category_id NULL, product_id NULL, min_stock, max_stock,
- *                 safety_stock, reorder_point, updated_by, updated_at)
- *     - CHECK: category_id IS NOT NULL OR product_id IS NOT NULL
- *     - Rule theo product_id (nếu có) LUÔN ưu tiên hơn rule theo category_id
- *       (xem seed data: rule riêng cho SKU bán chạy ghi đè rule chung của category).
- *
- * LƯU Ý QUAN TRỌNG (đã kiểm tra lại db.sql):
- *   - products KHÔNG có cột current_stock. Tồn kho nằm ở bảng `stock` (per
- *     warehouse) do Inventory.php quản lý.
- *   - products.unit_cost = giá NHẬP từ nhà cung cấp (dùng để tính giá trị đơn
- *     đặt hàng - PO Amount). Đây KHÔNG phải giá bán lẻ - hệ thống hiện chưa có
- *     giá bán lẻ (sales_transaction_details chưa có unit_price), nên "doanh
- *     thu" (revenue) vẫn KHÔNG tính được, chỉ giá trị NHẬP HÀNG mới tính được.
- *   - products KHÔNG có created_at/updated_at.
- */
 
 declare(strict_types=1);
 
@@ -47,13 +15,9 @@ class Product
         $this->conn = Database::getConnection();
     }
 
-    // -------------------------------------------------------------------
     // CRUD: products
-    // -------------------------------------------------------------------
 
-    /**
-     * FR-ADM-01 / FR-STF-01: danh sách sản phẩm, JOIN sẵn category để hiển thị.
-     */
+    /* FR-ADM-01 / FR-STF-01: danh sách sản phẩm, JOIN sẵn category để hiển thị. */
     public function getAll(?int $categoryId = null, ?string $keyword = null, bool $activeOnly = false): array
     {
         $sql = "SELECT p.*, c.category_name, c.category_type, c.requires_fefo
@@ -102,15 +66,8 @@ class Product
         return $stmt->fetch();
     }
 
-    /**
-     * BR-01: sku_code là UNIQUE KEY trong DB. Nếu trùng, PDO ném PDOException
-     * mã lỗi 23000 -> bắt lại và trả về thông báo rõ ràng thay vì để lộ lỗi SQL thô.
-     *
-     * unit_cost (giá nhập từ NCC) bắt buộc >= 0 - dùng để tính giá trị đơn đặt
-     * hàng (PO Amount) ở PurchaseOrderService/AdminService, KHÔNG phải giá bán lẻ.
-     *
-     * @return array{success: bool, product_id?: string, message: string}
-     */
+    /* BR-01: sku_code là UNIQUE KEY trong DB; nếu trùng, PDO ném PDOException mã lỗi 23000 -> bắt lại và trả về thông báo rõ ràng thay vì để lộ lỗi SQL thô.
+     * unit_cost (giá nhập từ NCC) bắt buộc >= 0 - dùng để tính giá trị đơn đặt hàng (PO Amount) ở PurchaseOrderService/AdminService, KHÔNG phải giá bán lẻ. */
     public function create(array $data): array
     {
         $unitCost = (float) ($data['unit_cost'] ?? 0);
@@ -150,7 +107,7 @@ class Product
         }
     }
 
-    /** $allowed field 'unit_cost': giá nhập từ NCC - PHẢI ép kiểu float >= 0 nếu có mặt trong $data (validate ở Service trước khi gọi). */
+    /* $allowed field 'unit_cost': giá nhập từ NCC - PHẢI ép kiểu float >= 0 nếu có mặt trong $data (validate ở Service trước khi gọi). */
     public function update(int $productId, array $data): bool
     {
         $allowed = ['sku_code', 'product_name', 'category_id', 'supplier_id', 'unit', 'shelf_life_days', 'unit_cost', 'is_active'];
@@ -175,13 +132,8 @@ class Product
         return $stmt->execute($params);
     }
 
-    /**
-     * "Xóa" sản phẩm = vô hiệu hóa (is_active = 0), KHÔNG xóa cứng.
-     * Lý do: product_id được nhiều bảng khác tham chiếu (stock, stock_batches,
-     * reorder_rules, sales_transaction_details, purchase_order_details,
-     * customer_feedback, shortage_incidents...) mà không có ON DELETE CASCADE
-     * -> DELETE cứng sẽ gây lỗi ràng buộc khóa ngoại và mất lịch sử giao dịch.
-     */
+    /* "Xóa" sản phẩm = vô hiệu hóa (is_active = 0), KHÔNG xóa cứng.
+     * Lý do: product_id được nhiều bảng khác tham chiếu (stock, stock_batches, reorder_rules, sales_transaction_details, purchase_order_details, customer_feedback, shortage_incidents...) mà không có ON DELETE CASCADE -> DELETE cứng sẽ gây lỗi ràng buộc khóa ngoại và mất lịch sử giao dịch. */
     public function deactivate(int $productId): bool
     {
         $stmt = $this->conn->prepare("UPDATE {$this->table} SET is_active = 0 WHERE product_id = :id");
@@ -194,11 +146,8 @@ class Product
         return $stmt->execute([':id' => $productId]);
     }
 
-    /**
-     * Xóa cứng - chỉ dùng khi chắc chắn sản phẩm chưa từng phát sinh giao dịch nào.
-     * Nếu còn bị FK tham chiếu, MySQL sẽ từ chối (error code 23000) -> trả về false
-     * thay vì để lộ lỗi SQL, gợi ý Controller dùng deactivate() thay thế.
-     */
+    /* Xóa cứng - chỉ dùng khi chắc chắn sản phẩm chưa từng phát sinh giao dịch nào.
+     * Nếu còn bị FK tham chiếu, MySQL sẽ từ chối (error code 23000) -> trả về false thay vì để lộ lỗi SQL, gợi ý Controller dùng deactivate() thay thế. */
     public function delete(int $productId): bool
     {
         try {
@@ -210,26 +159,18 @@ class Product
         }
     }
 
-    // -------------------------------------------------------------------
     // Helper: categories (không có Category.php riêng, đọc trực tiếp ở đây)
-    // -------------------------------------------------------------------
 
-    /** FR-ADM-05: dropdown category khi tạo/sửa sản phẩm */
+    /* FR-ADM-05: dropdown category khi tạo/sửa sản phẩm */
     public function getCategories(): array
     {
         $stmt = $this->conn->query("SELECT * FROM categories ORDER BY category_name ASC");
         return $stmt->fetchAll();
     }
 
-    // -------------------------------------------------------------------
     // reorder_rules
-    // -------------------------------------------------------------------
 
-    /**
-     * BR-05: Lấy rule đang có hiệu lực cho 1 sản phẩm.
-     * Ưu tiên rule riêng theo product_id; nếu không có, fallback về rule
-     * chung của category_id mà sản phẩm đó thuộc về.
-     */
+    /* BR-05: Lấy rule đang có hiệu lực cho 1 sản phẩm. Ưu tiên rule riêng theo product_id; nếu không có, fallback về rule chung của category_id mà sản phẩm đó thuộc về. */
     public function getEffectiveReorderRule(int $productId): array|false
     {
         $stmt = $this->conn->prepare(
@@ -272,14 +213,9 @@ class Product
         return $stmt->fetchAll();
     }
 
-    /**
-     * BR-16: chỉ Admin được cấu hình reorder_point/min/max/safety_stock.
-     * Model không kiểm tra role (đã có Middleware::guard([ROLE_ADMIN]) ở Controller) -
-     * nhưng LUÔN ghi audit log vì đây là hành động thay đổi chính sách nhạy cảm
-     * (FR-SYS-03, khớp mẫu 'UPDATE_REORDER_RULE' đã có sẵn trong audit_logs seed data).
-     *
-     * $target: ['category_id' => int] HOẶC ['product_id' => int] (đúng 1 trong 2).
-     */
+    /* BR-16: chỉ Admin được cấu hình reorder_point/min/max/safety_stock.
+     * Model không kiểm tra role (đã có Middleware::guard([ROLE_ADMIN]) ở Controller) - nhưng LUÔN ghi audit log vì đây là hành động thay đổi chính sách nhạy cảm (FR-SYS-03, khớp mẫu 'UPDATE_REORDER_RULE' đã có sẵn trong audit_logs seed data).
+     * $target: ['category_id' => int] HOẶC ['product_id' => int] (đúng 1 trong 2). */
     public function upsertReorderRule(array $target, array $data, int $updatedBy): array
     {
         $categoryId = $target['category_id'] ?? null;

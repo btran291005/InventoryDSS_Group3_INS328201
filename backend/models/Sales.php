@@ -1,31 +1,4 @@
 <?php
-/**
- * File: backend/models/Sales.php
- * Purpose: CRUD cho sales_transactions/sales_transaction_details; khi 1 giao dịch
- * được xác nhận, tự động trừ kho trong bảng `stock` và ghi log vào `stock_movements`
- * trong CÙNG một DB transaction (atomic) - nếu bất kỳ dòng nào không đủ tồn kho,
- * rollback toàn bộ giao dịch.
- *
- * Related: FR-STF-02, BR-02 (tự động trừ kho), BR-03 (không cho âm kho)
- *
- * Bảng liên quan (đã có trong DB, xem db.sql):
- *   sales_transactions(transaction_id, performed_by, transaction_time)
- *   sales_transaction_details(detail_id, transaction_id, product_id, quantity_sold, batch_id)
- *     - batch_id nullable, tham chiếu stock_batches (dùng khi có FEFO, xem Inventory.php)
- *   stock(stock_id, product_id, warehouse_id, quantity_on_hand, last_updated)
- *     - UNIQUE(product_id, warehouse_id), CHECK quantity_on_hand >= 0 (DB tự chặn âm kho)
- *   stock_movements(movement_id, product_id, movement_type, quantity_change, reason,
- *                   reference_id, performed_by, created_at)
- *
- * LƯU Ý QUAN TRỌNG (đã kiểm tra lại db.sql):
- *   - sales_transactions/sales_transaction_details KHÔNG có cột giá (unit_price)
- *     hay total_amount - schema hiện tại chỉ theo dõi SỐ LƯỢNG bán, không có
- *     doanh thu bằng tiền. Nếu dashboard/report cần "doanh thu", products cần
- *     thêm cột price ở Phase 1 (báo lại nhóm nếu cần bổ sung).
- *   - Việc chọn batch theo FEFO (batch_id) là trách nhiệm của Inventory.php
- *     (chưa code ở phase này) - Sales::createTransaction() chỉ CHẤP NHẬN batch_id
- *     nếu Controller/Service đã xác định sẵn, không tự chọn batch ở đây.
- */
 
 declare(strict_types=1);
 
@@ -42,15 +15,7 @@ class Sales
         $this->conn = Database::getConnection();
     }
 
-    /**
-     * BR-02 + BR-03: Tạo giao dịch bán hàng và trừ kho ngay lập tức, atomic.
-     *
-     * @param int   $staffId     account_id của Store Staff thực hiện (performed_by)
-     * @param int   $warehouseId Kho/kệ xuất hàng (VD: Kệ trưng bày = 1, Tủ mát = 2)
-     * @param array $items       [['product_id'=>1,'quantity_sold'=>2,'batch_id'=>null], ...]
-     *
-     * @return array{success: bool, transaction_id: string|null, message: string}
-     */
+    /* BR-02 + BR-03: Tạo giao dịch bán hàng và trừ kho ngay lập tức, atomic. */
     public function createTransaction(int $staffId, int $warehouseId, array $items): array
     {
         if (empty($items)) {
@@ -60,8 +25,7 @@ class Sales
         try {
             $this->conn->beginTransaction();
 
-            // Khóa các dòng stock liên quan trước (SELECT ... FOR UPDATE) để 2 giao dịch
-            // bán cùng sản phẩm/cùng lúc không thể cùng đọc thấy đủ hàng rồi cùng trừ âm.
+            // Khóa các dòng stock liên quan trước (SELECT ... FOR UPDATE) để 2 giao dịch bán cùng sản phẩm/cùng lúc không thể cùng đọc thấy đủ hàng rồi cùng trừ âm.
             $lockStmt = $this->conn->prepare(
                 "SELECT quantity_on_hand FROM stock
                  WHERE product_id = :product_id AND warehouse_id = :warehouse_id
@@ -128,8 +92,7 @@ class Sales
                     ':batch_id'       => $item['batch_id'] ?? null,
                 ]);
 
-                // CHECK constraint chk_qty_positive ở DB là lớp bảo vệ cuối cùng cho BR-03,
-                // nhưng ta đã khóa + kiểm tra trước nên về lý thuyết không thể âm ở đây.
+                // CHECK constraint chk_qty_positive ở DB là lớp bảo vệ cuối cùng cho BR-03, nhưng ta đã khóa + kiểm tra trước nên về lý thuyết không thể âm ở đây.
                 $updateStockStmt->execute([
                     ':qty'          => $qty,
                     ':product_id'   => $productId,
@@ -198,11 +161,8 @@ class Sales
         return $stmt->fetchAll();
     }
 
-    /**
-     * FR-STF-13: lịch sử bán hàng 7/30 ngày cho 1 sản phẩm (theo SỐ LƯỢNG bán/ngày).
-     * Dùng SALES_HISTORY_SHORT_RANGE_DAYS / SALES_HISTORY_LONG_RANGE_DAYS
-     * (định nghĩa ở backend/config/app_config.php) làm giá trị mặc định hợp lệ.
-     */
+    /* FR-STF-13: lịch sử bán hàng 7/30 ngày cho 1 sản phẩm (theo số lượng bán/ngày).
+     * Dùng SALES_HISTORY_SHORT_RANGE_DAYS / SALES_HISTORY_LONG_RANGE_DAYS (định nghĩa ở backend/config/app_config.php) làm giá trị mặc định hợp lệ. */
     public function getSalesHistory(int $productId, int $days = SALES_HISTORY_SHORT_RANGE_DAYS): array
     {
         $allowedRanges = [SALES_HISTORY_SHORT_RANGE_DAYS, SALES_HISTORY_LONG_RANGE_DAYS];

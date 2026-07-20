@@ -1,17 +1,4 @@
 <?php
-/**
- * File: backend/models/Warehouse.php
- * Purpose: CRUD cho bảng warehouses (master data).
- * Related: FR-ADM-01
- *
- * Bảng warehouses (đã có trong DB, xem db.sql):
- *   warehouse_id, warehouse_name, location
- *   (không có created_at/updated_at trong schema hiện tại)
- *
- * LƯU Ý: bảng `stock` tham chiếu warehouse_id (FK, không có ON DELETE CASCADE),
- * nên delete() sẽ thất bại nếu warehouse đó đang còn tồn kho - đây là hành vi
- * đúng mong muốn (tránh xóa nhầm kho đang có hàng).
- */
 
 declare(strict_types=1);
 
@@ -75,10 +62,7 @@ class Warehouse
         return $stmt->execute($params);
     }
 
-    /**
-     * Xóa cứng. Nếu warehouse còn dữ liệu trong `stock` (FK), MySQL từ chối
-     * (error code 23000) -> trả về false thay vì lộ lỗi SQL thô.
-     */
+    /* Xóa cứng. Nếu warehouse còn dữ liệu trong stock (FK), MySQL từ chối (error code 23000) -> trả về false thay vì lộ lỗi SQL thô. */
     public function delete(int $warehouseId): bool
     {
         try {

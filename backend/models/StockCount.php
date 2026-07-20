@@ -1,33 +1,4 @@
 <?php
-/**
- * File: backend/models/StockCount.php
- * Purpose: CRUD cho stock_counts, stock_count_details, customer_feedback,
- * shortage_incidents.
- * Related: FR-STF-04, FR-STF-09, FR-STF-11, FR-ADM-09, BR-14
- *
- * Bảng liên quan (đã có trong DB, xem db.sql):
- *   stock_counts(count_id, performed_by, count_date)
- *   stock_count_details(count_detail_id, count_id, product_id, system_qty, actual_qty,
- *                        discrepancy) -- discrepancy là GENERATED COLUMN
- *                        (= actual_qty - system_qty), KHÔNG được INSERT/UPDATE thủ công.
- *   customer_feedback(feedback_id, product_id NULL, logged_by, feedback_text, created_at)
- *   shortage_incidents(incident_id, product_id, handled_by, resolution_action,
- *                       status ENUM('Open','Resolved'), created_at)
- *
- * ⚠️ SCHEMA GAP CẦN NHÓM XÁC NHẬN LẠI:
- *   stock_counts / stock_count_details KHÔNG có cột warehouse_id, trong khi tồn kho
- *   thực tế (`stock`) được lưu theo TỪNG warehouse (1 sản phẩm có thể có nhiều dòng
- *   stock ở nhiều kho khác nhau). Vì vậy:
- *     - system_qty ở đây được tính bằng TỔNG quantity_on_hand của sản phẩm trên
- *       TẤT CẢ các warehouse (khớp với cách dữ liệu mẫu trong db.sql được tạo,
- *       VD sản phẩm 10: kho 1 có 45 + kho 4 có 200 = 245, đúng bằng system_qty mẫu).
- *     - VÌ KHÔNG BIẾT chênh lệch phát sinh ở kho nào, completeSession() KHÔNG tự
- *       động sửa lại bảng `stock` (tránh trừ/cộng nhầm kho) - chỉ ghi nhận chênh
- *       lệch vào stock_movements để Admin/Manager xem xét và điều chỉnh thủ công.
- *   Nếu muốn kiểm kê theo TỪNG kho và tự động sửa đúng dòng `stock` tương ứng,
- *   cần bổ sung cột warehouse_id vào stock_counts (hoặc stock_count_details) ở
- *   Phase 1. Báo lại nếu muốn tôi đề xuất câu ALTER TABLE cho việc này.
- */
 
 declare(strict_types=1);
 
@@ -43,11 +14,9 @@ class StockCount
         $this->conn = Database::getConnection();
     }
 
-    // -------------------------------------------------------------------
     // stock_counts / stock_count_details
-    // -------------------------------------------------------------------
 
-    /** FR-STF-09: bắt đầu 1 phiên kiểm kê mới. */
+    /* FR-STF-09: bắt đầu 1 phiên kiểm kê mới. */
     public function createSession(int $staffId): string
     {
         $stmt = $this->conn->prepare(
@@ -57,14 +26,9 @@ class StockCount
         return $this->conn->lastInsertId();
     }
 
-    /**
-     * FR-STF-04 / BR-14: ghi nhận số lượng đếm thực tế cho 1 sản phẩm.
-     * system_qty được TỰ ĐỘNG lấy = tổng quantity_on_hand hiện tại của sản phẩm
-     * trên tất cả các kho (xem ghi chú SCHEMA GAP ở đầu file).
-     *
-     * @return array{success: bool, detail_id?: string, system_qty?: int,
-     *               actual_qty?: int, discrepancy?: int, message: string}
-     */
+    /* FR-STF-04 / BR-14: ghi nhận số lượng đếm thực tế cho 1 sản phẩm.
+     * system_qty được TỰ ĐỘNG lấy = tổng quantity_on_hand hiện tại của sản phẩm trên tất cả các kho (xem ghi chú SCHEMA GAP ở đầu file).
+     * @return array{success: bool, detail_id?: string, system_qty?: int, actual_qty?: int, discrepancy?: int, message: string} */
     public function addCountItem(int $countId, int $productId, int $actualQty): array
     {
         $sysStmt = $this->conn->prepare(
@@ -95,11 +59,7 @@ class StockCount
         ];
     }
 
-    /**
-     * FR-STF-09 / BR-14: hoàn tất phiên kiểm kê - với mỗi dòng có discrepancy != 0,
-     * ghi 1 dòng vào stock_movements (movement_type = 'count_correction') để lưu
-     * vết, KHÔNG tự sửa bảng `stock` (xem SCHEMA GAP ở đầu file).
-     */
+    /* FR-STF-09 / BR-14: hoàn tất phiên kiểm kê - với mỗi dòng có discrepancy != 0, ghi 1 dòng vào stock_movements (movement_type = 'count_correction') để lưu vết, KHÔNG tự sửa bảng stock (xem SCHEMA GAP ở đầu file). */
     public function finalizeSession(int $countId, int $staffId): array
     {
         try {
@@ -170,7 +130,7 @@ class StockCount
         return $session;
     }
 
-    /** FR-ADM-09: lịch sử kiểm kê toàn hệ thống + số dòng lệch, cho Admin theo dõi bất thường. */
+    /* FR-ADM-09: lịch sử kiểm kê toàn hệ thống + số dòng lệch, cho Admin theo dõi bất thường. */
     public function getHistory(): array
     {
         $sql = "SELECT sc.*, a.full_name AS performed_by_name,
@@ -186,9 +146,7 @@ class StockCount
         return $stmt->fetchAll();
     }
 
-    // -------------------------------------------------------------------
     // customer_feedback (FR-STF-11)
-    // -------------------------------------------------------------------
 
     public function addCustomerFeedback(?int $productId, int $loggedBy, string $feedbackText): string
     {
@@ -226,9 +184,7 @@ class StockCount
         return $stmt->fetchAll();
     }
 
-    // -------------------------------------------------------------------
     // shortage_incidents (User Story: log stock-shortage incidents)
-    // -------------------------------------------------------------------
 
     public function createShortageIncident(int $productId, int $handledBy, ?string $resolutionAction = null): string
     {
