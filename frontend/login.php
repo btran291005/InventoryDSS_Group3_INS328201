@@ -1,22 +1,4 @@
 <?php
-/**
- * File: frontend/login.php
- * Purpose: Trang đăng nhập. Gọi Auth::login(), thành công thì redirect
- * tới dashboard đúng role; thất bại thì hiển thị lỗi ngay trên form.
- * Related: FR-SYS-01, NFR-03, BR-19
- *
- * UI note: split-screen "Enterprise Login" (logo + hero panel bên trái,
- * form bên phải), có 3 tab chọn Role (Admin/Manager/Store Staff) phía
- * trên form. Dùng Bootstrap 5 (CDN) cho layout/grid/form control; phần
- * CSS custom (gradient thương hiệu, hiệu ứng network trên hero panel...)
- * tách riêng ra assets/css/login.css - xem file đó để sửa style.
- *
- * Role-tab guard: user PHẢI chọn 1 role trước khi login. Role chọn trên UI
- * được so với role_id thật của account trong DB (qua Auth::login()) - nếu
- * KHÔNG khớp, từ chối đăng nhập ngay tại đây (không tạo session), báo lỗi
- * "không đúng vai trò". Đây là validation ở tầng server (Auth.php), tab UI
- * chỉ là lớp thuận tiện, không phải cơ chế bảo mật duy nhất (NFR-03).
- */
 
 declare(strict_types=1);
 
@@ -33,9 +15,7 @@ if (Auth::check()) {
     exit;
 }
 
-// 3 tab role hiển thị trên UI - dùng thẳng ROLE_NAMES đã định nghĩa ở
-// app_config.php (single source of truth cho map role_id -> tên hiển thị,
-// tránh duplicate dữ liệu giữa 2 nơi).
+// 3 tab role hiển thị trên UI - dùng thẳng ROLE_NAMES đã định nghĩa ở app_config.php (single source of truth cho map role_id -> tên hiển thị, tránh duplicate dữ liệu giữa 2 nơi).
 $roleTabs = ROLE_NAMES;
 
 $errorMessage = '';
@@ -48,13 +28,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Chặn giá trị role_id lạ (không thuộc 3 role đã biết) bị POST thủ công
     if (!array_key_exists($postedRoleId, $roleTabs)) {
-        $errorMessage = 'Vui lòng chọn vai trò hợp lệ trước khi đăng nhập.';
+        $errorMessage = 'Please select a valid role before signing in.';
     } else {
         $selectedRole = $postedRoleId;
 
-        // Role đã chọn được truyền vào Auth::login() -> Auth.php tự so sánh với
-        // role_id thật trong DB SAU khi xác thực đúng mật khẩu, và từ chối nếu
-        // lệch (không tạo session trong trường hợp đó).
+        // Role đã chọn được truyền vào Auth::login() -> Auth.php tự so sánh với role_id thật trong DB SAU khi xác thực đúng mật khẩu, và từ chối nếu lệch (không tạo session trong trường hợp đó).
         $result = Auth::login($username, $password, $postedRoleId);
 
         if ($result['success']) {
@@ -68,11 +46,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng nhập - InventoryDSS</title>
+    <title>Sign In - InventoryDSS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="assets/css/login.css" rel="stylesheet">
 </head>
@@ -136,10 +114,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             <!-- Cột phải: form -->
             <div class="col-12 col-lg-5 d-flex flex-column">
-                <h1 class="fw-bold display-6 mb-2">Enterprise Login</h1>
-                <p class="text-muted mb-4">Chọn vai trò và đăng nhập vào hệ thống InventoryDSS.</p>
+                <h1 class="fw-bold display-6 mb-2">Enterprise Sign In</h1>
+                <p class="text-muted mb-4">Select a role and sign in to the InventoryDSS system.</p>
 
-                <div class="role-tabs d-grid gap-2 p-1 rounded-3 mb-4" style="grid-template-columns: repeat(3, 1fr);" role="tablist" aria-label="Chọn vai trò đăng nhập">
+                <div class="role-tabs d-grid gap-2 p-1 rounded-3 mb-4" style="grid-template-columns: repeat(3, 1fr);" role="tablist" aria-label="Select login role">
                     <?php foreach ($roleTabs as $roleIdOption => $roleLabel): ?>
                         <button type="button"
                                 class="role-tab btn btn-sm fw-bold border-0 rounded-2 py-2<?= $selectedRole === $roleIdOption ? ' active' : '' ?>"
@@ -160,7 +138,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <input type="hidden" name="role_id" id="role_id" value="<?= (int) $selectedRole ?>">
 
                         <div class="mb-3">
-                            <label for="username" class="form-label text-uppercase small fw-bold text-secondary" style="letter-spacing: .04em; font-size: .72rem;">Tên đăng nhập</label>
+                            <label for="username" class="form-label text-uppercase small fw-bold text-secondary" style="letter-spacing: .04em; font-size: .72rem;">Username</label>
                             <div class="field-wrap">
                                 <svg class="field-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="1.8">
                                     <rect x="3" y="5" width="18" height="14" rx="2"/>
@@ -173,7 +151,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
 
                         <div class="mb-3">
-                            <label for="password" class="form-label text-uppercase small fw-bold text-secondary" style="letter-spacing: .04em; font-size: .72rem;">Mật khẩu</label>
+                            <label for="password" class="form-label text-uppercase small fw-bold text-secondary" style="letter-spacing: .04em; font-size: .72rem;">Password</label>
                             <div class="field-wrap">
                                 <svg class="field-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="1.8">
                                     <rect x="4" y="10" width="16" height="10" rx="2"/>
@@ -181,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 </svg>
                                 <input type="password" id="password" name="password" class="form-control rounded-3" required
                                        placeholder="••••••••">
-                                <button type="button" class="toggle-pw" id="togglePasswordBtn" aria-label="Hiện/ẩn mật khẩu">
+                                <button type="button" class="toggle-pw" id="togglePasswordBtn" aria-label="Show or hide password">
                                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="1.8">
                                         <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"/>
                                         <circle cx="12" cy="12" r="3"/>
@@ -192,11 +170,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                         <div class="form-check d-flex align-items-center gap-2 mb-4">
                             <input type="checkbox" id="remember" name="remember" class="form-check-input mt-0" style="cursor: pointer;">
-                            <label for="remember" class="form-check-label small text-secondary" style="cursor: pointer;">Duy trì phiên đăng nhập</label>
+                            <label for="remember" class="form-check-label small text-secondary" style="cursor: pointer;">Keep me signed in</label>
                         </div>
 
                         <button type="submit" class="btn btn-brand w-100 fw-bold py-2 rounded-3 d-flex align-items-center justify-content-center gap-2">
-                            Đăng nhập
+                            Sign In
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
                                 <path d="M5 12h14M13 6l6 6-6 6"/>
                             </svg>
@@ -208,9 +186,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <table class="table table-sm demo-table mb-0 align-middle">
                             <thead>
                                 <tr class="text-muted small">
-                                    <th class="fw-semibold">Vai trò</th>
+                                    <th class="fw-semibold">Role</th>
                                     <th class="fw-semibold">Username</th>
-                                    <th class="fw-semibold">Mật khẩu</th>
+                                    <th class="fw-semibold">Password</th>
                                 </tr>
                             </thead>
                             <tbody class="small">
@@ -234,7 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
 
                     <div class="text-center small text-muted mt-3 pt-3 border-top border-dashed">
-                        Cần cấp quyền truy cập? Liên hệ Admin hệ thống.
+                        Need access? Contact the system administrator.
                     </div>
                 </div>
             </div>
@@ -254,9 +232,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         })();
 
-        // Chọn tab role -> đồng bộ vào hidden input #role_id, gửi kèm khi submit form.
-        // Việc chọn sai role thật của account vẫn bị chặn ở server (Auth::login())
-        // dù JS này có bị tắt hay bị can thiệp - đây chỉ là tiện ích UI.
+        // Chọn tab role -> đồng bộ vào hidden input #role_id, gửi kèm khi submit form. Việc chọn sai role thật của account vẫn bị chặn ở server (Auth::login()) dù JS này có bị tắt hay bị can thiệp - đây chỉ là tiện ích UI.
         (function () {
             var tabs = document.querySelectorAll('.role-tab');
             var roleInput = document.getElementById('role_id');
