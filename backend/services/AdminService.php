@@ -722,10 +722,13 @@ class AdminService
      * duyệt), và hoạt động gần đây (audit log mới nhất).
      *
      * @return array{
-     *   kpi: array{active_users:int, total_products:int, total_suppliers:int, pending_pos:int, transactions_30d:int},
+     *   kpi: array{active_users:int, total_products:int, total_suppliers:int, pending_pos:int, transactions_30d:int, deltas: array, trends: array},
      *   low_stock_alerts: array,
      *   pending_orders: array,
-     *   recent_activity: array
+     *   recent_activity: array,
+     *   activity_trend_7d: array,
+     *   product_mix: array,
+     *   po_workflow: array
      * }
      */
     public function getSystemSummary(): array
@@ -761,39 +764,58 @@ class AdminService
         // (đúng thiết kế "effective rule" của Product::getEffectiveReorderRule(), viết
         // lại thành 1 câu SQL duy nhất ở đây để không phải loop N+1 query theo từng sản phẩm).
         //
-        // ⚠️ HAVING dùng lại NGUYÊN VẸN biểu thức COALESCE(...) thay vì alias
-        // "reorder_point" trần - vì rule_product.reorder_point VÀ
-        // rule_category.reorder_point đều có mặt trong GROUP BY (cùng tên cột,
-        // khác bảng nguồn), nên MySQL báo lỗi 1052 "column is ambiguous" nếu
-        // HAVING chỉ ghi "reorder_point" (không tự suy ra đó là alias SELECT).
+        // ⚠️ FIX #2 (2026-07): FIX #1 (bọc thành subquery "ranked") vẫn còn lỗi
+        // 1052 "Column 'reorder_point' is ambiguous in on clause" trên môi
+        // trường thực tế (MySQL/MariaDB agressive derived-table merge): khi 2
+        // subquery LEFT JOIN (rule_product, rule_category) cùng SELECT từ 1
+        // bảng gốc (reorder_rules) với CÙNG tên cột, optimizer merge/inline cả
+        // 2 subquery thành 2 lần JOIN trực tiếp vào reorder_rules, rồi tự sinh
+        // ON clause tham chiếu "reorder_point" không rõ instance nào.
+        // Cách sửa dứt điểm: gộp product-rule và category-rule thành 1 JOIN
+        // DUY NHẤT vào reorder_rules (không self-join 2 lần), dùng điều kiện
+        // OR để khớp theo product_id trước, category_id sau - loại bỏ hoàn
+        // toàn khả năng optimizer merge sai vì giờ chỉ còn 1 JOIN vào bảng đó.
+        // Ưu tiên rule theo product (rr.product_id = p.product_id) hơn rule
+        // theo category (rr.category_id = p.category_id) được xử lý bằng
+        // ORDER BY + LIMIT 1 trong correlated subquery riêng cho từng sản phẩm.
         $lowStockSql = "
-            SELECT
-                p.product_id, p.sku_code, p.product_name,
-                COALESCE(SUM(st.quantity_on_hand), 0) AS current_stock,
-                COALESCE(rule_product.reorder_point, rule_category.reorder_point, 0) AS reorder_point,
-                COALESCE(rule_product.safety_stock, rule_category.safety_stock, 0) AS safety_stock,
-                COALESCE(sold.qty_sold_30d, 0) AS qty_sold_30d
-            FROM products p
-            LEFT JOIN stock st ON st.product_id = p.product_id
-            LEFT JOIN (
-                SELECT product_id, reorder_point, safety_stock FROM reorder_rules WHERE product_id IS NOT NULL
-            ) AS rule_product ON rule_product.product_id = p.product_id
-            LEFT JOIN (
-                SELECT category_id, reorder_point, safety_stock FROM reorder_rules WHERE category_id IS NOT NULL
-            ) AS rule_category ON rule_category.category_id = p.category_id
-            LEFT JOIN (
-                SELECT std.product_id, SUM(std.quantity_sold) AS qty_sold_30d
-                FROM sales_transaction_details std
-                JOIN sales_transactions t ON t.transaction_id = std.transaction_id
-                WHERE t.transaction_time >= (NOW() - INTERVAL 30 DAY)
-                GROUP BY std.product_id
-            ) AS sold ON sold.product_id = p.product_id
-            WHERE p.is_active = 1
-            GROUP BY p.product_id, p.sku_code, p.product_name, rule_product.reorder_point,
-                     rule_category.reorder_point, rule_product.safety_stock, rule_category.safety_stock,
-                     sold.qty_sold_30d
-            HAVING COALESCE(SUM(st.quantity_on_hand), 0) <= COALESCE(rule_product.reorder_point, rule_category.reorder_point, 0)
-            ORDER BY qty_sold_30d DESC, current_stock ASC
+            SELECT * FROM (
+                SELECT
+                    p.product_id, p.sku_code, p.product_name,
+                    COALESCE(SUM(st.quantity_on_hand), 0) AS current_stock,
+                    COALESCE((
+                        SELECT rr.reorder_point FROM reorder_rules rr
+                        WHERE rr.product_id = p.product_id
+                        LIMIT 1
+                    ), (
+                        SELECT rr2.reorder_point FROM reorder_rules rr2
+                        WHERE rr2.category_id = p.category_id AND rr2.product_id IS NULL
+                        LIMIT 1
+                    ), 0) AS reorder_point,
+                    COALESCE((
+                        SELECT rr.safety_stock FROM reorder_rules rr
+                        WHERE rr.product_id = p.product_id
+                        LIMIT 1
+                    ), (
+                        SELECT rr2.safety_stock FROM reorder_rules rr2
+                        WHERE rr2.category_id = p.category_id AND rr2.product_id IS NULL
+                        LIMIT 1
+                    ), 0) AS safety_stock,
+                    COALESCE(sold.qty_sold_30d, 0) AS qty_sold_30d
+                FROM products p
+                LEFT JOIN stock st ON st.product_id = p.product_id
+                LEFT JOIN (
+                    SELECT std.product_id, SUM(std.quantity_sold) AS qty_sold_30d
+                    FROM sales_transaction_details std
+                    JOIN sales_transactions t ON t.transaction_id = std.transaction_id
+                    WHERE t.transaction_time >= (NOW() - INTERVAL 30 DAY)
+                    GROUP BY std.product_id
+                ) AS sold ON sold.product_id = p.product_id
+                WHERE p.is_active = 1
+                GROUP BY p.product_id, p.sku_code, p.product_name, p.category_id, sold.qty_sold_30d
+            ) AS ranked
+            WHERE ranked.current_stock <= ranked.reorder_point
+            ORDER BY ranked.qty_sold_30d DESC, ranked.current_stock ASC
             LIMIT 8";
 
         $lowStockAlerts = $pdo->query($lowStockSql)->fetchAll();
@@ -808,6 +830,76 @@ class AdminService
         $recentActivity = $this->getAuditLogs();
         $recentActivity = array_slice($recentActivity, 0, 6);
 
+        // --- KPI card "phụ liệu" (sparkline HOẶC delta), lấy dữ liệu thật
+        // theo ĐÚNG bản chất biến động của mỗi KPI:
+        //   - active_users / total_products / total_suppliers: các sự kiện
+        //     "tạo mới"/"đăng nhập" này hiếm khi xảy ra ĐỀU ĐẶN mỗi ngày (vs
+        //     transactions/PO vốn phát sinh liên tục) -> sparkline 7 điểm
+        //     thường ra đường phẳng (0 suốt tuần), không có giá trị hiển thị.
+        //     Thay bằng DELTA: tổng số sự kiện trong 7 ngày qua (đủ để biết
+        //     "tuần này có gì thay đổi không" mà không vẽ chart giả).
+        //   - pending_pos / transactions: phát sinh tự nhiên hàng ngày trong
+        //     vận hành cửa hàng -> giữ sparkline (có ý nghĩa thống kê thật).
+        $activeUsersLoginsThisWeek     = (int) $pdo->query(
+            "SELECT COUNT(*) FROM audit_logs WHERE action_type = 'LOGIN' AND timestamp >= (CURDATE() - INTERVAL 6 DAY)"
+        )->fetchColumn();
+        $totalProductsCreatedThisWeek  = (int) $pdo->query(
+            "SELECT COUNT(*) FROM audit_logs WHERE action_type = 'CREATE_PRODUCT' AND timestamp >= (CURDATE() - INTERVAL 6 DAY)"
+        )->fetchColumn();
+        $totalSuppliersCreatedThisWeek = (int) $pdo->query(
+            "SELECT COUNT(*) FROM audit_logs WHERE action_type = 'CREATE_SUPPLIER' AND timestamp >= (CURDATE() - INTERVAL 6 DAY)"
+        )->fetchColumn();
+
+        $pendingPosTrend   = $this->getDailyCountTrend($pdo, "SELECT DATE(created_at), COUNT(*) FROM purchase_orders WHERE created_at >= (CURDATE() - INTERVAL 6 DAY) GROUP BY DATE(created_at)");
+        $transactionsTrend = $this->getDailyCountTrend($pdo, "SELECT DATE(transaction_time), COUNT(*) FROM sales_transactions WHERE transaction_time >= (CURDATE() - INTERVAL 6 DAY) GROUP BY DATE(transaction_time)");
+
+        // "User Activity Trend" (chart lớn ở giữa trang, KHÁC với sparkline
+        // trong từng KPI card) vẫn dùng TOÀN BỘ audit_logs làm thước đo hoạt
+        // động hệ thống nói chung (không giới hạn action_type nào) - đây vẫn
+        // là lựa chọn đúng cho 1 chart tổng quan, khác với sparkline của
+        // từng KPI card vốn PHẢI khớp đúng ý nghĩa của riêng KPI đó.
+        $activityTrend7d = $this->getDailyCountTrend($pdo, "SELECT DATE(timestamp), COUNT(*) FROM audit_logs WHERE timestamp >= (CURDATE() - INTERVAL 6 DAY) GROUP BY DATE(timestamp)");
+
+        // --- "Product Mix": tỷ trọng số SKU active theo từng category, dùng
+        // cho donut chart. category_name lấy trực tiếp từ bảng categories
+        // (KHÔNG bịa nhãn "Beverages/Snacks/Other" cố định như mockup, vì
+        // dữ liệu thật có thể có category khác - hiển thị đúng category thật).
+        $productMixRaw = $pdo->query("
+            SELECT c.category_name, COUNT(p.product_id) AS sku_count
+            FROM categories c
+            LEFT JOIN products p ON p.category_id = c.category_id AND p.is_active = 1
+            GROUP BY c.category_id, c.category_name
+            HAVING sku_count > 0
+            ORDER BY sku_count DESC
+        ")->fetchAll();
+
+        $productMix = [];
+        if ($totalProducts > 0) {
+            foreach ($productMixRaw as $row) {
+                $productMix[] = [
+                    'category_name' => $row['category_name'],
+                    'sku_count'     => (int) $row['sku_count'],
+                    'percentage'    => round(((int) $row['sku_count'] / $totalProducts) * 100, 1),
+                ];
+            }
+        }
+
+        // --- "Purchase Order Workflow": đếm PO theo từng trạng thái thật của
+        // schema (Draft, Pending, Approved, Rejected, Delivered - KHÔNG có
+        // "Shipped"/"Closed" vì cột status trong db.sql không có 2 giá trị
+        // này, xem CREATE TABLE purchase_orders).
+        $poStatusRaw = $pdo->query("
+            SELECT status, COUNT(*) AS total FROM purchase_orders GROUP BY status
+        ")->fetchAll(PDO::FETCH_KEY_PAIR);
+
+        $poWorkflow = [];
+        foreach (['Draft', 'Pending', 'Approved', 'Delivered', 'Rejected'] as $status) {
+            $poWorkflow[] = [
+                'status' => $status,
+                'count'  => (int) ($poStatusRaw[$status] ?? 0),
+            ];
+        }
+
         return [
             'kpi' => [
                 'active_users'     => $activeUsers,
@@ -815,11 +907,59 @@ class AdminService
                 'total_suppliers'  => $totalSuppliers,
                 'pending_pos'      => $pendingPos,
                 'transactions_30d' => $transactions30d,
+                // Delta 7 ngày qua - dùng cho card KHÔNG có sparkline (biến
+                // động không đều đặn hàng ngày).
+                'deltas' => [
+                    'active_users'    => $activeUsersLoginsThisWeek,
+                    'total_products'  => $totalProductsCreatedThisWeek,
+                    'total_suppliers' => $totalSuppliersCreatedThisWeek,
+                ],
+                // Sparkline 7 ngày - chỉ cho card có hoạt động phát sinh tự
+                // nhiên hàng ngày (PO, giao dịch bán hàng).
+                'trends' => [
+                    'pending_pos'      => $pendingPosTrend,
+                    'transactions_30d' => $transactionsTrend,
+                ],
             ],
-            'low_stock_alerts' => $lowStockAlerts,
-            'pending_orders'   => $pendingOrders,
-            'recent_activity'  => $recentActivity,
+            'low_stock_alerts'  => $lowStockAlerts,
+            'pending_orders'    => $pendingOrders,
+            'recent_activity'   => $recentActivity,
+            'activity_trend_7d' => $activityTrend7d,
+            'product_mix'       => $productMix,
+            'po_workflow'       => $poWorkflow,
         ];
+    }
+
+    /**
+     * Helper dùng chung cho MỌI sparkline/trend-chart 7 ngày trên dashboard -
+     * chạy 1 câu SQL bất kỳ có dạng "SELECT DATE(cột_thời_gian), COUNT(*) ...
+     * GROUP BY DATE(cột_thời_gian)" (2 cột: ngày, số đếm), rồi tự điền đủ 7
+     * ngày liên tục kể cả ngày không có dữ liệu (count = 0) - đảm bảo mọi
+     * chart luôn có đúng 7 điểm, không bị "gãy" khi có ngày trống.
+     *
+     * ⚠️ $sql PHẢI là câu query TĨNH do code nội bộ định nghĩa (không bao giờ
+     * nhận trực tiếp từ input người dùng) - các lời gọi hàm này trong
+     * getSystemSummary() đều hardcode sẵn, không có tham số nào từ ngoài lọt
+     * vào chuỗi SQL, nên không có rủi ro SQL Injection dù không dùng prepared
+     * statement ở đây.
+     *
+     * @return array<int, array{date: string, label: string, count: int}> Đúng 7 phần tử, cũ -> mới.
+     */
+    private function getDailyCountTrend(PDO $pdo, string $sql): array
+    {
+        $rows = $pdo->query($sql)->fetchAll(PDO::FETCH_KEY_PAIR);
+
+        $trend = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $date = date('Y-m-d', strtotime("-{$i} day"));
+            $trend[] = [
+                'date'  => $date,
+                'label' => date('D', strtotime($date)), // Mon, Tue, ...
+                'count' => (int) ($rows[$date] ?? 0),
+            ];
+        }
+
+        return $trend;
     }
 
     // =====================================================================
@@ -974,8 +1114,7 @@ class AdminService
 
     /**
      * FR-ADM-10: sao lưu dữ liệu ra file .sql.
-     * TODO: cần nhóm xác nhận đường dẫn mysqldump.exe (XAMPP thường ở
-     * C:\xampp\mysql\bin\mysqldump.exe) và thư mục lưu backup trước khi implement.
+     * TODO: cần nhóm xác nhận đường dẫn mysqldump.exe và thư mục lưu backup trước khi implement.
      */
     public function backupDatabase(int $actorId): array
     {
