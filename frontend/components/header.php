@@ -41,6 +41,6 @@ $breadcrumbs = $breadcrumbs ?? [];
             <span class="app-header-user-name"><?= htmlspecialchars(Auth::fullName() ?? '', ENT_QUOTES, 'UTF-8') ?></span>
             <span class="app-header-user-role"><?= htmlspecialchars(Auth::roleName() ?? '', ENT_QUOTES, 'UTF-8') ?></span>
         </div>
-        <a href="<?= BASE_URL ?>/logout.php" class="app-header-logout" title="Đăng xuất">Đăng xuất</a>
+        <a href="<?= BASE_URL ?>/logout.php" class="app-header-logout" title="Log out">Log out</a>
     </div>
 </header>

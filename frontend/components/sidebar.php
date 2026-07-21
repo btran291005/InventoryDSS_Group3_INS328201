@@ -91,6 +91,6 @@ if ($roleId === ROLE_ADMIN) {
     </nav>
 
     <div class="sidebar-footer">
-        <a href="<?= BASE_URL ?>/logout.php" class="sidebar-logout">Đăng xuất</a>
+        <a href="<?= BASE_URL ?>/logout.php" class="sidebar-logout">Log out</a>
     </div>
 </aside>
