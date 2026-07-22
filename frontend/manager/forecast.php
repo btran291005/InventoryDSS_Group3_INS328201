@@ -318,7 +318,22 @@ button?.addEventListener('click', async () => {
             body: JSON.stringify(payload)
         });
 
-        const data = await response.json();
+        // Đọc response dạng text trước rồi mới parse JSON thủ công: nếu server
+        // trả về HTML (trang lỗi PHP, 404, warning rò rỉ...) thay vì JSON,
+        // ta báo lỗi rõ ràng cho người dùng thay vì để JSON.parse ném ra
+        // thông báo khó hiểu kiểu `"...</...>"... is not valid JSON`.
+        const rawText = await response.text();
+        let data;
+        try {
+            data = JSON.parse(rawText);
+        } catch (parseError) {
+            console.error('[Forecast Error] Non-JSON response:', rawText.slice(0, 500));
+            throw new Error(
+                `Server trả về dữ liệu không hợp lệ (HTTP ${response.status}). `
+                + 'Có thể do lỗi phía backend (PHP warning/exception) hoặc sai đường dẫn API. '
+                + 'Vui lòng kiểm tra log server hoặc liên hệ quản trị viên.'
+            );
+        }
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${data.message || 'Lỗi kết nối'}`);
