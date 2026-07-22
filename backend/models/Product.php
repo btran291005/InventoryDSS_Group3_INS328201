@@ -168,6 +168,33 @@ class Product
         return $stmt->fetchAll();
     }
 
+    /**
+     * FR-MGR-02/04/05: map product_id -> {supplier_id, supplier_name} cho toàn
+     * bộ sản phẩm active - dùng ở ManagerService::getProductSupplierMap() để
+     * UI gom gợi ý đặt hàng theo nhà cung cấp trước khi tạo PO (mỗi PO chỉ có
+     * đúng 1 supplier_id, xem Order::createDraft()).
+     *
+     * @return array<int, array{supplier_id: int, supplier_name: string}>
+     */
+    public function getSupplierMapForActiveProducts(): array
+    {
+        $stmt = $this->conn->query(
+            "SELECT p.product_id, p.supplier_id, s.supplier_name
+             FROM {$this->table} p
+             JOIN suppliers s ON s.supplier_id = p.supplier_id
+             WHERE p.is_active = 1"
+        );
+
+        $map = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $map[(int) $row['product_id']] = [
+                'supplier_id'   => (int) $row['supplier_id'],
+                'supplier_name' => $row['supplier_name'],
+            ];
+        }
+        return $map;
+    }
+
     // reorder_rules
 
     /* BR-05: Lấy rule đang có hiệu lực cho 1 sản phẩm. Ưu tiên rule riêng theo product_id; nếu không có, fallback về rule chung của category_id mà sản phẩm đó thuộc về. */

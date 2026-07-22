@@ -105,83 +105,87 @@ $forecastEndpoint = str_replace('/frontend', '', BASE_URL) . '/backend/api/forec
         }
     </style>
 </head>
-<body class="app-shell">
-<?php require __DIR__ . '/../components/sidebar.php'; ?>
-<main class="app-main">
-    <?php require __DIR__ . '/../components/header.php'; ?>
-    <section class="forecast-page">
-        <div class="forecast-intro">
-            <div>
-                <h2>Dự báo nhu cầu (Demand Forecast)</h2>
-                <p>Dự báo nhu cầu 7 ngày tới cho từng sản phẩm bằng AI Forecast API. So sánh gợi ý từ API với quy tắc Reorder Point. Nếu API không khả dụng, hệ thống tự động dùng quy tắc dự phòng.</p>
-            </div>
-        </div>
+<body>
+<div class="app-shell">
+    <?php require __DIR__ . '/../components/sidebar.php'; ?>
 
-        <div class="forecast-panel">
-            <div class="forecast-field">
-                <label for="forecastProduct">Chọn sản phẩm</label>
-                <select id="forecastProduct">
-                    <option value="">-- Chọn sản phẩm --</option>
-                    <?php foreach ($products as $product): ?>
-                        <option value="<?= (int) $product['product_id'] ?>" data-stock="<?= (int) $product['current_stock'] ?>">
-                            <?= htmlspecialchars($product['sku_code'] . ' — ' . $product['product_name'] . ' (' . $product['category_type'] . ')', ENT_QUOTES, 'UTF-8') ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-            <button type="button" class="forecast-button" id="runForecast" <?= empty($products) ? 'disabled' : '' ?>>Tạo dự báo 7 ngày</button>
-        </div>
+    <div class="app-content">
+        <?php require __DIR__ . '/../components/header.php'; ?>
 
-        <div id="forecastStatus" class="forecast-status" role="status"></div>
+        <main class="app-main">
+            <section class="forecast-page">
+                <div class="forecast-intro">
+                    <div>
+                        <h2 class="page-heading mb-1">Dự báo nhu cầu (Demand Forecast)</h2>
+                        <p class="page-subheading mb-0">Dự báo nhu cầu 7 ngày tới cho từng sản phẩm bằng AI Forecast API. So sánh gợi ý từ API với quy tắc Reorder Point. Nếu API không khả dụng, hệ thống tự động dùng quy tắc dự phòng.</p>
+                    </div>
+                </div>
 
-        <div id="emptyForecast" class="empty-state">
-            <strong>Chọn sản phẩm</strong> từ dropdown bên trên rồi bấm nút <strong>"Tạo dự báo 7 ngày"</strong> để xem kết quả dự báo nhu cầu.
-        </div>
+                <div class="forecast-panel">
+                    <div class="forecast-field">
+                        <label for="forecastProduct">Chọn sản phẩm</label>
+                        <select id="forecastProduct">
+                            <option value="">-- Chọn sản phẩm --</option>
+                            <?php foreach ($products as $product): ?>
+                                <option value="<?= (int) $product['product_id'] ?>" data-stock="<?= (int) $product['current_stock'] ?>">
+                                    <?= htmlspecialchars($product['sku_code'] . ' — ' . $product['product_name'] . ' (' . $product['category_type'] . ')', ENT_QUOTES, 'UTF-8') ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <button type="button" class="forecast-button" id="runForecast" <?= empty($products) ? 'disabled' : '' ?>>Tạo dự báo 7 ngày</button>
+                </div>
 
-        <div id="forecastResult" hidden>
-            <div class="forecast-grid">
-                <article class="forecast-card api">
-                    <h3>📊 Gợi ý từ AI Forecast</h3>
-                    <div class="forecast-number" id="apiSuggestion">—</div>
-                    <div class="forecast-meta" id="apiMeta">Đang chờ dự báo</div>
-                </article>
+                <div id="forecastStatus" class="forecast-status" role="status"></div>
 
-                <article class="forecast-card rule">
-                    <h3>📋 Gợi ý Reorder Point</h3>
-                    <div class="forecast-number" id="ruleSuggestion">—</div>
-                    <div class="forecast-meta" id="ruleMeta">Dữ liệu sẵn sàng</div>
-                </article>
+                <div id="emptyForecast" class="empty-state">
+                    <strong>Chọn sản phẩm</strong> từ dropdown bên trên rồi bấm nút <strong>"Tạo dự báo 7 ngày"</strong> để xem kết quả dự báo nhu cầu.
+                </div>
 
-                <article class="forecast-card stock">
-                    <h3>📦 Tồn kho hiện tại</h3>
-                    <div class="forecast-number" id="stockValue">—</div>
-                    <div class="forecast-meta" id="stockMeta">Tồn kho hôm nay</div>
-                </article>
-            </div>
+                <div id="forecastResult" hidden>
+                    <div class="forecast-grid">
+                        <article class="forecast-card api">
+                            <h3>📊 Gợi ý từ AI Forecast</h3>
+                            <div class="forecast-number" id="apiSuggestion">—</div>
+                            <div class="forecast-meta" id="apiMeta">Đang chờ dự báo</div>
+                        </article>
 
-            <article class="forecast-card forecast-chart-card" id="forecastChartCard">
-                <h3>📈 Dự báo nhu cầu theo ngày (7 ngày tới)</h3>
-                <p id="chartSubtitle">Khoảng trên/dưới thể hiện vùng biến động dự kiến dựa trên dữ liệu lịch sử</p>
-                <svg id="forecastChart" viewBox="0 0 760 280" aria-label="Biểu đồ dự báo nhu cầu 7 ngày"></svg>
-            </article>
+                        <article class="forecast-card rule">
+                            <h3>📋 Gợi ý Reorder Point</h3>
+                            <div class="forecast-number" id="ruleSuggestion">—</div>
+                            <div class="forecast-meta" id="ruleMeta">Dữ liệu sẵn sàng</div>
+                        </article>
 
-            <div class="forecast-table-wrap">
-                <table class="forecast-table">
-                    <thead>
-                        <tr>
-                            <th>Ngày</th>
-                            <th>Nhu cầu dự báo</th>
-                            <th>Cận dưới</th>
-                            <th>Cận trên</th>
-                        </tr>
-                    </thead>
-                    <tbody id="forecastTable"></tbody>
-                </table>
-            </div>
-        </div>
-    </section>
-</main>
-<script>
+                        <article class="forecast-card stock">
+                            <h3>📦 Tồn kho hiện tại</h3>
+                            <div class="forecast-number" id="stockValue">—</div>
+                            <div class="forecast-meta" id="stockMeta">Tồn kho hôm nay</div>
+                        </article>
+                    </div>
+
+                    <article class="forecast-card forecast-chart-card" id="forecastChartCard">
+                        <h3>📈 Dự báo nhu cầu theo ngày (7 ngày tới)</h3>
+                        <p id="chartSubtitle">Khoảng trên/dưới thể hiện vùng biến động dự kiến dựa trên dữ liệu lịch sử</p>
+                        <svg id="forecastChart" viewBox="0 0 760 280" aria-label="Biểu đồ dự báo nhu cầu 7 ngày"></svg>
+                    </article>
+
+                    <div class="forecast-table-wrap">
+                        <table class="forecast-table">
+                            <thead>
+                                <tr>
+                                    <th>Ngày</th>
+                                    <th>Nhu cầu dự báo</th>
+                                    <th>Cận dưới</th>
+                                    <th>Cận trên</th>
+                                </tr>
+                            </thead>
+                            <tbody id="forecastTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+        <script>
 const endpoint = <?= json_encode($forecastEndpoint, JSON_UNESCAPED_SLASHES) ?>;
 const csrfToken = <?= json_encode($_SESSION['forecast_csrf_token']) ?>;
 const button = document.getElementById('runForecast');
@@ -352,6 +356,7 @@ button?.addEventListener('click', async () => {
         button.textContent = 'Tạo dự báo 7 ngày';
     }
 });
-</script>
-</body>
-</html>
+        </script>
+    </div>
+</div>
+<?php require __DIR__ . '/../components/footer.php'; ?>

@@ -287,6 +287,19 @@ class ManagerService
     }
 
     /**
+     * FR-MGR-02/04/05: map product_id -> supplier_id + supplier_name cho TOÀN
+     * BỘ sản phẩm active - dùng ở UI reorder_suggestions.php để GOM các gợi ý
+     * theo nhà cung cấp trước khi tạo PO, vì Order::createDraft() chỉ nhận 1
+     * supplier_id duy nhất cho mỗi đơn (BR-07: 1 PO = 1 NCC).
+     *
+     * @return array<int, array{supplier_id: int, supplier_name: string}>
+     */
+    public function getProductSupplierMap(): array
+    {
+        return $this->productModel->getSupplierMapForActiveProducts();
+    }
+
+    /**
      * FR-MGR-04 / BR-06: Manager tạo PO mới với số lượng TỰ NHẬP (đã override
      * sẵn từ đầu, vì ReorderService gợi ý số lượng ban đầu chưa có ở phase này).
      * approved_qty = suggested_qty tại bước tạo Draft; Manager sửa lại qua
