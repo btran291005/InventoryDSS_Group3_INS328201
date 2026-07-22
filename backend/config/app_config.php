@@ -37,8 +37,14 @@ define('ROLE_NAMES', [
 
 // 5. Hằng số nghiệp vụ (Business Rules) - tránh magic number rải rác trong Service
 
-// BR-18 / NFR-06: Timeout gọi AI Forecast API trước khi fallback về Reorder Point
-define('FORECAST_API_TIMEOUT_SECONDS', 5);
+// BR-18 / NFR-06: Timeout gọi AI Forecast API trước khi fallback về Reorder Point.
+// 12 giây đủ cho một lượt fit model cục bộ đầu tiên, nhưng vẫn không để Manager chờ vô hạn.
+define('FORECAST_API_TIMEOUT_SECONDS', 12);
+
+// Hợp đồng Forecast: dùng chuỗi ngày liên tục (bao gồm ngày không phát sinh bán hàng)
+// để model nhận diện đúng ngày nhu cầu bằng 0 thay vì hiểu là dữ liệu bị thiếu.
+define('FORECAST_HISTORY_DAYS', 56);
+define('FORECAST_HORIZON_DAYS', 7);
 
 // FR-MGR-12: "Top 10 Stock-out Risk" tính theo doanh số bán trung bình N ngày gần nhất
 define('STOCKOUT_RISK_SALES_WINDOW_DAYS', 7);

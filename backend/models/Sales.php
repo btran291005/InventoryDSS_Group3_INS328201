@@ -181,4 +181,49 @@ class Sales
         $stmt->execute([':product_id' => $productId]);
         return $stmt->fetchAll();
     }
+
+    /**
+     * Lịch sử bán theo ngày liên tục cho Forecast API. Khác với getSalesHistory(),
+     * ngày không có giao dịch vẫn được trả về với quantity_sold = 0 để tránh làm
+     * sai chuỗi thời gian của model.
+     *
+     * @return array<int, array{sale_date: string, quantity_sold: int}>
+     */
+    public function getDailyForecastHistory(int $productId, int $days = FORECAST_HISTORY_DAYS): array
+    {
+        $days = max(14, min($days, 180));
+        $startDate = date('Y-m-d', strtotime('-' . ($days - 1) . ' days'));
+
+        $stmt = $this->conn->prepare(
+            "SELECT DATE(st.transaction_time) AS sale_date, SUM(std.quantity_sold) AS total_quantity
+             FROM sales_transaction_details std
+             JOIN {$this->table} st ON st.transaction_id = std.transaction_id
+             WHERE std.product_id = :product_id
+               AND st.transaction_time >= :start_date
+               AND st.transaction_time < DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+             GROUP BY DATE(st.transaction_time)"
+        );
+        $stmt->execute([
+            ':product_id' => $productId,
+            ':start_date' => $startDate,
+        ]);
+
+        $quantitiesByDate = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $quantitiesByDate[(string) $row['sale_date']] = (int) $row['total_quantity'];
+        }
+
+        $history = [];
+        $date = new DateTimeImmutable($startDate);
+        for ($i = 0; $i < $days; $i++) {
+            $dateKey = $date->format('Y-m-d');
+            $history[] = [
+                'sale_date' => $dateKey,
+                'quantity_sold' => $quantitiesByDate[$dateKey] ?? 0,
+            ];
+            $date = $date->modify('+1 day');
+        }
+
+        return $history;
+    }
 }

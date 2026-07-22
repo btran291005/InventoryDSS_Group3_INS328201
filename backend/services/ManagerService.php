@@ -265,6 +265,27 @@ class ManagerService
         return $integrationService->getForecastForProduct($productId);
     }
 
+    /** Danh sách sản phẩm dùng cho màn hình Forecast của Manager. */
+    public function getForecastProducts(): array
+    {
+        $products = $this->productModel->getAll(null, null, true);
+        $stocksByProduct = [];
+        foreach ($this->inventoryModel->getStockByProduct() as $stock) {
+            $stocksByProduct[(int) $stock['product_id']] = (int) $stock['total_quantity'];
+        }
+
+        return array_map(
+            static fn(array $product): array => [
+                'product_id' => (int) $product['product_id'],
+                'sku_code' => $product['sku_code'],
+                'product_name' => $product['product_name'],
+                'category_type' => $product['category_type'],
+                'current_stock' => $stocksByProduct[(int) $product['product_id']] ?? 0,
+            ],
+            $products
+        );
+    }
+
     /**
      * FR-MGR-04 / BR-06: Manager tạo PO mới với số lượng TỰ NHẬP (đã override
      * sẵn từ đầu, vì ReorderService gợi ý số lượng ban đầu chưa có ở phase này).

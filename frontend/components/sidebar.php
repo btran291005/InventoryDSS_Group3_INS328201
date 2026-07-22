@@ -51,6 +51,7 @@ if ($roleId === ROLE_ADMIN) {
 } elseif ($roleId === ROLE_MANAGER) {
     $menuItems = [
         'dashboard'    => ['label' => 'Dashboard', 'href' => '/manager/dashboard.php', 'icon' => 'grid'],
+        'forecast'     => ['label' => 'Demand Forecast', 'href' => '/manager/forecast.php', 'icon' => 'activity'],
         'reorder'      => ['label' => 'Reorder', 'href' => '/manager/reorder/reorder_suggestions.php', 'icon' => 'refresh-cw'],
         'po'           => ['label' => 'Purchase Order (PO)', 'href' => '/manager/purchase_order/po_submit.php', 'icon' => 'file-text'],
         'demand_trend' => ['label' => 'Demand Trend', 'href' => '/manager/demand_trend.php', 'icon' => 'trending-up'],

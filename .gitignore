@@ -9,6 +9,9 @@
 /vendor/
 composer.phar
 
+# --- Local Python environment for Forecast API ---
+/forecast-api/.venv/
+
 # --- Logs ---
 *.log
 /logs/

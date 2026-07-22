@@ -1,17 +1,15 @@
-/** demo code (not official) */
-
 <?php
 declare(strict_types=1);
 
 require_once __DIR__ . '/../config/app_config.php';
 require_once __DIR__ . '/../config/database.php';
 
+/** HTTP client for the local Demand Forecast service. */
 class ForecastAPI
 {
-    private PDO $conn;
+    private const API_NAMES = ['AI_Demand_Forecast', 'Demand_Forecast_API'];
 
-    /** Tên định danh API trong bảng api_configs - PHẢI khớp đúng seed data. */
-    private const API_NAME = 'AI_Demand_Forecast';
+    private PDO $conn;
 
     public function __construct()
     {
@@ -19,110 +17,104 @@ class ForecastAPI
     }
 
     /**
-     * Gọi AI Demand Forecast API cho 1 sản phẩm.
-     *
-     * KHÔNG throw exception ra ngoài - mọi lỗi (timeout, lỗi mạng, response sai
-     * định dạng, chưa cấu hình api_configs...) đều trả về qua 'success' => false
-     * kèm 'error' mô tả rõ nguyên nhân, để IntegrationService quyết định fallback
-     * (BR-18) mà không cần try/catch phức tạp ở tầng trên.
-     *
-     * @return array{success: bool, suggested_qty?: int, confidence?: float, error?: string}
+     * @param array<string, mixed> $requestData Contract defined by forecast-api/app/schemas.py
+     * @return array{success: bool, suggested_qty?: int, forecasted_demand?: float, forecast?: array, model_used?: string, error?: string}
      */
-    public function getSuggestedQuantity(int $productId, string $skuCode, int $currentStock, int $historyDays = STOCKOUT_RISK_SALES_WINDOW_DAYS): array
+    public function getForecast(array $requestData): array
     {
         $config = $this->getApiConfig();
         if ($config === false) {
-            return [
-                'success' => false,
-                'error'   => "Chưa cấu hình API '" . self::API_NAME . "' trong bảng api_configs.",
-            ];
+            return ['success' => false, 'error' => 'Chưa cấu hình Demand Forecast API.'];
         }
 
-        $payload = json_encode([
-            'product_id'    => $productId,
-            'sku_code'      => $skuCode,
-            'history_days'  => $historyDays,
-            'current_stock' => $currentStock,
-        ], JSON_UNESCAPED_UNICODE);
-
+        $payload = json_encode($requestData, JSON_UNESCAPED_UNICODE);
         if ($payload === false) {
-            return ['success' => false, 'error' => 'Không thể mã hóa payload gửi tới Forecast API.'];
+            return ['success' => false, 'error' => 'Không thể tạo dữ liệu gửi tới Forecast API.'];
+        }
+        $endpoint = $this->normaliseForecastEndpoint((string) $config['endpoint_url']);
+
+        try {
+            $ch = curl_init();
+            if ($ch === false) {
+                return ['success' => false, 'error' => 'Không thể khởi tạo Forecast API client.'];
+            }
+            curl_setopt_array($ch, [
+                CURLOPT_URL => $endpoint,
+                CURLOPT_POST => true,
+                CURLOPT_POSTFIELDS => $payload,
+                CURLOPT_HTTPHEADER => [
+                    'Content-Type: application/json',
+                    'Accept: application/json',
+                    'X-API-Key: ' . $config['api_key'],
+                ],
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CONNECTTIMEOUT => min(3, FORECAST_API_TIMEOUT_SECONDS),
+                CURLOPT_TIMEOUT => FORECAST_API_TIMEOUT_SECONDS,
+                CURLOPT_SSL_VERIFYPEER => str_starts_with($endpoint, 'https://'),
+            ]);
+
+            $body = curl_exec($ch);
+            $curlError = curl_error($ch);
+            $curlErrno = curl_errno($ch);
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+        } catch (Throwable $e) {
+            error_log('[ForecastAPI] ' . $e->getMessage());
+            return ['success' => false, 'error' => 'Không thể gọi Forecast API.'];
         }
 
-        $ch = curl_init();
-        curl_setopt_array($ch, [
-            CURLOPT_URL            => $config['endpoint_url'],
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => $payload,
-            CURLOPT_HTTPHEADER     => [
-                'Content-Type: application/json',
-                'Authorization: Bearer ' . $config['api_key'],
-            ],
-            CURLOPT_RETURNTRANSFER => true,
-            // BR-18/NFR-06: timeout cứng, PHẢI luôn set - đây là điều kiện để
-            // IntegrationService kích hoạt fallback đúng lúc, không để Manager
-            // chờ vô hạn khi API bên thứ 3 bị treo.
-            CURLOPT_CONNECTTIMEOUT => FORECAST_API_TIMEOUT_SECONDS,
-            CURLOPT_TIMEOUT        => FORECAST_API_TIMEOUT_SECONDS,
-            CURLOPT_SSL_VERIFYPEER => true,
-        ]);
-
-        $rawResponse = curl_exec($ch);
-        $curlErrno   = curl_errno($ch);
-        $curlError   = curl_error($ch);
-        $httpCode    = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        // Lỗi mạng/timeout (bao gồm CURLE_OPERATION_TIMEDOUT) - đây chính là ca
-        // BR-18 mô tả: "AI Forecast service is unavailable".
         if ($curlErrno !== 0) {
-            error_log("[ForecastAPI] cURL error (errno={$curlErrno}): {$curlError}");
-            return ['success' => false, 'error' => "Không thể kết nối Forecast API: {$curlError}"];
+            error_log("[ForecastAPI] cURL error {$curlErrno}: {$curlError}");
+            return ['success' => false, 'error' => 'Không thể kết nối Forecast API.'];
         }
 
         if ($httpCode < 200 || $httpCode >= 300) {
-            error_log("[ForecastAPI] HTTP {$httpCode} - response: " . substr((string) $rawResponse, 0, 500));
-            return ['success' => false, 'error' => "Forecast API trả về mã lỗi HTTP {$httpCode}."];
+            error_log('[ForecastAPI] HTTP ' . $httpCode . ': ' . substr((string) $body, 0, 500));
+            return ['success' => false, 'error' => "Forecast API trả về HTTP {$httpCode}."];
         }
 
-        return $this->parseResponse($rawResponse);
+        return $this->parseResponse($body);
     }
 
-    /**
-     * Đọc endpoint_url + api_key hiện hành từ bảng api_configs.
-     * Trả về false nếu chưa cấu hình (chưa từng chạy seed hoặc bị Admin xóa).
-     */
     private function getApiConfig(): array|false
     {
+        $placeholders = implode(', ', array_fill(0, count(self::API_NAMES), '?'));
         $stmt = $this->conn->prepare(
-            'SELECT endpoint_url, api_key FROM api_configs WHERE api_name = :api_name LIMIT 1'
+            "SELECT endpoint_url, api_key FROM api_configs WHERE api_name IN ({$placeholders}) ORDER BY config_id ASC LIMIT 1"
         );
-        $stmt->execute([':api_name' => self::API_NAME]);
+        $stmt->execute(self::API_NAMES);
         return $stmt->fetch();
     }
 
-    /**
-     * Parse response JSON thô từ API thành mảng chuẩn hóa.
-     * Tách riêng private để dễ sửa nếu hợp đồng API thật khác với giả định ở
-     * đầu file - chỉ cần sửa hàm này, không ảnh hưởng phần cURL/timeout ở trên.
-     */
+    private function normaliseForecastEndpoint(string $endpoint): string
+    {
+        $endpoint = rtrim(trim($endpoint), '/');
+        return str_ends_with($endpoint, '/forecast') ? $endpoint : $endpoint . '/forecast';
+    }
+
     private function parseResponse(string|false $rawResponse): array
     {
         if ($rawResponse === false || $rawResponse === '') {
-            return ['success' => false, 'error' => 'Forecast API trả về response rỗng.'];
+            return ['success' => false, 'error' => 'Forecast API trả về dữ liệu rỗng.'];
         }
 
-        $data = json_decode($rawResponse, true);
+        try {
+            $data = json_decode($rawResponse, true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException) {
+            return ['success' => false, 'error' => 'Forecast API trả về JSON không hợp lệ.'];
+        }
 
-        if (!is_array($data) || !isset($data['suggested_qty']) || !is_numeric($data['suggested_qty'])) {
-            error_log('[ForecastAPI] Response không đúng định dạng mong đợi: ' . substr($rawResponse, 0, 500));
+        if (!is_array($data) || !isset($data['suggested_reorder_quantity']) || !is_numeric($data['suggested_reorder_quantity'])) {
             return ['success' => false, 'error' => 'Forecast API trả về dữ liệu không đúng định dạng.'];
         }
 
         return [
-            'success'       => true,
-            'suggested_qty' => (int) $data['suggested_qty'],
-            'confidence'    => isset($data['confidence']) ? (float) $data['confidence'] : null,
+            'success' => true,
+            'suggested_qty' => max(0, (int) ceil((float) $data['suggested_reorder_quantity'])),
+            'forecasted_demand' => isset($data['forecasted_demand']) && is_numeric($data['forecasted_demand'])
+                ? (float) $data['forecasted_demand'] : null,
+            'forecast' => is_array($data['forecast'] ?? null) ? $data['forecast'] : [],
+            'model_used' => is_string($data['model_used'] ?? null) ? $data['model_used'] : 'forecast_api',
         ];
     }
 }

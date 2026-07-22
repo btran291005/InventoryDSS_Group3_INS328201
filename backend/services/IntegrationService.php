@@ -36,6 +36,7 @@ require_once __DIR__ . '/../api/ForecastAPI.php';
 require_once __DIR__ . '/../api/NotificationAPI.php';
 require_once __DIR__ . '/../models/Product.php';
 require_once __DIR__ . '/../models/Inventory.php';
+require_once __DIR__ . '/../models/Sales.php';
 require_once __DIR__ . '/ReorderService.php';
 
 class IntegrationService
@@ -45,6 +46,7 @@ class IntegrationService
     private NotificationAPI $notificationApi;
     private Product $productModel;
     private Inventory $inventoryModel;
+    private Sales $salesModel;
     private ReorderService $reorderService;
 
     public function __construct()
@@ -54,6 +56,7 @@ class IntegrationService
         $this->notificationApi = new NotificationAPI();
         $this->productModel    = new Product();
         $this->inventoryModel  = new Inventory();
+        $this->salesModel      = new Sales();
         $this->reorderService  = new ReorderService();
     }
 
@@ -93,12 +96,19 @@ class IntegrationService
         $stockRows = $this->inventoryModel->getStockByProduct($productId);
         $currentStock = !empty($stockRows) ? (int) $stockRows[0]['total_quantity'] : 0;
 
+        $ruleBased = $this->reorderService->suggestQuantityForProduct($productId);
+        $rule = $ruleBased['success'] ? $ruleBased['suggestion'] : null;
+
         // Bước 1: thử gọi AI Forecast API thật (timeout đã xử lý bên trong ForecastAPI).
-        $apiResult = $this->forecastApi->getSuggestedQuantity(
-            $productId,
-            $product['sku_code'],
-            $currentStock
-        );
+        $apiResult = $this->forecastApi->getForecast([
+            'product_id' => $productId,
+            'category_type' => $product['category_type'] ?: null,
+            'sales_history' => $this->salesModel->getDailyForecastHistory($productId),
+            'forecast_horizon_days' => FORECAST_HORIZON_DAYS,
+            'current_stock' => $currentStock,
+            'safety_stock' => $rule['safety_stock'] ?? 0,
+            'max_stock' => $rule['max_stock'] ?? 0,
+        ]);
 
         if ($apiResult['success']) {
             $this->recordForecastResult($productId, $apiResult['suggested_qty'], 'success');
@@ -107,7 +117,10 @@ class IntegrationService
                 'success'       => true,
                 'source'        => 'ai_forecast',
                 'suggested_qty' => $apiResult['suggested_qty'],
-                'confidence'    => $apiResult['confidence'] ?? null,
+                'forecasted_demand' => $apiResult['forecasted_demand'] ?? null,
+                'forecast' => $apiResult['forecast'] ?? [],
+                'model_used' => $apiResult['model_used'] ?? 'forecast_api',
+                'rule_based_suggestion' => $rule,
                 'message'       => 'Đã lấy gợi ý từ AI Demand Forecast API.',
             ];
         }
@@ -136,7 +149,7 @@ class IntegrationService
             'success'       => true,
             'source'        => 'rule_based_fallback',
             'suggested_qty' => $suggestedQty,
-            'confidence'    => null,
+            'rule_based_suggestion' => $fallback['suggestion'],
             'message'       => 'AI Forecast API không khả dụng - đã dùng công thức Reorder Point dự phòng (BR-18).',
         ];
     }
