@@ -86,6 +86,7 @@ class Supplier
         $sql = "SELECT
                     s.supplier_id,
                     s.supplier_name,
+                    s.contact_phone,
                     s.avg_lead_time_days,
                     COUNT(DISTINCT po.po_id) AS total_delivered_orders,
                     COUNT(DISTINCT CASE WHEN pod.discrepancy_reason IS NOT NULL THEN po.po_id END) AS orders_with_discrepancy,

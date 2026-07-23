@@ -362,6 +362,10 @@ class ManagerService
         }
 
         $po['details'] = $this->orderModel->getDetails($poId);
+        // FR-MGR-11: kèm sẵn hiệu suất nhà cung cấp (lead-time, tỉ lệ sai lệch)
+        // để trang chi tiết PO hiển thị "Supplier Details" mà không cần query thêm ở view.
+        $supplierPerf = $this->supplierModel->getPerformanceStats((int) $po['supplier_id']);
+        $po['supplier_performance'] = $supplierPerf !== false ? $supplierPerf : null;
         return $po;
     }
 

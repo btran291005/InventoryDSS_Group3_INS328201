@@ -80,10 +80,11 @@ class Order
     {
         $stmt = $this->conn->prepare(
             "SELECT pod.po_detail_id, pod.po_id, pod.product_id, p.product_name, p.sku_code,
-                    p.unit_cost, pod.suggested_qty, pod.approved_qty, pod.received_qty,
+                    p.unit_cost, c.category_name, pod.suggested_qty, pod.approved_qty, pod.received_qty,
                     pod.discrepancy_reason, (pod.approved_qty * p.unit_cost) AS line_cost
              FROM purchase_order_details pod
              JOIN products p ON p.product_id = pod.product_id
+             JOIN categories c ON c.category_id = p.category_id
              WHERE pod.po_id = :po_id"
         );
         $stmt->execute([':po_id' => $poId]);

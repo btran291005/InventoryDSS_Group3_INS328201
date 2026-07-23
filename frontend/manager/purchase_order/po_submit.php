@@ -85,7 +85,10 @@ if ($selectedPoId !== null) {
     }
 }
 
-$myOrders = $selectedPoId === null ? $managerService->listMyPurchaseOrders($actorId) : [];
+// Trang này CHỈ để soạn/nộp PO - chỉ hiện các đơn còn 'Draft' (cần Manager xử
+// lý tiếp: sửa số lượng rồi nộp Admin duyệt). Xem tổng trạng thái TẤT CẢ đơn
+// (Pending/Approved/Rejected/Delivered...) -> po-status.php riêng.
+$myOrders = $selectedPoId === null ? $managerService->listMyPurchaseOrders($actorId, 'Draft') : [];
 
 /** Màu badge theo trạng thái PO - khớp inline style đã dùng ở admin/po_approval.php. */
 function poStatusBadgeStyle(string $status): string
@@ -98,6 +101,90 @@ function poStatusBadgeStyle(string $status): string
         'Delivered' => 'background: var(--color-success-bg); color: var(--color-success);',
         default     => 'background: var(--surface-alt); color: var(--text-muted);',
     };
+}
+
+/**
+ * Workflow stepper của 1 PO theo đúng state machine thật (Order::EDITABLE_STATUSES,
+ * submitForApproval/approve/reject/markDelivered) - KHÔNG bịa thêm bước không tồn tại
+ * trong schema (vd. "AI Suggestion"/"Review" tách rời - ở đây gộp vào 'Draft' vì đó là
+ * lúc Manager sửa approved_qty qua updateLineQuantity()).
+ *
+ * @return array<int, array{key:string,label:string}>
+ */
+function poWorkflowSteps(): array
+{
+    return [
+        ['key' => 'Draft',     'label' => 'Draft & Review'],
+        ['key' => 'Pending',   'label' => 'Pending Approval'],
+        ['key' => 'Approved',  'label' => 'Approved'],
+        ['key' => 'Delivered', 'label' => 'Delivered'],
+    ];
+}
+
+/** Vẽ donut chart SVG từ danh sách segment - dùng chung công thức với admin/dashboard.php::renderDonutChart(). */
+function renderPoDonutChart(array $segments): array
+{
+    $palette = ['#1e3a5f', '#c2410c', '#3b82f6', '#166534', '#92400e', '#9333ea'];
+
+    $radius = 70;
+    $circumference = 2 * M_PI * $radius;
+    $cx = 90;
+    $cy = 90;
+    $strokeWidth = 26;
+
+    $segmentsWithColor = [];
+    $offset = 0;
+    $circles = '';
+
+    foreach ($segments as $i => $seg) {
+        $color = $palette[$i % count($palette)];
+        $pct = (float) $seg['percentage'];
+        $dash = ($pct / 100) * $circumference;
+        $gap = $circumference - $dash;
+
+        $circles .= '<circle cx="' . $cx . '" cy="' . $cy . '" r="' . $radius . '" '
+                  . 'fill="none" stroke="' . $color . '" stroke-width="' . $strokeWidth . '" '
+                  . 'stroke-dasharray="' . round($dash, 2) . ' ' . round($gap, 2) . '" '
+                  . 'stroke-dashoffset="' . round(-$offset, 2) . '" '
+                  . 'transform="rotate(-90 ' . $cx . ' ' . $cy . ')" />';
+
+        $offset += $dash;
+        $segmentsWithColor[] = array_merge($seg, ['color' => $color]);
+    }
+
+    return ['svg' => '<svg viewBox="0 0 180 180">' . $circles . '</svg>', 'segments_with_color' => $segmentsWithColor];
+}
+
+// Dữ liệu bổ sung cho phần header giống mockup (Supplier Details / Estimated
+// Total / Item Breakdown) - chỉ tính khi đang xem chi tiết 1 PO.
+$supplierPerf = null;
+$poDonut = null;
+$poTotalAmount = 0;
+
+if ($selectedPo !== null) {
+    $supplierPerf = $managerService->getSupplierPerformance((int) $selectedPo['supplier_id']);
+
+    // Item Breakdown: gom line_cost theo category_name THẬT của sản phẩm
+    // (bảng categories/products đã có sẵn category_id) - không hardcode
+    // "Beverage/Snacks/Other" như mockup gốc vì category thực tế của hệ
+    // thống này khác (FMCG/Fresh_Food/Imported_Korean).
+    $categoryTotals = [];
+    foreach ($selectedPo['details'] as $line) {
+        $cat = $line['category_name'] ?? 'Khác';
+        $categoryTotals[$cat] = ($categoryTotals[$cat] ?? 0) + (float) $line['line_cost'];
+        $poTotalAmount += (float) $line['line_cost'];
+    }
+    arsort($categoryTotals);
+
+    $segments = [];
+    foreach ($categoryTotals as $catName => $amount) {
+        $segments[] = [
+            'category_name' => $catName,
+            'amount'        => $amount,
+            'percentage'    => $poTotalAmount > 0 ? round($amount / $poTotalAmount * 100, 1) : 0,
+        ];
+    }
+    $poDonut = renderPoDonutChart($segments);
 }
 
 $pageTitle   = 'Purchase Orders';
@@ -131,20 +218,23 @@ $activeMenu  = 'po';
 
                 <?php if ($selectedPo === null): ?>
 
-                    <!-- ================= DANH SÁCH PO CỦA TÔI ================= -->
+                    <!-- ================= DANH SÁCH PO CẦN XỬ LÝ (DRAFT) ================= -->
                     <div class="mb-4">
                         <h2 class="page-heading mb-1">Purchase Orders</h2>
-                        <p class="page-subheading mb-0">Đơn đặt hàng đã tạo - vào từng đơn để sửa số lượng (BR-06) hoặc gửi Admin duyệt.</p>
+                        <p class="page-subheading mb-0">
+                            Đơn nháp (Draft) cần xử lý - sửa số lượng (BR-06) rồi gửi Admin duyệt.
+                            Xem tổng trạng thái mọi đơn tại <a href="po-status.php">PO Status</a>.
+                        </p>
                     </div>
 
                     <div class="panel-card">
                         <div class="panel-card-header">
-                            <h3 class="panel-card-title">Đơn của tôi</h3>
+                            <h3 class="panel-card-title">Đơn nháp của tôi</h3>
                             <span class="panel-card-note"><?= count($myOrders) ?> đơn</span>
                         </div>
 
                         <?php if (empty($myOrders)): ?>
-                            <div class="empty-state">Chưa có đơn đặt hàng nào. Vào <a href="../reorder/reorder_suggestions.php">Reorder Suggestions</a> để tạo đơn mới.</div>
+                            <div class="empty-state">Không có đơn nháp nào cần xử lý. Vào <a href="../reorder/reorder_suggestions.php">Reorder Suggestions</a> để tạo đơn mới, hoặc xem <a href="po-status.php">PO Status</a> cho các đơn đã nộp.</div>
                         <?php else: ?>
                             <div class="table-responsive">
                                 <table class="table data-table align-middle mb-0">
@@ -211,6 +301,114 @@ $activeMenu  = 'po';
                             Đơn đã ở trạng thái <strong><?= htmlspecialchars($selectedPo['status'], ENT_QUOTES, 'UTF-8') ?></strong> - không thể sửa số lượng (BR-20: đơn Draft mới được chỉnh sửa).
                         </div>
                     <?php endif; ?>
+
+                    <!-- ===== Workflow stepper: Draft -> Pending -> Approved -> Delivered ===== -->
+                    <div class="panel-card mb-4">
+                        <div class="po-detail-steps">
+                            <?php
+                            $steps = poWorkflowSteps();
+                            $currentIdx = array_search($selectedPo['status'], array_column($steps, 'key'), true);
+                            $currentIdx = $currentIdx === false ? -1 : $currentIdx;
+                            // Rejected: hiển thị dừng ngay sau Pending, không tô các bước sau như đã hoàn tất.
+                            $isRejected = $selectedPo['status'] === 'Rejected';
+                            ?>
+                            <?php foreach ($steps as $i => $step): ?>
+                                <?php
+                                $state = 'upcoming';
+                                if (!$isRejected && $i < $currentIdx) { $state = 'done'; }
+                                elseif (!$isRejected && $i === $currentIdx) { $state = 'active'; }
+                                elseif ($isRejected && $step['key'] === 'Draft') { $state = 'done'; }
+                                elseif ($isRejected && $step['key'] === 'Pending') { $state = 'rejected'; }
+                                ?>
+                                <div class="po-detail-step po-detail-step-<?= $state ?>">
+                                    <span class="po-detail-step-dot"></span>
+                                    <span class="po-detail-step-label"><?= htmlspecialchars($step['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                </div>
+                                <?php if ($i < count($steps) - 1): ?><span class="po-detail-step-line"></span><?php endif; ?>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
+
+                    <!-- ===== Supplier Details / Estimated Total / Item Breakdown ===== -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-lg-4">
+                            <div class="panel-card h-100">
+                                <div class="panel-card-header">
+                                    <h3 class="panel-card-title">Supplier Details</h3>
+                                </div>
+                                <div class="fw-semibold mb-1"><?= htmlspecialchars($selectedPo['supplier_name'], ENT_QUOTES, 'UTF-8') ?></div>
+                                <div class="text-muted small mb-3">Supplier ID: <?= (int) $selectedPo['supplier_id'] ?></div>
+
+                                <?php if ($supplierPerf !== false && $supplierPerf !== null): ?>
+                                    <div class="d-flex justify-content-between py-1" style="font-size:.87rem;">
+                                        <span class="text-muted">Avg. Lead Time</span>
+                                        <span class="fw-semibold"><?= number_format((float) $supplierPerf['avg_lead_time_days'], 1) ?> ngày</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between py-1" style="font-size:.87rem;">
+                                        <span class="text-muted">Đơn đã giao</span>
+                                        <span class="fw-semibold"><?= number_format((int) $supplierPerf['total_delivered_orders']) ?></span>
+                                    </div>
+                                    <div class="d-flex justify-content-between py-1" style="font-size:.87rem;">
+                                        <span class="text-muted">Tỉ lệ sai lệch</span>
+                                        <span class="fw-semibold"><?= $supplierPerf['discrepancy_rate_percent'] !== null ? number_format((float) $supplierPerf['discrepancy_rate_percent'], 1) . '%' : 'Chưa có dữ liệu' ?></span>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="text-muted small">Chưa có đơn 'Delivered' để đánh giá hiệu suất nhà cung cấp.</div>
+                                <?php endif; ?>
+
+                                <?php $supplierPhone = $supplierPerf['contact_phone'] ?? null; ?>
+                                <div class="mt-3 pt-3" style="border-top:1px solid var(--surface-border-soft);">
+                                    <?php if (!empty($supplierPhone)): ?>
+                                        <a href="tel:<?= htmlspecialchars($supplierPhone, ENT_QUOTES, 'UTF-8') ?>" class="btn btn-outline-secondary btn-sm w-100">Liên hệ NCC: <?= htmlspecialchars($supplierPhone, ENT_QUOTES, 'UTF-8') ?></a>
+                                    <?php else: ?>
+                                        <span class="text-muted small">Chưa có số điện thoại liên hệ.</span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="panel-card h-100">
+                                <div class="panel-card-header">
+                                    <h3 class="panel-card-title">Estimated PO Total</h3>
+                                </div>
+                                <div class="fw-bold" style="font-size:1.9rem; color: var(--brand-primary);"><?= number_format($poTotalAmount) ?> đ</div>
+                                <p class="text-muted small mb-0 mt-2">Tổng giá trị nhập hàng (approved_qty &times; unit_cost) của <?= count($selectedPo['details']) ?> dòng sản phẩm trong đơn.</p>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-4">
+                            <div class="panel-card h-100">
+                                <div class="panel-card-header">
+                                    <h3 class="panel-card-title">Item Breakdown</h3>
+                                </div>
+                                <?php if (!empty($poDonut['segments_with_color'])): ?>
+                                    <div class="product-mix-wrap">
+                                        <div class="product-mix-donut">
+                                            <?= $poDonut['svg'] ?>
+                                            <div class="product-mix-center">
+                                                <span class="product-mix-center-value"><?= count($selectedPo['details']) ?></span>
+                                                <span class="product-mix-center-label">SKUs</span>
+                                            </div>
+                                        </div>
+                                        <div class="product-mix-legend">
+                                            <?php foreach ($poDonut['segments_with_color'] as $seg): ?>
+                                                <div class="product-mix-legend-item">
+                                                    <span class="product-mix-legend-left">
+                                                        <span class="product-mix-dot" style="background: <?= htmlspecialchars($seg['color'], ENT_QUOTES, 'UTF-8') ?>;"></span>
+                                                        <?= htmlspecialchars($seg['category_name'], ENT_QUOTES, 'UTF-8') ?>
+                                                    </span>
+                                                    <span class="product-mix-legend-pct"><?= number_format($seg['percentage'], 1) ?>%</span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php else: ?>
+                                    <div class="empty-state">Chưa có dữ liệu sản phẩm.</div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
 
                     <div class="panel-card">
                         <div class="panel-card-header">

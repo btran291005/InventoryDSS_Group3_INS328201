@@ -105,6 +105,21 @@ if ($suggestionResult['success']) {
 $pageTitle   = 'Reorder Suggestions';
 $breadcrumbs = ['Manager', 'Reorder', 'Suggestions'];
 $activeMenu  = 'reorder';
+
+/**
+ * Phân loại mức độ khẩn cấp của 1 dòng gợi ý - dựa TRỰC TIẾP trên
+ * current_stock/safety_stock/reorder_point thật (ReorderService::suggestQuantity()
+ * đã lọc sẵn chỉ trả về sản phẩm current_stock <= reorder_point, nên ở đây chỉ
+ * còn phân biệt 'Critical' (đã thủng safety stock - rủi ro hết hàng trước khi
+ * lô mới về) và 'Low' (dưới reorder point nhưng vẫn còn trên safety stock).
+ */
+function reorderUrgency(array $item): array
+{
+    if ((int) $item['current_stock'] <= (int) $item['safety_stock']) {
+        return ['label' => 'Critical', 'class' => 'stock-pill-critical'];
+    }
+    return ['label' => 'Low', 'class' => 'stock-pill-warn'];
+}
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -128,7 +143,10 @@ $activeMenu  = 'reorder';
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
                     <div>
                         <h2 class="page-heading mb-1">Reorder Suggestions</h2>
-                        <p class="page-subheading mb-0">Gợi ý đặt hàng theo Reorder Point/Safety Stock (BR-05), gom theo nhà cung cấp.</p>
+                        <p class="page-subheading mb-0">
+                            Hệ thống đã phân tích tồn kho/doanh số và tạo gợi ý đặt hàng theo Reorder Point &amp; Safety Stock (BR-05).
+                            Chọn các dòng cần đặt bên dưới để tạo Purchase Order Draft.
+                        </p>
                     </div>
                     <a href="stockout_risk.php" class="btn btn-outline-secondary btn-sm">Xem Stock-out Risk</a>
                 </div>
@@ -158,11 +176,14 @@ $activeMenu  = 'reorder';
                                     <input type="hidden" name="supplier_id" value="<?= (int) $supplierId ?>">
 
                                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                                        <h3 class="panel-card-title mb-0">
-                                            <?= htmlspecialchars($group['supplier_name'], ENT_QUOTES, 'UTF-8') ?>
-                                        </h3>
+                                        <div>
+                                            <h3 class="panel-card-title mb-0">
+                                                <?= htmlspecialchars($group['supplier_name'], ENT_QUOTES, 'UTF-8') ?>
+                                            </h3>
+                                            <span class="panel-card-note"><?= count($group['items']) ?> sản phẩm cần đặt</span>
+                                        </div>
                                         <button type="submit" class="btn btn-brand btn-sm" <?= $supplierId === 0 ? 'disabled title="Cần cập nhật nhà cung cấp cho sản phẩm trước"' : '' ?>>
-                                            Tạo PO cho các dòng đã chọn
+                                            Tạo PO Draft cho các dòng đã chọn
                                         </button>
                                     </div>
 
@@ -174,6 +195,7 @@ $activeMenu  = 'reorder';
                                                         <input type="checkbox" class="form-check-input select-all-checkbox" data-form-id="<?= $formId ?>">
                                                     </th>
                                                     <th>Sản phẩm</th>
+                                                    <th>Mức độ</th>
                                                     <th class="text-end">Tồn kho</th>
                                                     <th class="text-end">Reorder Point</th>
                                                     <th class="text-end">Bán TB/ngày (7d)</th>
@@ -182,6 +204,7 @@ $activeMenu  = 'reorder';
                                             </thead>
                                             <tbody>
                                                 <?php foreach ($group['items'] as $item): ?>
+                                                    <?php $urgency = reorderUrgency($item); ?>
                                                     <tr>
                                                         <td>
                                                             <input type="checkbox" class="form-check-input line-checkbox" name="product_id[]" value="<?= (int) $item['product_id'] ?>" form="<?= $formId ?>">
@@ -191,6 +214,7 @@ $activeMenu  = 'reorder';
                                                             <span class="fw-semibold"><?= htmlspecialchars($item['product_name'], ENT_QUOTES, 'UTF-8') ?></span>
                                                             <div class="text-muted small"><?= htmlspecialchars($item['sku_code'], ENT_QUOTES, 'UTF-8') ?></div>
                                                         </td>
+                                                        <td><span class="stock-pill <?= $urgency['class'] ?>"><?= $urgency['label'] ?></span></td>
                                                         <td class="text-end"><?= number_format((int) $item['current_stock']) ?></td>
                                                         <td class="text-end text-muted"><?= number_format((int) $item['reorder_point']) ?></td>
                                                         <td class="text-end text-muted"><?= number_format((float) $item['avg_daily_sales_7d'], 2) ?></td>

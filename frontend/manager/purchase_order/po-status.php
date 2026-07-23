@@ -1,16 +1,15 @@
 <?php
 /**
  * File: frontend/manager/purchase_order/po-status.php
- * Purpose: Manager xem trạng thái các đơn đặt hàng (PO) do CHÍNH MÌNH tạo -
- * chờ Admin duyệt / đã duyệt / đã từ chối / đã giao. Dùng
- * ManagerService::listMyPurchaseOrders() + getPurchaseOrderDetail() (đã có
- * sẵn, ManagerService không tự lọc theo managerId nên Service truyền vào
- * Auth::id() ở phía trang này).
+ * Purpose: Manager xem TỔNG TRẠNG THÁI của TẤT CẢ các PO do chính mình tạo
+ * (Draft/Pending/Approved/Rejected/Delivered) - đối lập với po_submit.php
+ * (chỉ để soạn/nộp các đơn còn Draft). Đây là trang tra cứu/theo dõi,
+ * KHÔNG cho sửa số lượng hay nộp đơn ở đây (BR-20 - chỉ po_submit.php mới
+ * có quyền sửa Draft).
  * Related: FR-MGR-06
+ * Calls: ManagerService::listMyPurchaseOrders(), getPurchaseOrderDetail()
  *
- * Lưu ý path: file nằm trong subfolder purchase_order/, dùng 3 cấp '../../../'
- * để require backend, và '../../components/' (2 cấp) để include layout -
- * giống quy ước đã áp dụng ở frontend/admin/setting/*.php.
+ * Style/layout đồng bộ frontend/manager/purchase_order/po_submit.php.
  */
 
 declare(strict_types=1);
@@ -25,168 +24,217 @@ require_once __DIR__ . '/../../../backend/services/ManagerService.php';
 Middleware::guard([ROLE_MANAGER]);
 
 $managerService = new ManagerService();
+$actorId = Auth::id();
 
-$filterStatus = $_GET['status'] ?? null;
-$orders = $managerService->listMyPurchaseOrders(Auth::id(), $filterStatus ?: null);
+/** Màu badge theo trạng thái PO - dùng chung công thức với po_submit.php. */
+function poStatusBadgeStyle(string $status): string
+{
+    return match ($status) {
+        'Draft'     => 'background: var(--color-info-bg); color: var(--color-info);',
+        'Pending'   => 'background: var(--color-warning-bg); color: var(--color-warning);',
+        'Approved'  => 'background: var(--color-success-bg); color: var(--color-success);',
+        'Rejected'  => 'background: var(--color-danger-bg); color: var(--color-danger);',
+        'Delivered' => 'background: var(--color-success-bg); color: var(--color-success);',
+        default     => 'background: var(--surface-alt); color: var(--text-muted);',
+    };
+}
 
-// Nếu có ?view=<po_id> -> hiển thị chi tiết dòng sản phẩm của đơn đó
+$statusOptions = ['Draft', 'Pending', 'Approved', 'Rejected', 'Delivered'];
+$filterStatus  = $_GET['status'] ?? '';
+$filterStatus  = in_array($filterStatus, $statusOptions, true) ? $filterStatus : null;
+
+$orders = $managerService->listMyPurchaseOrders($actorId, $filterStatus);
+
+// Nếu có ?view=<po_id> -> hiển thị chi tiết dòng sản phẩm của đơn đó (read-only).
 $viewingPoId = isset($_GET['view']) ? (int) $_GET['view'] : null;
 $viewingPo = $viewingPoId ? $managerService->getPurchaseOrderDetail($viewingPoId) : false;
 
-// Ngăn Manager xem PO của người khác qua URL thủ công (?view=<po_id lạ>)
-if ($viewingPo !== false && (int) $viewingPo['created_by'] !== Auth::id()) {
+// Ngăn Manager xem PO của người khác qua URL thủ công (?view=<po_id lạ>).
+if ($viewingPo !== false && (int) $viewingPo['created_by'] !== $actorId) {
     $viewingPo = false;
 }
 
-$statusBadge = [
-    'Draft'     => 'bg-secondary',
-    'Pending'   => 'bg-warning text-dark',
-    'Approved'  => 'bg-success',
-    'Rejected'  => 'bg-danger',
-    'Delivered' => 'bg-primary',
-];
+$viewingPoTotal = 0;
+if ($viewingPo !== false) {
+    foreach ($viewingPo['details'] as $line) {
+        $viewingPoTotal += (float) $line['line_cost'];
+    }
+}
 
-$pageTitle = 'Purchase Order Status';
-require_once __DIR__ . '/../../components/header.php';
-require_once __DIR__ . '/../../components/sidebar.php';
+$pageTitle   = 'PO Status';
+$breadcrumbs = ['Manager', 'PO Status'];
+$activeMenu  = 'po_status';
 ?>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PO Status - InventoryDSS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="<?= BASE_URL ?>/assets/css/theme_variables.css" rel="stylesheet">
+    <link href="<?= BASE_URL ?>/assets/css/custom.css" rel="stylesheet">
+</head>
+<body>
+    <div class="app-shell">
+        <?php require __DIR__ . '/../../components/sidebar.php'; ?>
 
-<h1 class="h4 mb-4">My Purchase Orders</h1>
+        <div class="app-content">
+            <?php require __DIR__ . '/../../components/header.php'; ?>
 
-<form method="get" class="row g-2 mb-3">
-    <div class="col-auto">
-        <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
-            <option value="">-- All statuses --</option>
-            <?php foreach (['Draft', 'Pending', 'Approved', 'Rejected', 'Delivered'] as $status): ?>
-                <option value="<?= $status ?>" <?= $filterStatus === $status ? 'selected' : '' ?>>
-                    <?= $status ?>
-                </option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-</form>
+            <main class="app-main">
 
-<div class="row g-4">
-    <div class="col-lg-7">
-        <div class="card">
-            <div class="card-header">Orders (<?= count($orders) ?>)</div>
-            <div class="table-responsive">
-                <table class="table table-hover mb-0 align-middle">
-                    <thead>
-                        <tr>
-                            <th>#PO</th>
-                            <th>Supplier</th>
-                            <th>Status</th>
-                            <th class="text-end">Total Value</th>
-                            <th>Created At</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($orders)): ?>
-                            <tr><td colspan="6" class="text-center text-muted py-4">No purchase orders found.</td></tr>
-                        <?php endif; ?>
-                        <?php foreach ($orders as $po): ?>
-                            <tr class="<?= $viewingPoId === (int) $po['po_id'] ? 'table-active' : '' ?>">
-                                <td>#<?= (int) $po['po_id'] ?></td>
-                                <td><?= htmlspecialchars($po['supplier_name']) ?></td>
-                                <td>
-                                    <span class="badge <?= $statusBadge[$po['status']] ?? 'bg-secondary' ?>">
-                                        <?= htmlspecialchars($po['status']) ?>
-                                    </span>
-                                </td>
-                                <td class="text-end"><?= number_format((float) $po['total_amount'], 0) ?></td>
-                                <td><?= htmlspecialchars($po['created_at']) ?></td>
-                                <td class="text-end">
-                                    <a href="?view=<?= (int) $po['po_id'] ?><?= $filterStatus ? '&status=' . urlencode($filterStatus) : '' ?>"
-                                       class="btn btn-sm btn-outline-primary">
-                                        View
-                                    </a>
-                                </td>
-                            </tr>
+                <div class="mb-4">
+                    <h2 class="page-heading mb-1">PO Status</h2>
+                    <p class="page-subheading mb-0">
+                        Trạng thái tổng hợp của mọi đơn đặt hàng bạn đã tạo (FR-MGR-06).
+                        Cần sửa số lượng hoặc nộp đơn Draft? Vào <a href="po_submit.php">Purchase Order (PO)</a>.
+                    </p>
+                </div>
+
+                <form method="get" class="d-flex align-items-center gap-2 mb-3">
+                    <label class="form-label small mb-0 text-muted">Lọc theo trạng thái</label>
+                    <select name="status" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
+                        <option value="">Tất cả</option>
+                        <?php foreach ($statusOptions as $status): ?>
+                            <option value="<?= $status ?>" <?= $filterStatus === $status ? 'selected' : '' ?>><?= $status ?></option>
                         <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
+                    </select>
+                </form>
+
+                <div class="row g-3">
+                    <div class="col-lg-7">
+                        <div class="panel-card">
+                            <div class="panel-card-header">
+                                <h3 class="panel-card-title">Đơn của tôi</h3>
+                                <span class="panel-card-note"><?= count($orders) ?> đơn</span>
+                            </div>
+
+                            <?php if (empty($orders)): ?>
+                                <div class="empty-state">Không có đơn nào khớp bộ lọc hiện tại.</div>
+                            <?php else: ?>
+                                <div class="table-responsive">
+                                    <table class="table data-table align-middle mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Mã PO</th>
+                                                <th>Nhà cung cấp</th>
+                                                <th>Trạng thái</th>
+                                                <th class="text-end">Tổng giá trị</th>
+                                                <th>Ngày tạo</th>
+                                                <th class="text-end">Thao tác</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($orders as $po): ?>
+                                                <tr class="<?= $viewingPoId === (int) $po['po_id'] ? 'table-active' : '' ?>">
+                                                    <td class="fw-semibold">#<?= (int) $po['po_id'] ?></td>
+                                                    <td><?= htmlspecialchars($po['supplier_name'], ENT_QUOTES, 'UTF-8') ?></td>
+                                                    <td><span class="stock-pill" style="<?= poStatusBadgeStyle($po['status']) ?>"><?= htmlspecialchars($po['status'], ENT_QUOTES, 'UTF-8') ?></span></td>
+                                                    <td class="text-end"><?= number_format((float) $po['total_amount']) ?> đ</td>
+                                                    <td class="text-muted small"><?= htmlspecialchars(date('d/m/Y', strtotime($po['created_at'])), ENT_QUOTES, 'UTF-8') ?></td>
+                                                    <td class="text-end">
+                                                        <a href="?view=<?= (int) $po['po_id'] ?><?= $filterStatus ? '&status=' . urlencode($filterStatus) : '' ?>" class="btn btn-outline-secondary btn-sm">Xem</a>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-5">
+                        <?php if ($viewingPo === false): ?>
+                            <div class="panel-card h-100 d-flex align-items-center justify-content-center">
+                                <div class="empty-state mb-0">Chọn 1 đơn ở danh sách bên trái để xem chi tiết.</div>
+                            </div>
+                        <?php else: ?>
+                            <div class="panel-card">
+                                <div class="panel-card-header">
+                                    <h3 class="panel-card-title">
+                                        PO #<?= (int) $viewingPo['po_id'] ?>
+                                        <span class="stock-pill ms-2" style="<?= poStatusBadgeStyle($viewingPo['status']) ?>"><?= htmlspecialchars($viewingPo['status'], ENT_QUOTES, 'UTF-8') ?></span>
+                                    </h3>
+                                </div>
+
+                                <div class="d-flex justify-content-between py-1" style="font-size:.87rem;">
+                                    <span class="text-muted">Nhà cung cấp</span>
+                                    <span class="fw-semibold"><?= htmlspecialchars($viewingPo['supplier_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                                </div>
+                                <div class="d-flex justify-content-between py-1" style="font-size:.87rem;">
+                                    <span class="text-muted">Ngày tạo</span>
+                                    <span class="fw-semibold"><?= htmlspecialchars(date('d/m/Y H:i', strtotime($viewingPo['created_at'])), ENT_QUOTES, 'UTF-8') ?></span>
+                                </div>
+                                <?php if (!empty($viewingPo['approved_at'])): ?>
+                                    <div class="d-flex justify-content-between py-1" style="font-size:.87rem;">
+                                        <span class="text-muted"><?= $viewingPo['status'] === 'Rejected' ? 'Ngày từ chối' : 'Ngày duyệt' ?></span>
+                                        <span class="fw-semibold">
+                                            <?= htmlspecialchars(date('d/m/Y H:i', strtotime($viewingPo['approved_at'])), ENT_QUOTES, 'UTF-8') ?>
+                                            (<?= htmlspecialchars($viewingPo['approved_by_name'] ?? '—', ENT_QUOTES, 'UTF-8') ?>)
+                                        </span>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="d-flex justify-content-between py-1 mb-3" style="font-size:.87rem;">
+                                    <span class="text-muted">Tổng giá trị</span>
+                                    <span class="fw-bold"><?= number_format($viewingPoTotal) ?> đ</span>
+                                </div>
+
+                                <div class="table-responsive">
+                                    <table class="table data-table align-middle mb-0" style="font-size:.82rem;">
+                                        <thead>
+                                            <tr>
+                                                <th>Sản phẩm</th>
+                                                <th class="text-end">SL gợi ý</th>
+                                                <th class="text-end">SL đặt</th>
+                                                <th class="text-end">Thực nhận</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($viewingPo['details'] as $line): ?>
+                                                <tr>
+                                                    <td>
+                                                        <span class="fw-semibold"><?= htmlspecialchars($line['product_name'], ENT_QUOTES, 'UTF-8') ?></span>
+                                                        <div class="text-muted small"><?= htmlspecialchars($line['sku_code'], ENT_QUOTES, 'UTF-8') ?></div>
+                                                    </td>
+                                                    <td class="text-end text-muted"><?= number_format((int) $line['suggested_qty']) ?></td>
+                                                    <td class="text-end fw-semibold"><?= number_format((int) $line['approved_qty']) ?></td>
+                                                    <td class="text-end"><?= $line['received_qty'] !== null ? number_format((int) $line['received_qty']) : '—' ?></td>
+                                                </tr>
+                                                <?php if (!empty($line['discrepancy_reason'])): ?>
+                                                    <tr>
+                                                        <td colspan="4" class="small" style="color: var(--color-warning); background: var(--color-warning-bg);">
+                                                            Sai lệch: <?= htmlspecialchars($line['discrepancy_reason'], ENT_QUOTES, 'UTF-8') ?>
+                                                        </td>
+                                                    </tr>
+                                                <?php endif; ?>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <?php if ($viewingPo['status'] === 'Rejected'): ?>
+                                    <div class="alert alert-danger py-2 px-3 mt-3 mb-0" style="font-size: .82rem;">
+                                        Đơn đã bị Admin từ chối. Tạo lại đơn nháp mới ở <a href="../reorder/reorder_suggestions.php">Reorder Suggestions</a> nếu vẫn cần đặt hàng (BR-20).
+                                    </div>
+                                <?php elseif ($viewingPo['status'] === 'Pending'): ?>
+                                    <div class="alert alert-warning py-2 px-3 mt-3 mb-0" style="font-size: .82rem;">
+                                        Đang chờ Admin duyệt - không thể sửa số lượng ở giai đoạn này (BR-20).
+                                    </div>
+                                <?php elseif ($viewingPo['status'] === 'Draft'): ?>
+                                    <div class="alert alert-info py-2 px-3 mt-3 mb-0" style="font-size: .82rem;">
+                                        Đơn còn ở dạng nháp - vào <a href="po_submit.php?po_id=<?= (int) $viewingPo['po_id'] ?>">Purchase Order (PO)</a> để sửa số lượng hoặc nộp Admin duyệt.
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+
+            </main>
         </div>
     </div>
 
-    <div class="col-lg-5">
-        <?php if ($viewingPo === false): ?>
-            <div class="card">
-                <div class="card-body text-center text-muted py-5">
-                    Select an order on the left to view its details.
-                </div>
-            </div>
-        <?php else: ?>
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span>Order #<?= (int) $viewingPo['po_id'] ?></span>
-                    <span class="badge <?= $statusBadge[$viewingPo['status']] ?? 'bg-secondary' ?>">
-                        <?= htmlspecialchars($viewingPo['status']) ?>
-                    </span>
-                </div>
-                <div class="card-body">
-                    <dl class="row mb-3">
-                        <dt class="col-5">Supplier</dt>
-                        <dd class="col-7"><?= htmlspecialchars($viewingPo['supplier_name']) ?></dd>
-                        <dt class="col-5">Created At</dt>
-                        <dd class="col-7"><?= htmlspecialchars($viewingPo['created_at']) ?></dd>
-                        <?php if ($viewingPo['approved_at']): ?>
-                            <dt class="col-5"><?= $viewingPo['status'] === 'Rejected' ? 'Rejected At' : 'Approved At' ?></dt>
-                            <dd class="col-7">
-                                <?= htmlspecialchars($viewingPo['approved_at']) ?>
-                                (<?= htmlspecialchars($viewingPo['approved_by_name'] ?? '—') ?>)
-                            </dd>
-                        <?php endif; ?>
-                    </dl>
-
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>SKU</th>
-                                <th>Product</th>
-                                <th class="text-end">Suggested</th>
-                                <th class="text-end">Approved (mine)</th>
-                                <th class="text-end">Received</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($viewingPo['details'] as $item): ?>
-                                <tr>
-                                    <td><?= htmlspecialchars($item['sku_code']) ?></td>
-                                    <td><?= htmlspecialchars($item['product_name']) ?></td>
-                                    <td class="text-end"><?= (int) $item['suggested_qty'] ?></td>
-                                    <td class="text-end"><?= (int) $item['approved_qty'] ?></td>
-                                    <td class="text-end">
-                                        <?= $item['received_qty'] !== null ? (int) $item['received_qty'] : '—' ?>
-                                    </td>
-                                </tr>
-                                <?php if (!empty($item['discrepancy_reason'])): ?>
-                                    <tr class="table-warning">
-                                        <td colspan="5" class="small">
-                                            <i class="bi bi-exclamation-triangle"></i>
-                                            Discrepancy: <?= htmlspecialchars($item['discrepancy_reason']) ?>
-                                        </td>
-                                    </tr>
-                                <?php endif; ?>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-
-                    <?php if ($viewingPo['status'] === 'Rejected'): ?>
-                        <div class="alert alert-danger mb-0">
-                            This order was rejected. Create a new draft if you still need to reorder these items (BR-20).
-                        </div>
-                    <?php elseif ($viewingPo['status'] === 'Pending'): ?>
-                        <div class="alert alert-warning mb-0">
-                            Waiting for Admin approval. This order cannot be edited while pending (BR-20).
-                        </div>
-                    <?php endif; ?>
-                </div>
-            </div>
-        <?php endif; ?>
-    </div>
-</div>
-
-<?php require_once __DIR__ . '/../../components/footer.php'; ?>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <?php require __DIR__ . '/../../components/footer.php'; ?>
