@@ -99,7 +99,7 @@ the PHP system still runs fully, it just loses the AI-based suggestion.
 actual access control is enforced by `Middleware::guard([...])` at the top of every
 view/API file.
 
-## 6. Known gaps / limitations (until 23/07/2026:
+## 6. Known gaps / limitations (until 23/07/2026):
 
 - **Secrets are not separated from code on the PHP side**: `backend/config/database.php`
   hardcodes DB credentials instead of reading from `.env`. `forecast-api` (Python)
