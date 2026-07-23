@@ -19,6 +19,7 @@ frontend/
   assets/     - CSS/JS/images
 forecast-api/ - Python (FastAPI) microservice computing Demand Forecast, independent of the PHP backend
 db.sql        - Full schema (DROP + CREATE) + seed/mock data for demos
+                (kept internal, NOT committed to this repo — see Section 3)
 ```
 
 ## 2. Environment requirements
@@ -45,6 +46,14 @@ db.sql        - Full schema (DROP + CREATE) + seed/mock data for demos
    ```sql
    CREATE DATABASE project2;
    ```
+
+   > ⚠️ **`db.sql` is intentionally NOT committed to this repository.** It is
+   > shared internally within the team (contains realistic-looking seed values,
+   > including something resembling an API key in `api_configs` — see Section 6)
+   > rather than pushed to a public GitHub repo. Ask a teammate for the current
+   > `db.sql` (or export it from an existing local instance:
+   > `mysqldump -u root project2 > db.sql`) and place it at the repo root before
+   > running the import below.
 
    ```bash
    mysql -u root project2 < db.sql
@@ -104,15 +113,19 @@ view/API file.
 - **Secrets are not separated from code on the PHP side**: `backend/config/database.php`
   hardcodes DB credentials instead of reading from `.env`. `forecast-api` (Python)
   does this correctly (`python-dotenv`); the PHP side does not.
-- **`db.sql` contains seed data that resembles a real API key**
-  (`sk_live_gs25_fbf932` in the `api_configs` table) — while likely demo/mock data,
-  the naming convention (`sk_live_...`) matches how real API keys are conventionally
-  named, so it should be reviewed before treating the repo as
-  public/production-safe.
+- **`db.sql` is deliberately excluded from this public repo** (see Section 3) because
+  its seed data contains a value that resembles a real API key
+  (`sk_live_gs25_fbf932` in the `api_configs` table). This is very likely
+  demo/mock data, but the naming convention (`sk_live_...`) matches how real API
+  keys are conventionally named — treat it as sensitive until confirmed
+  otherwise, and do not paste its contents into any public channel (issues, PRs,
+  chat logs) when sharing it internally.
 - **No versioned migrations** — `db.sql` is a single DROP+CREATE+INSERT script, with
   no schema changes tracked separately over time.
-- **No CI, and no pull request has been reviewed on this repo** as of this README
-  (git history currently shows a single `Demo` commit on `main`).
+- **No CI, and no pull request has been reviewed on this repo**: `main` has 30+
+  commits, but most messages are non-descriptive (`Update`, `Demo`) and none
+  reference an issue/requirement ID — commit history is not traceable back to
+  FR/BR IDs as of this README.
 
 ## 7. Related documentation
 
