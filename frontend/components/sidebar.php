@@ -82,7 +82,7 @@ if ($roleId === ROLE_ADMIN) {
             'icon'  => 'users',
             'activeAlso' => ['accounts', 'permissions'],
         ],
-        'rules'       => ['label' => 'Rules', 'href' => '/admin/setting/reorder_rules.php', 'icon' => 'sliders'],
+        'rules'       => ['label' => 'Rules', 'href' => '/admin/reorder_rules.php', 'icon' => 'sliders'],
         // TODO: sitemap yêu cầu "Inventory" (Overview + Count History) cho Admin,
         // nhưng chưa có file frontend/admin nào cho phần này - tạm ẩn khỏi menu
         // cho tới khi 2 trang đó được code, để tránh trỏ vào link 404.
