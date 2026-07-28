@@ -207,14 +207,56 @@ $transactionsCounts = array_column($kpi['trends']['transactions_30d'], 'count');
 
 $activityCounts = array_column($activityTrend7d, 'count');
 
-// Alerts panel: lấy từ recent_activity, chỉ hiển thị các hành động đáng chú ý
-// (khác Recent Activity ở cuối trang vốn liệt kê MỌI hành động) - ưu tiên
-// severity danger/warning trước, tối đa 3 dòng khớp mockup ("3 NEW").
-$alertCandidates = array_filter($recentActivity, fn(array $log) => classifyAlertSeverity($log['action_type']) !== 'info');
-$alertItems = array_slice(array_values($alertCandidates), 0, 3);
-if (empty($alertItems)) {
-    // Không có gì "đáng báo động" -> vẫn hiện tối đa 3 hoạt động gần nhất để panel không trống trơn.
-    $alertItems = array_slice($recentActivity, 0, 3);
+// Alerts panel: TRƯỚC ĐÂY chỉ lấy từ audit log (recent_activity), nên khi
+// hoạt động gần nhất toàn là LOGIN/LOGOUT, panel hiện "3 NEW" nhưng nội dung
+// chỉ là ai đó đăng nhập - lệch hẳn kỳ vọng "cảnh báo" của người xem. Giờ ưu
+// tiên đúng thứ tự mức độ khẩn cấp về NGHIỆP VỤ trước, audit log chỉ là
+// fallback cuối cùng khi không có gì đáng chú ý hơn:
+//   1. Low-stock alerts (BR-04) - mỗi sản phẩm dưới reorder point là 1 alert thật
+//   2. Pending PO approvals (FR-ADM-06) - đơn hàng đang chờ Admin xử lý
+//   3. Audit log severity danger/warning (REJECT/LOCK/APPROVE/UPDATE)
+//   4. Nếu vẫn trống, mới hiện audit log gần nhất bất kỳ (giữ panel không trống trơn)
+$alertItems = [];
+
+foreach (array_slice($lowStockAlerts, 0, 3) as $item) {
+    $isCritical = (int) $item['current_stock'] <= 0;
+    $alertItems[] = [
+        'severity' => $isCritical ? 'danger' : 'warning',
+        'title'    => $isCritical ? 'Out of stock' : 'Low stock',
+        'body'     => htmlspecialchars($item['product_name'], ENT_QUOTES, 'UTF-8')
+                    . ' — còn ' . (int) $item['current_stock'] . '/' . (int) $item['reorder_point'] . ' (reorder point)',
+        'time'     => null,
+        'link'     => 'dashboard.php#low-stock',
+    ];
+}
+
+if (count($alertItems) < 3) {
+    foreach (array_slice($pendingOrders, 0, 3 - count($alertItems)) as $po) {
+        $alertItems[] = [
+            'severity' => 'warning',
+            'title'    => 'PO awaiting approval',
+            'body'     => 'PO #' . (int) $po['po_id'] . ' — ' . htmlspecialchars($po['supplier_name'], ENT_QUOTES, 'UTF-8')
+                        . ' (tạo bởi ' . htmlspecialchars($po['created_by_name'], ENT_QUOTES, 'UTF-8') . ')',
+            'time'     => formatDashboardDateTime($po['created_at']),
+            'link'     => 'po_approval.php',
+        ];
+    }
+}
+
+if (count($alertItems) < 3) {
+    $auditCandidates = array_filter($recentActivity, fn(array $log) => classifyAlertSeverity($log['action_type']) !== 'info');
+    $auditPool = !empty($auditCandidates) ? array_values($auditCandidates) : $recentActivity;
+
+    foreach (array_slice($auditPool, 0, 3 - count($alertItems)) as $log) {
+        $alertItems[] = [
+            'severity' => classifyAlertSeverity($log['action_type']),
+            'title'    => ucfirst(formatActionLabel($log['action_type'])),
+            'body'     => htmlspecialchars($log['account_name'], ENT_QUOTES, 'UTF-8')
+                        . (!empty($log['target_table']) ? ' — ' . htmlspecialchars($log['target_table'], ENT_QUOTES, 'UTF-8') . ($log['target_id'] !== null ? ' #' . (int) $log['target_id'] : '') : ''),
+            'time'     => formatDashboardDateTime($log['timestamp']),
+            'link'     => 'audit_log.php',
+        ];
+    }
 }
 
 $donutData = renderDonutChart($productMix);
@@ -476,35 +518,97 @@ $activeMenu  = 'dashboard';
                                         $y = round($padTop + $plotH - (($row['count'] / $axisMax) * $plotH), 1);
                                         $pts[] = ['x' => $x, 'y' => $y, 'count' => $row['count'], 'label' => $row['label']];
                                     }
-                                    $lineStr = implode(' ', array_map(fn($p) => $p['x'] . ',' . $p['y'], $pts));
-                                    $areaStr = $padLeft . ',' . ($padTop + $plotH) . ' ' . $lineStr . ' ' . ($padLeft + $plotW) . ',' . ($padTop + $plotH);
+
+                                    // Đường cong mượt qua từng điểm, dùng MONOTONE CUBIC interpolation
+                                    // (Fritsch-Carlson) thay vì Catmull-Rom thuần. Catmull-Rom từng dùng ở
+                                    // đây bị "overshoot": khi 2-3 điểm liên tiếp bằng nhau (VD: nhiều ngày
+                                    // liền có count=0), tiếp tuyến tại điểm giữa vẫn khác 0 -> đường cong vọt
+                                    // xuống dưới 0 trông như số liệu ÂM, sai lệch nghiêm trọng so với dữ liệu
+                                    // thật. Monotone cubic đảm bảo đường đi giữa 2 điểm luôn nằm trong đúng
+                                    // khoảng [min(y1,y2), max(y1,y2)] của 2 điểm đó - không bao giờ vọt ra
+                                    // ngoài, kể cả khi dữ liệu phẳng hoặc đổi hướng đột ngột.
+                                    $smoothPath = '';
+                                    if ($n > 0) {
+                                        // Tangent tại mỗi điểm: độ dốc trung bình 2 đoạn liền kề, nhưng ép về 0
+                                        // nếu 2 đoạn đổi dấu (đỉnh/đáy cục bộ) hoặc 1 trong 2 đoạn phẳng -
+                                        // chính điều kiện này ngăn overshoot ở các đoạn có giá trị bằng nhau.
+                                        $dx = []; $dy = []; $slope = [];
+                                        for ($i = 0; $i < $n - 1; $i++) {
+                                            $dx[$i] = $pts[$i + 1]['x'] - $pts[$i]['x'];
+                                            $dy[$i] = $pts[$i + 1]['y'] - $pts[$i]['y'];
+                                            $slope[$i] = $dx[$i] != 0 ? $dy[$i] / $dx[$i] : 0;
+                                        }
+
+                                        $tangent = array_fill(0, $n, 0.0);
+                                        for ($i = 1; $i < $n - 1; $i++) {
+                                            if ($n < 2 || $slope[$i - 1] * $slope[$i] <= 0) {
+                                                $tangent[$i] = 0.0; // đổi hướng hoặc đoạn phẳng -> tiếp tuyến = 0, không overshoot
+                                            } else {
+                                                $tangent[$i] = ($slope[$i - 1] + $slope[$i]) / 2;
+                                            }
+                                        }
+                                        if ($n > 1) {
+                                            $tangent[0] = $slope[0];
+                                            $tangent[$n - 1] = $slope[$n - 2];
+                                        }
+
+                                        $smoothPath = 'M ' . $pts[0]['x'] . ',' . $pts[0]['y'];
+                                        for ($i = 0; $i < $n - 1; $i++) {
+                                            $p1 = $pts[$i];
+                                            $p2 = $pts[$i + 1];
+                                            $segDx = $dx[$i] / 3;
+
+                                            $cp1x = round($p1['x'] + $segDx, 1);
+                                            $cp1y = round($p1['y'] + $tangent[$i] * $segDx, 1);
+                                            $cp2x = round($p2['x'] - $segDx, 1);
+                                            $cp2y = round($p2['y'] - $tangent[$i + 1] * $segDx, 1);
+
+                                            $smoothPath .= ' C ' . $cp1x . ',' . $cp1y . ' ' . $cp2x . ',' . $cp2y . ' ' . $p2['x'] . ',' . $p2['y'];
+                                        }
+                                    }
+                                    $areaPath = $smoothPath . ' L ' . ($padLeft + $plotW) . ',' . ($padTop + $plotH)
+                                              . ' L ' . $padLeft . ',' . ($padTop + $plotH) . ' Z';
+
+                                    $lastPt = $pts[$n - 1];
                                 ?>
                                 <div class="activity-chart-wrap">
                                     <svg class="activity-chart-svg" viewBox="0 0 <?= $chartW ?> <?= $chartH ?>" preserveAspectRatio="xMidYMid meet">
+                                        <defs>
+                                            <linearGradient id="activityAreaFill" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stop-color="var(--brand-primary)" stop-opacity="0.22"></stop>
+                                                <stop offset="100%" stop-color="var(--brand-primary)" stop-opacity="0"></stop>
+                                            </linearGradient>
+                                        </defs>
+
                                         <!-- Gridline ngang + nhãn trục Y -->
                                         <?php foreach ($yTicks as $tick): ?>
                                             <?php $tickY = round($padTop + $plotH - (($tick / $axisMax) * $plotH), 1); ?>
-                                            <line x1="<?= $padLeft ?>" y1="<?= $tickY ?>" x2="<?= $padLeft + $plotW ?>" y2="<?= $tickY ?>" stroke="var(--surface-border)" stroke-width="1"></line>
+                                            <line x1="<?= $padLeft ?>" y1="<?= $tickY ?>" x2="<?= $padLeft + $plotW ?>" y2="<?= $tickY ?>" stroke="var(--surface-border-soft)" stroke-width="1" stroke-dasharray="3 4"></line>
                                             <text x="<?= $padLeft - 8 ?>" y="<?= $tickY + 3 ?>" text-anchor="end" class="activity-chart-axis-label"><?= $tick ?></text>
                                         <?php endforeach; ?>
 
-                                        <polygon points="<?= htmlspecialchars($areaStr, ENT_QUOTES, 'UTF-8') ?>" fill="var(--brand-primary)" opacity="0.12"></polygon>
-                                        <polyline points="<?= htmlspecialchars($lineStr, ENT_QUOTES, 'UTF-8') ?>" fill="none" stroke="var(--brand-primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
+                                        <path d="<?= htmlspecialchars($areaPath, ENT_QUOTES, 'UTF-8') ?>" fill="url(#activityAreaFill)"></path>
+                                        <path d="<?= htmlspecialchars($smoothPath, ENT_QUOTES, 'UTF-8') ?>" fill="none" stroke="var(--brand-primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
 
                                         <!-- Dot + số thật tại mỗi điểm - cho phép nhìn giá trị chính xác thay vì chỉ đoán qua hình dạng đường -->
-                                        <?php foreach ($pts as $p): ?>
-                                            <circle cx="<?= $p['x'] ?>" cy="<?= $p['y'] ?>" r="4" fill="#fff" stroke="var(--brand-primary)" stroke-width="2.5"></circle>
-                                            <text x="<?= $p['x'] ?>" y="<?= max(12, $p['y'] - 10) ?>" text-anchor="middle" class="activity-chart-point-label"><?= (int) $p['count'] ?></text>
+                                        <?php foreach ($pts as $i => $p): ?>
+                                            <?php $isLast = $i === $n - 1; ?>
+                                            <?php if ($isLast): ?>
+                                                <circle cx="<?= $p['x'] ?>" cy="<?= $p['y'] ?>" r="9" fill="var(--brand-primary)" opacity="0.15"></circle>
+                                            <?php endif; ?>
+                                            <circle cx="<?= $p['x'] ?>" cy="<?= $p['y'] ?>" r="<?= $isLast ? 5 : 3.5 ?>" fill="#fff" stroke="var(--brand-primary)" stroke-width="<?= $isLast ? 3 : 2 ?>"></circle>
+                                            <text x="<?= $p['x'] ?>" y="<?= max(12, $p['y'] - 12) ?>" text-anchor="middle" class="activity-chart-point-label<?= $isLast ? ' activity-chart-point-label-current' : '' ?>"><?= (int) $p['count'] ?></text>
                                         <?php endforeach; ?>
                                     </svg>
                                     <div class="activity-chart-labels">
-                                        <?php foreach ($activityTrend7d as $row): ?>
-                                            <span><?= htmlspecialchars($row['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                        <?php foreach ($activityTrend7d as $i => $row): ?>
+                                            <span class="<?= $i === $n - 1 ? 'activity-chart-label-current' : '' ?>"><?= htmlspecialchars($row['label'], ENT_QUOTES, 'UTF-8') ?></span>
                                         <?php endforeach; ?>
                                     </div>
                                 </div>
                             <?php endif; ?>
                         </div>
+
                     </div>
 
                     <div class="col-12 col-xl-5">
@@ -541,10 +645,13 @@ $activeMenu  = 'dashboard';
                     </div>
                 </div>
 
-                <!-- Purchase Order Workflow (đếm PO theo trạng thái thật: Draft/Pending/Approved/Delivered/Rejected) -->
+                <!-- Purchase Order Workflow + Alerts panel: chung 1 hàng, 2 cột - PO Workflow
+                     rộng hơn (7/12) vì có 5 cột bar cần đủ chỗ hiển thị nhãn, Alerts hẹp hơn
+                     (5/12) vì nội dung là danh sách dòng ngắn. Trên màn hình nhỏ (dưới xl) tự
+                     xếp chồng như mọi cặp panel khác trong trang. -->
                 <div class="row g-3 mt-0">
-                    <div class="col-12">
-                        <div class="panel-card">
+                    <div class="col-12 col-xl-7">
+                        <div class="panel-card h-100">
                             <div class="panel-card-header">
                                 <h3 class="panel-card-title">Purchase Order Workflow</h3>
                                 <span class="panel-card-note">Distribution of purchase orders by current status</span>
@@ -553,10 +660,22 @@ $activeMenu  = 'dashboard';
                             <?php $maxPoCount = max(array_column($poWorkflow, 'count')) ?: 1; ?>
                             <div class="po-workflow-chart">
                                 <?php foreach ($poWorkflow as $col): ?>
-                                    <?php $barHeightPct = $col['count'] > 0 ? max(6, round(($col['count'] / $maxPoCount) * 100)) : 2; ?>
+                                    <?php
+                                        $barHeightPct = $col['count'] > 0 ? max(6, round(($col['count'] / $maxPoCount) * 100)) : 2;
+                                        // Màu theo Ý NGHĨA trạng thái, không phải thứ tự cột - khớp cùng bảng
+                                        // màu status-badge đã dùng ở po_approval.php để nhất quán trong toàn hệ
+                                        // thống (Rejected luôn là màu cảnh báo/nguy hiểm bất kể ở đâu).
+                                        $statusColorClass = match ($col['status']) {
+                                            'Rejected'  => 'po-workflow-bar-danger',
+                                            'Delivered' => 'po-workflow-bar-success',
+                                            'Approved'  => 'po-workflow-bar-info',
+                                            'Pending'   => 'po-workflow-bar-warning',
+                                            default     => 'po-workflow-bar-muted', // Draft
+                                        };
+                                    ?>
                                     <div class="po-workflow-col">
                                         <div class="po-workflow-bar-track">
-                                            <div class="po-workflow-bar" style="height: <?= $barHeightPct ?>%;">
+                                            <div class="po-workflow-bar <?= $statusColorClass ?>" style="height: <?= $barHeightPct ?>%;">
                                                 <span class="po-workflow-bar-value"><?= number_format($col['count']) ?></span>
                                             </div>
                                         </div>
@@ -566,11 +685,48 @@ $activeMenu  = 'dashboard';
                             </div>
                         </div>
                     </div>
+
+                    <!-- Alerts panel: ưu tiên cảnh báo nghiệp vụ thật (low-stock, PO pending) trước audit log -->
+                    <div class="col-12 col-xl-5">
+                        <div class="panel-card h-100">
+                            <div class="panel-card-header">
+                                <h3 class="panel-card-title">
+                                    Alerts
+                                    <?php if (!empty($alertItems)): ?>
+                                        <span class="badge-count badge-count-warn"><?= count($alertItems) ?> NEW</span>
+                                    <?php endif; ?>
+                                </h3>
+                            </div>
+
+                            <?php if (empty($alertItems)): ?>
+                                <div class="empty-state">No recent alerts.</div>
+                            <?php else: ?>
+                                <div class="alert-list">
+                                    <?php foreach ($alertItems as $alert): ?>
+                                        <a href="<?= htmlspecialchars($alert['link'], ENT_QUOTES, 'UTF-8') ?>" class="alert-item alert-item-link">
+                                            <span class="alert-item-icon severity-<?= $alert['severity'] ?>" aria-hidden="true"></span>
+                                            <div class="alert-item-content">
+                                                <div class="alert-item-top">
+                                                    <span class="alert-item-title severity-<?= $alert['severity'] ?>"><?= $alert['title'] ?></span>
+                                                    <?php if ($alert['time'] !== null): ?>
+                                                        <span class="alert-item-time"><?= $alert['time'] ?></span>
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="alert-item-body"><?= $alert['body'] ?></div>
+                                            </div>
+                                        </a>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                 </div>
 
+                <!-- Recent activity / audit log (FR-ADM-07) - tách riêng hàng, full-width vì là
+                     danh sách dài (nhiều dòng), gộp chung với 2 panel ngắn ở trên sẽ làm chúng
+                     bị kéo cao theo mất cân đối. -->
                 <div class="row g-3 mt-0">
-                    <!-- Recent activity / audit log (FR-ADM-07) -->
-                    <div class="col-12 col-xl-8">
+                    <div class="col-12">
                         <div class="panel-card">
                             <div class="panel-card-header">
                                 <h3 class="panel-card-title">Recent Activity</h3>
@@ -596,44 +752,6 @@ $activeMenu  = 'dashboard';
                                         </li>
                                     <?php endforeach; ?>
                                 </ul>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <!-- Alerts panel: hành động đáng chú ý (danger/warning) trích từ audit log -->
-                    <div class="col-12 col-xl-4">
-                        <div class="panel-card h-100">
-                            <div class="panel-card-header">
-                                <h3 class="panel-card-title">
-                                    Alerts
-                                    <?php if (!empty($alertItems)): ?>
-                                        <span class="badge-count badge-count-warn"><?= count($alertItems) ?> NEW</span>
-                                    <?php endif; ?>
-                                </h3>
-                            </div>
-
-                            <?php if (empty($alertItems)): ?>
-                                <div class="empty-state">No recent alerts.</div>
-                            <?php else: ?>
-                                <div class="alert-list">
-                                    <?php foreach ($alertItems as $log): ?>
-                                        <?php $severity = classifyAlertSeverity($log['action_type']); ?>
-                                        <div class="alert-item">
-                                            <div class="alert-item-top">
-                                                <span class="alert-item-title severity-<?= $severity ?>">
-                                                    <?= htmlspecialchars(ucfirst(formatActionLabel($log['action_type'])), ENT_QUOTES, 'UTF-8') ?>
-                                                </span>
-                                                <span class="alert-item-time"><?= formatDashboardDateTime($log['timestamp']) ?></span>
-                                            </div>
-                                            <div class="alert-item-body">
-                                                <?= htmlspecialchars($log['account_name'], ENT_QUOTES, 'UTF-8') ?>
-                                                <?php if (!empty($log['target_table'])): ?>
-                                                    — <?= htmlspecialchars($log['target_table'], ENT_QUOTES, 'UTF-8') ?><?= $log['target_id'] !== null ? ' #' . (int) $log['target_id'] : '' ?>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                    <?php endforeach; ?>
-                                </div>
                             <?php endif; ?>
                         </div>
                     </div>

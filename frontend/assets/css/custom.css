@@ -546,7 +546,7 @@ body {
     color: var(--text-muted);
 }
 
-/* --- Activity Trend (area chart, 7 ngày) --- */
+/* --- Activity Trend (smooth area chart, 7 ngày) --- */
 .activity-chart-wrap {
     width: 100%;
 }
@@ -560,9 +560,41 @@ body {
 .activity-chart-labels {
     display: flex;
     justify-content: space-between;
-    padding: 6px 4px 0;
+    padding: 8px 4px 0;
     font-size: .74rem;
     color: var(--text-muted);
+}
+
+/* Nhãn ngày của điểm dữ liệu mới nhất (hôm nay/gần nhất) - đậm hơn để mắt
+   tự nhiên neo vào giá trị hiện tại, khớp với dot lớn hơn trên chart. */
+.activity-chart-label-current {
+    color: var(--brand-primary);
+    font-weight: 700;
+}
+
+/* Text bên trong SVG chart (trục Y + số tại từng điểm dữ liệu). SVG <text>
+   không kế thừa font-family/font-size từ CSS ngoài theo mặc định ở một số
+   trình duyệt, nên khai báo tường minh ở đây để không bị lệch cỡ chữ hệ
+   thống (thường to hơn nhiều so với thiết kế). */
+.activity-chart-axis-label {
+    font-family: inherit;
+    font-size: 10px;
+    fill: var(--text-muted);
+}
+
+.activity-chart-point-label {
+    font-family: inherit;
+    font-size: 11px;
+    font-weight: 600;
+    fill: var(--text-secondary, var(--text-muted));
+}
+
+/* Điểm dữ liệu mới nhất - nổi bật hơn hẳn các điểm còn lại để mắt neo vào
+   giá trị hiện tại trước, khớp với dot lớn hơn + vòng glow phía sau nó. */
+.activity-chart-point-label-current {
+    font-size: 13px;
+    font-weight: 800;
+    fill: var(--brand-primary);
 }
 
 /* --- Product Mix (donut + legend) --- */
@@ -694,12 +726,24 @@ body {
     background: var(--brand-primary);
     min-height: 4px;
     position: relative;
-    transition: filter .15s;
+    transition: filter .15s, transform .15s;
 }
 
 .po-workflow-bar:hover {
     filter: brightness(1.15);
+    transform: scaleX(1.08);
 }
+
+/* Màu theo Ý NGHĨA trạng thái PO (Rejected = danger, Delivered = success,
+   Approved = info, Pending = warning, Draft = trung tính) - dùng chung
+   --color-* đã định nghĩa ở theme_variables.css, để khi trang po_approval.php
+   (hiện vẫn là stub, xem docblock đầu file đó) được viết đầy đủ với status
+   badge riêng, 2 nơi tự động khớp màu nhau mà không cần đồng bộ thủ công. */
+.po-workflow-bar-muted   { background: var(--text-muted); opacity: .55; }
+.po-workflow-bar-warning { background: var(--color-warning); }
+.po-workflow-bar-info    { background: var(--color-info); }
+.po-workflow-bar-success { background: var(--color-success); }
+.po-workflow-bar-danger  { background: var(--color-danger); }
 
 .po-workflow-bar-value {
     position: absolute;
@@ -718,28 +762,63 @@ body {
     font-weight: 600;
 }
 
-/* --- Alerts panel (System Overview - phân biệt severity) --- */
+/* --- Alerts panel (System Overview - ưu tiên cảnh báo nghiệp vụ thật) --- */
 .alert-list {
     display: flex;
     flex-direction: column;
     gap: 2px;
 }
 
+/* alert-item giờ là <a> (bấm được, dẫn tới trang liên quan: low-stock trên
+   dashboard, po_approval.php, audit_log.php) thay vì <div> tĩnh trước đây -
+   reset màu link mặc định + thêm hover nhẹ để vẫn rõ ràng là có thể click. */
 .alert-item {
     display: flex;
-    flex-direction: column;
-    gap: 3px;
-    padding: 12px 4px;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 8px;
     border-bottom: 1px solid var(--surface-border-soft);
+    text-decoration: none;
+    color: inherit;
+    border-radius: var(--radius-sm);
+    transition: background .15s;
+}
+
+.alert-item:hover {
+    background: var(--brand-primary-light);
+    text-decoration: none;
+    color: inherit;
 }
 
 .alert-item:last-child {
     border-bottom: none;
-    padding-bottom: 0;
+    padding-bottom: 8px;
 }
 
 .alert-item:first-child {
-    padding-top: 0;
+    padding-top: 8px;
+}
+
+/* Chấm tròn màu severity ở đầu mỗi dòng - tín hiệu thị giác nhanh hơn việc
+   phải đọc chữ để biết mức độ, đồng bộ cách dùng chấm màu ở Product Mix legend. */
+.alert-item-icon {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+
+.alert-item-icon.severity-danger  { background: var(--color-danger); }
+.alert-item-icon.severity-warning { background: var(--color-warning); }
+.alert-item-icon.severity-info    { background: var(--brand-accent); }
+
+.alert-item-content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
 }
 
 .alert-item-top {

@@ -874,13 +874,30 @@ class AdminService
             ORDER BY sku_count DESC
         ")->fetchAll();
 
+        // Donut chỉ đọc được với ít lát cắt - với cửa hàng có nhiều category
+        // (10+), vẽ hết tất cả khiến mỗi lát quá mỏng để phân biệt và legend
+        // tràn dài mất kiểm soát. Giữ PRODUCT_MIX_TOP_N category lớn nhất,
+        // gộp phần còn lại thành 1 lát "Khác" - vẫn phản ánh đúng 100% tổng số
+        // SKU, chỉ gộp nhãn hiển thị chứ không bỏ sót dữ liệu.
         $productMix = [];
         if ($totalProducts > 0) {
-            foreach ($productMixRaw as $row) {
+            $topRows = array_slice($productMixRaw, 0, PRODUCT_MIX_TOP_N);
+            $otherRows = array_slice($productMixRaw, PRODUCT_MIX_TOP_N);
+
+            foreach ($topRows as $row) {
                 $productMix[] = [
                     'category_name' => $row['category_name'],
                     'sku_count'     => (int) $row['sku_count'],
                     'percentage'    => round(((int) $row['sku_count'] / $totalProducts) * 100, 1),
+                ];
+            }
+
+            if (!empty($otherRows)) {
+                $otherSkuCount = array_sum(array_map(fn($r) => (int) $r['sku_count'], $otherRows));
+                $productMix[] = [
+                    'category_name' => 'Khác (' . count($otherRows) . ' nhóm)',
+                    'sku_count'     => $otherSkuCount,
+                    'percentage'    => round(($otherSkuCount / $totalProducts) * 100, 1),
                 ];
             }
         }
