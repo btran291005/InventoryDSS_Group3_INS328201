@@ -149,7 +149,12 @@ function renderDonutChart(array $segments): array
     $circles = '';
 
     foreach ($segments as $i => $seg) {
-        $color = $palette[$i % count($palette)];
+        // Lát "Khác (N nhóm)" là tổng gộp nhiều category nhỏ - dùng màu xám
+        // trung tính cố định thay vì tiếp tục vòng palette, để mắt phân biệt
+        // ngay đây là 1 lát TỔNG HỢP chứ không phải 1 category bình thường có
+        // cùng "trọng số hiển thị" như các lát top N.
+        $isOther = str_starts_with($seg['category_name'], 'Khác (');
+        $color = $isOther ? '#C7CDD6' : $palette[$i % count($palette)];
         $pct = (float) $seg['percentage'];
         $dash = ($pct / 100) * $circumference;
         $gap = $circumference - $dash;
@@ -612,7 +617,7 @@ $activeMenu  = 'dashboard';
                     </div>
 
                     <div class="col-12 col-xl-5">
-                        <div class="panel-card">
+                        <div class="panel-card h-100">
                             <div class="panel-card-header">
                                 <h3 class="panel-card-title">Product Mix</h3>
                             </div>
@@ -630,7 +635,8 @@ $activeMenu  = 'dashboard';
                                     </div>
                                     <div class="product-mix-legend">
                                         <?php foreach ($donutData['segments_with_color'] as $seg): ?>
-                                            <div class="product-mix-legend-item">
+                                            <?php $isOtherSeg = str_starts_with($seg['category_name'], 'Khác ('); ?>
+                                            <div class="product-mix-legend-item<?= $isOtherSeg ? ' product-mix-legend-item-other' : '' ?>">
                                                 <span class="product-mix-legend-left">
                                                     <span class="product-mix-dot" style="background: <?= htmlspecialchars($seg['color'], ENT_QUOTES, 'UTF-8') ?>;"></span>
                                                     <?= htmlspecialchars($seg['category_name'], ENT_QUOTES, 'UTF-8') ?>
@@ -657,31 +663,52 @@ $activeMenu  = 'dashboard';
                                 <span class="panel-card-note">Distribution of purchase orders by current status</span>
                             </div>
 
-                            <?php $maxPoCount = max(array_column($poWorkflow, 'count')) ?: 1; ?>
-                            <div class="po-workflow-chart">
-                                <?php foreach ($poWorkflow as $col): ?>
-                                    <?php
-                                        $barHeightPct = $col['count'] > 0 ? max(6, round(($col['count'] / $maxPoCount) * 100)) : 2;
-                                        // Màu theo Ý NGHĨA trạng thái, không phải thứ tự cột - khớp cùng bảng
-                                        // màu status-badge đã dùng ở po_approval.php để nhất quán trong toàn hệ
-                                        // thống (Rejected luôn là màu cảnh báo/nguy hiểm bất kể ở đâu).
-                                        $statusColorClass = match ($col['status']) {
-                                            'Rejected'  => 'po-workflow-bar-danger',
-                                            'Delivered' => 'po-workflow-bar-success',
-                                            'Approved'  => 'po-workflow-bar-info',
-                                            'Pending'   => 'po-workflow-bar-warning',
-                                            default     => 'po-workflow-bar-muted', // Draft
-                                        };
-                                    ?>
-                                    <div class="po-workflow-col">
-                                        <div class="po-workflow-bar-track">
-                                            <div class="po-workflow-bar <?= $statusColorClass ?>" style="height: <?= $barHeightPct ?>%;">
-                                                <span class="po-workflow-bar-value"><?= number_format($col['count']) ?></span>
-                                            </div>
+                            <?php
+                                $maxPoCount = max(array_column($poWorkflow, 'count')) ?: 1;
+                                // Trục tham chiếu 0/25/50/75/100% của cột cao nhất - làm tròn lên bội
+                                // số của 1 khi maxPoCount nhỏ để nhãn không bị số lẻ vô nghĩa (VD: 1.75).
+                                $poAxisMax = max(4, (int) ceil($maxPoCount / 4) * 4);
+                                $poYTicks = [0, (int) round($poAxisMax * 0.25), (int) round($poAxisMax * 0.5), (int) round($poAxisMax * 0.75), $poAxisMax];
+                            ?>
+                            <div class="po-workflow-chart-wrap">
+                                <div class="po-workflow-gridlines">
+                                    <?php foreach (array_reverse($poYTicks) as $tick): ?>
+                                        <div class="po-workflow-gridline">
+                                            <span class="po-workflow-gridline-label"><?= $tick ?></span>
+                                            <span class="po-workflow-gridline-rule"></span>
                                         </div>
-                                        <span class="po-workflow-label"><?= htmlspecialchars($col['status'], ENT_QUOTES, 'UTF-8') ?></span>
-                                    </div>
-                                <?php endforeach; ?>
+                                    <?php endforeach; ?>
+                                </div>
+                                <div class="po-workflow-chart">
+                                    <?php foreach ($poWorkflow as $col): ?>
+                                        <?php
+                                            // Chiều cao cột tính TRỰC TIẾP theo cùng thang po_axis_max với
+                                            // gridline phía sau (không còn công thức max(6,...) riêng của
+                                            // riêng bar) - đảm bảo cột và gridline luôn khớp đúng 1 thang đo
+                                            // duy nhất, để "1 đơn" trông đúng là rất thấp so với trục thay vì
+                                            // trông như lỗi hiển thị do neo theo % của maxPoCount.
+                                            $barHeightPct = $col['count'] > 0 ? max(3, round(($col['count'] / $poAxisMax) * 100)) : 0;
+                                            // Màu theo Ý NGHĨA trạng thái, không phải thứ tự cột - khớp cùng bảng
+                                            // màu status-badge đã dùng ở po_approval.php để nhất quán trong toàn hệ
+                                            // thống (Rejected luôn là màu cảnh báo/nguy hiểm bất kể ở đâu).
+                                            $statusColorClass = match ($col['status']) {
+                                                'Rejected'  => 'po-workflow-bar-danger',
+                                                'Delivered' => 'po-workflow-bar-success',
+                                                'Approved'  => 'po-workflow-bar-info',
+                                                'Pending'   => 'po-workflow-bar-warning',
+                                                default     => 'po-workflow-bar-muted', // Draft
+                                            };
+                                        ?>
+                                        <div class="po-workflow-col">
+                                            <div class="po-workflow-bar-track">
+                                                <div class="po-workflow-bar <?= $statusColorClass ?>" style="height: <?= $barHeightPct ?>%;">
+                                                    <span class="po-workflow-bar-value"><?= number_format($col['count']) ?></span>
+                                                </div>
+                                            </div>
+                                            <span class="po-workflow-label"><?= htmlspecialchars($col['status'], ENT_QUOTES, 'UTF-8') ?></span>
+                                        </div>
+                                    <?php endforeach; ?>
+                                </div>
                             </div>
                         </div>
                     </div>

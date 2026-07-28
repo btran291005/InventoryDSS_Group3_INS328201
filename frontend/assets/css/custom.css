@@ -602,13 +602,16 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 18px;
+    justify-content: center;
+    gap: 20px;
+    height: 100%;
+    min-height: 260px;
 }
 
 .product-mix-donut {
     position: relative;
-    width: 180px;
-    height: 180px;
+    width: 200px;
+    height: 200px;
     flex-shrink: 0;
 }
 
@@ -692,13 +695,66 @@ body {
     color: var(--text-primary);
 }
 
+.product-mix-legend-item-other .product-mix-legend-left {
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+.product-mix-legend-item-other .product-mix-legend-pct {
+    color: var(--text-muted);
+}
+
 /* --- Purchase Order Workflow (bar chart theo status) --- */
+
+/* Container quan hệ để gridline (nền) và chart (cột, z-index cao hơn) chồng
+   đúng vị trí lên nhau - cùng chiều cao 200px như .po-workflow-chart trước
+   đây, chỉ thêm 1 lớp phía sau chứ không đổi kích thước tổng thể. */
+.po-workflow-chart-wrap {
+    position: relative;
+    height: 200px;
+}
+
+.po-workflow-gridlines {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    /* Padding dưới chừa đúng chỗ cho nhãn status bên dưới cột (label nằm
+       ngoài vùng 200px của track trong .po-workflow-col), để gridline 0%
+       thẳng hàng với chân cột thật chứ không lệch xuống dưới label. */
+    padding-bottom: 26px;
+    pointer-events: none;
+}
+
+.po-workflow-gridline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.po-workflow-gridline-label {
+    font-size: .68rem;
+    color: var(--text-muted);
+    width: 18px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.po-workflow-gridline-rule {
+    flex: 1;
+    height: 1px;
+    background: var(--surface-border-soft);
+    border-top: 1px dashed var(--surface-border-soft);
+}
+
 .po-workflow-chart {
+    position: relative;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
     gap: 20px;
-    height: 200px;
+    height: 100%;
     padding: 0 8px;
 }
 

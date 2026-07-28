@@ -59,7 +59,7 @@ define('EXPIRY_ALERT_WINDOW_HOURS', 24);
 // Admin dashboard "Product Mix": số category lớn nhất hiển thị riêng trên
 // donut chart, phần còn lại gộp vào 1 lát "Khác" - tránh donut/legend vỡ
 // layout khi hệ thống có nhiều category (xem AdminService::getSystemSummary()).
-define('PRODUCT_MIX_TOP_N', 8);
+define('PRODUCT_MIX_TOP_N', 5);
 
 // 6. Chế độ môi trường (dùng để bật/tắt hiển thị lỗi chi tiết)
 define('APP_ENV', 'development'); // 'development' | 'production'

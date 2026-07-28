@@ -63,13 +63,15 @@ class AdminService
      * FR-ADM-02: tạo tài khoản mới. Kiểm tra độ mạnh mật khẩu (Auth) trước khi
      * xuống Model - Model chỉ chịu trách nhiệm hash + INSERT, không validate rule.
      *
-     * @param array $data ['username'=>string,'password'=>string,'full_name'=>string,'role_id'=>int]
+     * @param array $data ['username'=>string,'password'=>string,'full_name'=>string,'email'=>string?,'phone_number'=>string?,'role_id'=>int]
      * @return array{success: bool, account_id?: string, message: string}
      */
     public function createAccount(array $data, int $actorId): array
     {
         $username = trim((string) ($data['username'] ?? ''));
         $fullName = trim((string) ($data['full_name'] ?? ''));
+        $email    = trim((string) ($data['email'] ?? ''));
+        $phone    = trim((string) ($data['phone_number'] ?? ''));
         $password = (string) ($data['password'] ?? '');
         $roleId   = (int) ($data['role_id'] ?? 0);
 
@@ -81,17 +83,23 @@ class AdminService
             return ['success' => false, 'message' => 'Vai trò không hợp lệ.'];
         }
 
+        if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return ['success' => false, 'message' => 'Email không đúng định dạng.'];
+        }
+
         $strength = Auth::validatePasswordStrength($password);
         if (!$strength['valid']) {
             return ['success' => false, 'message' => $strength['message']];
         }
 
         $result = $this->accountModel->create([
-            'username'  => $username,
-            'password'  => $password,
-            'full_name' => $fullName,
-            'role_id'   => $roleId,
-            'status'    => 'active',
+            'username'     => $username,
+            'password'     => $password,
+            'full_name'    => $fullName,
+            'email'        => $email !== '' ? $email : null,
+            'phone_number' => $phone !== '' ? $phone : null,
+            'role_id'      => $roleId,
+            'status'       => 'active',
         ]);
 
         if ($result['success']) {
@@ -102,10 +110,10 @@ class AdminService
     }
 
     /**
-     * FR-ADM-02: cập nhật họ tên/vai trò của 1 tài khoản. Đổi mật khẩu xử lý
+     * FR-ADM-02: cập nhật họ tên/email/sđt/vai trò của 1 tài khoản. Đổi mật khẩu xử lý
      * riêng ở resetPassword() để tránh vô tình ghi đè bằng chuỗi rỗng.
      *
-     * @param array $data ['full_name'=>string?, 'role_id'=>int?]
+     * @param array $data ['full_name'=>string?, 'email'=>string?, 'phone_number'=>string?, 'role_id'=>int?]
      */
     public function updateAccount(int $accountId, array $data, int $actorId): array
     {
@@ -117,6 +125,19 @@ class AdminService
                 return ['success' => false, 'message' => 'Họ tên không được để trống.'];
             }
             $payload['full_name'] = $fullName;
+        }
+
+        if (array_key_exists('email', $data)) {
+            $email = trim((string) $data['email']);
+            if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                return ['success' => false, 'message' => 'Email không đúng định dạng.'];
+            }
+            $payload['email'] = $email !== '' ? $email : null;
+        }
+
+        if (array_key_exists('phone_number', $data)) {
+            $phone = trim((string) $data['phone_number']);
+            $payload['phone_number'] = $phone !== '' ? $phone : null;
         }
 
         if (array_key_exists('role_id', $data)) {
@@ -188,15 +209,44 @@ class AdminService
         return ['success' => $ok, 'message' => $ok ? 'Đã mở khóa tài khoản.' : 'Có lỗi xảy ra khi mở khóa tài khoản.'];
     }
 
-    /** FR-ADM-02: danh sách tài khoản, lọc theo role/status nếu cần (truyền qua từ UI filter). */
-    public function listAccounts(?int $roleId = null, ?string $status = null): array
+    /**
+     * FR-ADM-02: xoá tài khoản. Chặn Admin tự xoá chính mình (cùng lý do an
+     * toàn vận hành như lockAccount()). Xoá thật (không phải soft-delete) vì
+     * bảng accounts không có cột trạng thái "deleted" riêng - nếu account đã
+     * có dữ liệu liên quan (PO, audit log cũ, phiếu nhập/xuất...), DB sẽ tự
+     * từ chối qua ràng buộc khoá ngoại (xem Account::delete()) và trả về
+     * $result['blocked'] = true để UI gợi ý dùng Khoá tài khoản thay thế.
+     */
+    public function deleteAccount(int $accountId, int $actorId): array
     {
-        return $this->accountModel->getAll($roleId, $status);
+        if ($accountId === $actorId) {
+            return ['success' => false, 'message' => 'Không thể tự xoá chính tài khoản đang đăng nhập.'];
+        }
+
+        $result = $this->accountModel->delete($accountId);
+
+        if ($result['success']) {
+            Logger::log($actorId, 'DELETE_ACCOUNT', 'accounts', $accountId);
+        }
+
+        return $result;
+    }
+
+    /** FR-ADM-02: danh sách tài khoản, lọc theo role/status/từ khoá tìm kiếm nếu cần (truyền qua từ UI filter). */
+    public function listAccounts(?int $roleId = null, ?string $status = null, ?string $keyword = null): array
+    {
+        return $this->accountModel->getAll($roleId, $status, $keyword);
     }
 
     public function getAccountDetail(int $accountId): array|false
     {
         return $this->accountModel->getById($accountId);
+    }
+
+    /** Số permission thật đang gán cho từng role - dùng cho summary card, KHÔNG bịa số cố định. */
+    public function countPermissionsByRole(): array
+    {
+        return $this->accountModel->countPermissionsByRole();
     }
 
     // =====================================================================

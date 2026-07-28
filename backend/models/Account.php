@@ -32,7 +32,8 @@ class Account
     public function getById(int $accountId): array|false
     {
         $stmt = $this->conn->prepare(
-            "SELECT a.account_id, a.username, a.full_name, a.role_id, r.role_name, a.status, a.created_at
+            "SELECT a.account_id, a.username, a.full_name, a.email, a.phone_number,
+                    a.role_id, r.role_name, a.status, a.created_at
              FROM {$this->table} a
              JOIN roles r ON r.role_id = a.role_id
              WHERE a.account_id = :id
@@ -42,10 +43,11 @@ class Account
         return $stmt->fetch();
     }
 
-    /* FR-ADM-02: danh sách toàn bộ account, kèm role_name, lọc theo role_id/status. */
-    public function getAll(?int $roleId = null, ?string $status = null): array
+    /* FR-ADM-02: danh sách toàn bộ account, kèm role_name, lọc theo role_id/status/keyword. */
+    public function getAll(?int $roleId = null, ?string $status = null, ?string $keyword = null): array
     {
-        $sql = "SELECT a.account_id, a.username, a.full_name, a.role_id, r.role_name, a.status, a.created_at
+        $sql = "SELECT a.account_id, a.username, a.full_name, a.email, a.phone_number,
+                       a.role_id, r.role_name, a.status, a.created_at
                 FROM {$this->table} a
                 JOIN roles r ON r.role_id = a.role_id
                 WHERE 1=1";
@@ -59,6 +61,13 @@ class Account
             $sql .= " AND a.status = :status";
             $params[':status'] = $status;
         }
+        if ($keyword !== null && $keyword !== '') {
+            $sql .= " AND (a.full_name LIKE :kw1 OR a.username LIKE :kw2 OR a.email LIKE :kw3)";
+            $kwParam = '%' . $keyword . '%';
+            $params[':kw1'] = $kwParam;
+            $params[':kw2'] = $kwParam;
+            $params[':kw3'] = $kwParam;
+        }
 
         $sql .= " ORDER BY a.created_at DESC";
 
@@ -71,8 +80,8 @@ class Account
      * BR-17: chỉ AdminService (sau khi Middleware::guard([ROLE_ADMIN])) được gọi hàm này.*/
     public function create(array $data): array
     {
-        $sql = "INSERT INTO {$this->table} (username, password_hash, full_name, role_id, status)
-                VALUES (:username, :password_hash, :full_name, :role_id, :status)";
+        $sql = "INSERT INTO {$this->table} (username, password_hash, full_name, email, phone_number, role_id, status)
+                VALUES (:username, :password_hash, :full_name, :email, :phone_number, :role_id, :status)";
 
         try {
             $stmt = $this->conn->prepare($sql);
@@ -80,6 +89,8 @@ class Account
                 ':username'      => trim($data['username']),
                 ':password_hash' => password_hash($data['password'], PASSWORD_DEFAULT),
                 ':full_name'     => trim($data['full_name']),
+                ':email'         => !empty($data['email']) ? trim($data['email']) : null,
+                ':phone_number'  => !empty($data['phone_number']) ? trim($data['phone_number']) : null,
                 ':role_id'       => (int) $data['role_id'],
                 ':status'        => $data['status'] ?? 'active',
             ]);
@@ -98,10 +109,10 @@ class Account
         }
     }
 
-    /* FR-ADM-02: cập nhật full_name/role_id. KHÔNG đổi password ở đây - dùng updatePassword() riêng để tránh vô tình ghi đè bằng chuỗi rỗng nếu form không gửi password. */
+    /* FR-ADM-02: cập nhật full_name/email/phone_number/role_id. KHÔNG đổi password ở đây - dùng updatePassword() riêng để tránh vô tình ghi đè bằng chuỗi rỗng nếu form không gửi password. */
     public function update(int $accountId, array $data): bool
     {
-        $allowed = ['full_name', 'role_id'];
+        $allowed = ['full_name', 'email', 'phone_number', 'role_id'];
         $fields = [];
         $params = [':id' => $accountId];
 
@@ -151,11 +162,63 @@ class Account
         return $stmt->execute([':status' => $status, ':id' => $accountId]);
     }
 
+    /**
+     * FR-ADM-02: xoá tài khoản. account_id được NHIỀU bảng khác tham chiếu
+     * KHÔNG có ON DELETE CASCADE (purchase_orders.created_by/approved_by,
+     * reorder_rules.updated_by, audit_logs.account_id, stock_transactions,
+     * inventory_adjustments, stock_counts, shortage_incidents, api_configs...)
+     * - hầu hết là NOT NULL. Nếu account đã từng thao tác bất kỳ nghiệp vụ
+     * nào, MySQL sẽ từ chối bằng lỗi khoá ngoại (1451) - đây là hành vi ĐÚNG
+     * và CỐ Ý, để không bao giờ âm thầm mất dấu vết audit log/PO/lịch sử tồn
+     * kho (vi phạm FR-ADM-07/FR-SYS-03) chỉ vì xoá 1 tài khoản.
+     *
+     * @return array{success: bool, message: string, blocked?: bool} $blocked=true nghĩa là DB từ chối do còn dữ liệu liên quan (không phải lỗi hệ thống).
+     */
+    public function delete(int $accountId): array
+    {
+        try {
+            $stmt = $this->conn->prepare("DELETE FROM {$this->table} WHERE account_id = :id");
+            $stmt->execute([':id' => $accountId]);
+
+            if ($stmt->rowCount() === 0) {
+                return ['success' => false, 'message' => 'Không tìm thấy tài khoản.'];
+            }
+
+            return ['success' => true, 'message' => 'Đã xoá tài khoản.'];
+        } catch (PDOException $e) {
+            // 1451 = Cannot delete or update a parent row: a foreign key constraint fails
+            if ((int) $e->errorInfo[1] === 1451 || (int) $e->getCode() === 23000) {
+                return [
+                    'success' => false,
+                    'blocked' => true,
+                    'message' => 'Không thể xoá: tài khoản này đã có dữ liệu liên quan trong hệ thống (Purchase Order, audit log, phiếu nhập/xuất...). Hãy dùng chức năng Khoá tài khoản thay thế.',
+                ];
+            }
+            error_log('[Account::delete] ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Có lỗi xảy ra khi xoá tài khoản.'];
+        }
+    }
+
     // roles / permissions / role_permissions (FR-ADM-03)
 
     public function getAllRoles(): array
     {
         return $this->conn->query("SELECT role_id, role_name FROM roles ORDER BY role_id")->fetchAll();
+    }
+
+    /* Đếm số permission thật (role_permissions) của từng role - dùng cho summary
+     * card ở accounts.php/permissions.php. KHÔNG bịa số cố định như mockup. */
+    public function countPermissionsByRole(): array
+    {
+        $rows = $this->conn->query(
+            "SELECT role_id, COUNT(*) AS permission_count FROM role_permissions GROUP BY role_id"
+        )->fetchAll();
+
+        $result = [];
+        foreach ($rows as $row) {
+            $result[(int) $row['role_id']] = (int) $row['permission_count'];
+        }
+        return $result;
     }
 
     public function getAllPermissions(): array
