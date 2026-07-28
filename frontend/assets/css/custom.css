@@ -440,6 +440,33 @@ body {
     color: var(--color-danger);
 }
 
+/* Trạng thái tài khoản 'active' (accounts.php) - xanh lá, tách biệt với
+   stock-pill-warn/critical vốn dành cho cảnh báo tồn kho. */
+.stock-pill-success {
+    background: var(--color-success-bg);
+    color: var(--color-success);
+}
+
+/* Badge role Admin - dùng brand-accent để nổi bật nhất trong 3 role (đúng
+   thứ bậc quyền hạn: Admin > Manager > Staff). */
+.stock-pill-accent {
+    background: var(--brand-primary-light);
+    color: var(--brand-accent);
+}
+
+/* Badge role Manager - dùng info (xanh dương), phân biệt với Admin (accent)
+   và Staff (muted/trung tính). */
+.stock-pill-info-role {
+    background: var(--color-info-bg);
+    color: var(--color-info);
+}
+
+/* Badge role Store Staff - trung tính, thấp nhất trong thứ bậc quyền hạn. */
+.stock-pill-muted {
+    background: var(--surface-border-soft);
+    color: var(--text-muted);
+}
+
 /* --- Danh sách hoạt động (pending PO / recent activity) --- */
 .activity-list {
     display: flex;
@@ -907,7 +934,106 @@ body {
 }
 
 /* =========================================================================
-   11. RESPONSIVE - sidebar thu gọn thành overlay trên màn hình nhỏ
+   12. SIDEBAR - NHÓM MENU CHA/CON (theo đúng Sitemap phân cấp 2 tầng:
+       VD Manager > Inventory > Inventory Health / AI Replenishment / Stock
+       Incidents). Nhóm cha chỉ để expand/collapse, KHÔNG phải link điều
+       hướng - nó không có href thật nên không xung đột với Middleware.
+   ========================================================================= */
+
+.sidebar-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-group-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, .72);
+    font-size: .89rem;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+}
+
+.sidebar-group-toggle:hover {
+    background: rgba(255, 255, 255, .08);
+    color: #fff;
+}
+
+.sidebar-group-toggle-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+/* Nhóm cha tô sáng khi 1 trong các mục con đang active, kể cả khi đang collapsed */
+.sidebar-group.has-active .sidebar-group-toggle {
+    color: #fff;
+    font-weight: 600;
+}
+
+.sidebar-group-caret {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    transition: transform .15s ease;
+    opacity: .6;
+}
+
+.sidebar-group.is-open .sidebar-group-caret {
+    transform: rotate(90deg);
+}
+
+.sidebar-submenu {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding-left: 14px;
+    margin-top: 1px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height .18s ease;
+}
+
+.sidebar-group.is-open .sidebar-submenu {
+    max-height: 400px; /* đủ lớn cho tối đa ~8 mục con - không cần JS đo chiều cao thật */
+}
+
+.sidebar-sublink {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 12px 8px 20px;
+    border-left: 2px solid rgba(255, 255, 255, .14);
+    color: rgba(255, 255, 255, .62);
+    text-decoration: none;
+    font-size: .84rem;
+    font-weight: 500;
+    transition: background .15s, color .15s, border-color .15s;
+}
+
+.sidebar-sublink:hover {
+    background: rgba(255, 255, 255, .06);
+    color: #fff;
+}
+
+.sidebar-sublink.active {
+    border-left-color: #fff;
+    color: #fff;
+    font-weight: 600;
+}
+
+/* =========================================================================
+   13. RESPONSIVE - sidebar thu gọn thành overlay trên màn hình nhỏ
    ========================================================================= */
 
 @media (max-width: 991.98px) {

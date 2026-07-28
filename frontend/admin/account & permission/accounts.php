@@ -20,12 +20,12 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../backend/config/app_config.php';
-require_once __DIR__ . '/../../backend/config/database.php';
-require_once __DIR__ . '/../../backend/core/Logger.php';
-require_once __DIR__ . '/../../backend/core/Auth.php';
-require_once __DIR__ . '/../../backend/core/Middleware.php';
-require_once __DIR__ . '/../../backend/services/AdminService.php';
+require_once __DIR__ . '/../../../backend/config/app_config.php';
+require_once __DIR__ . '/../../../backend/config/database.php';
+require_once __DIR__ . '/../../../backend/core/Logger.php';
+require_once __DIR__ . '/../../../backend/core/Auth.php';
+require_once __DIR__ . '/../../../backend/core/Middleware.php';
+require_once __DIR__ . '/../../../backend/services/AdminService.php';
 
 // BR-19 / NFR-03: chỉ Admin được vào trang này, chặn ở tầng server
 Middleware::guard([ROLE_ADMIN]);
@@ -152,10 +152,10 @@ $activeMenu  = 'accounts';
 </head>
 <body>
     <div class="app-shell">
-        <?php require __DIR__ . '/../components/sidebar.php'; ?>
+        <?php require __DIR__ . '/../../components/sidebar.php'; ?>
 
         <div class="app-content">
-            <?php require __DIR__ . '/../components/header.php'; ?>
+            <?php require __DIR__ . '/../../components/header.php'; ?>
 
             <main class="app-main">
 
@@ -539,4 +539,4 @@ $activeMenu  = 'accounts';
             deleteBtn.title = isSelf ? 'You cannot delete the account you are currently logged in with.' : '';
         });
     </script>
-    <?php require __DIR__ . '/../components/footer.php'; ?>
+    <?php require __DIR__ . '/../../components/footer.php'; ?>
