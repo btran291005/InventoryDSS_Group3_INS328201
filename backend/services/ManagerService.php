@@ -300,6 +300,37 @@ class ManagerService
     }
 
     /**
+     * FR-MGR-04/05: danh sách sản phẩm active THUỘC 1 nhà cung cấp cụ thể,
+     * kèm unit_cost + tồn kho hiện tại - dùng cho màn "Tạo PO thủ công"
+     * (po_create.php), nơi Manager TỰ CHỌN sản phẩm/số lượng thay vì bắt buộc
+     * đi từ danh sách gợi ý của ReorderService. Lọc theo supplier ngay từ
+     * đầu vì BR-07 (1 PO = 1 NCC) - tránh Manager chọn nhầm sản phẩm không
+     * thuộc NCC đã chọn ở bước trước.
+     *
+     * @return array<int, array{product_id:int, sku_code:string, product_name:string, unit_cost:float, current_stock:int}>
+     */
+    public function getProductsBySupplier(int $supplierId): array
+    {
+        $products = $this->productModel->getBySupplier($supplierId);
+
+        $stocksByProduct = [];
+        foreach ($this->inventoryModel->getStockByProduct() as $stock) {
+            $stocksByProduct[(int) $stock['product_id']] = (int) $stock['total_quantity'];
+        }
+
+        return array_map(
+            static fn(array $product): array => [
+                'product_id'     => (int) $product['product_id'],
+                'sku_code'       => $product['sku_code'],
+                'product_name'   => $product['product_name'],
+                'unit_cost'      => (float) $product['unit_cost'],
+                'current_stock'  => $stocksByProduct[(int) $product['product_id']] ?? 0,
+            ],
+            $products
+        );
+    }
+
+    /**
      * FR-MGR-04 / BR-06: Manager tạo PO mới với số lượng TỰ NHẬP (đã override
      * sẵn từ đầu, vì ReorderService gợi ý số lượng ban đầu chưa có ở phase này).
      * approved_qty = suggested_qty tại bước tạo Draft; Manager sửa lại qua

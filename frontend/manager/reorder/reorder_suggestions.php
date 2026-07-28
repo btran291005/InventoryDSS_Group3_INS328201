@@ -148,7 +148,10 @@ function reorderUrgency(array $item): array
                             Chọn các dòng cần đặt bên dưới để tạo Purchase Order Draft.
                         </p>
                     </div>
-                    <a href="stockout_risk.php" class="btn btn-outline-secondary btn-sm">Xem Stock-out Risk</a>
+                    <div class="d-flex gap-2">
+                        <a href="../purchase_order/po_create.php" class="btn btn-brand btn-sm">+ Tạo PO thủ công</a>
+                        <a href="stockout_risk.php" class="btn btn-outline-secondary btn-sm">Xem Stock-out Risk</a>
+                    </div>
                 </div>
 
                 <?php if ($flashMessage !== ''): ?>

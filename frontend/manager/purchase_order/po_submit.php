@@ -219,12 +219,15 @@ $activeMenu  = 'po';
                 <?php if ($selectedPo === null): ?>
 
                     <!-- ================= DANH SÁCH PO CẦN XỬ LÝ (DRAFT) ================= -->
-                    <div class="mb-4">
-                        <h2 class="page-heading mb-1">Purchase Orders</h2>
-                        <p class="page-subheading mb-0">
-                            Đơn nháp (Draft) cần xử lý - sửa số lượng (BR-06) rồi gửi Admin duyệt.
-                            Xem tổng trạng thái mọi đơn tại <a href="po-status.php">PO Status</a>.
-                        </p>
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+                        <div>
+                            <h2 class="page-heading mb-1">Purchase Orders</h2>
+                            <p class="page-subheading mb-0">
+                                Đơn nháp (Draft) cần xử lý - sửa số lượng (BR-06) rồi gửi Admin duyệt.
+                                Xem tổng trạng thái mọi đơn tại <a href="po-status.php">PO Status</a>.
+                            </p>
+                        </div>
+                        <a href="po_create.php" class="btn btn-brand btn-sm">+ Tạo PO thủ công</a>
                     </div>
 
                     <div class="panel-card">
@@ -234,7 +237,7 @@ $activeMenu  = 'po';
                         </div>
 
                         <?php if (empty($myOrders)): ?>
-                            <div class="empty-state">Không có đơn nháp nào cần xử lý. Vào <a href="../reorder/reorder_suggestions.php">Reorder Suggestions</a> để tạo đơn mới, hoặc xem <a href="po-status.php">PO Status</a> cho các đơn đã nộp.</div>
+                            <div class="empty-state">Không có đơn nháp nào cần xử lý. Vào <a href="../reorder/reorder_suggestions.php">Reorder Suggestions</a> để tạo đơn theo gợi ý, <a href="po_create.php">tạo PO thủ công</a>, hoặc xem <a href="po-status.php">PO Status</a> cho các đơn đã nộp.</div>
                         <?php else: ?>
                             <div class="table-responsive">
                                 <table class="table data-table align-middle mb-0">

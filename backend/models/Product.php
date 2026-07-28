@@ -195,6 +195,22 @@ class Product
         return $map;
     }
 
+    /**
+     * FR-MGR-04/05: danh sách sản phẩm active thuộc ĐÚNG 1 nhà cung cấp - dùng
+     * cho màn "Tạo PO thủ công" (ManagerService::getProductsBySupplier()),
+     * nơi Manager chọn sản phẩm/số lượng tự do thay vì đi qua danh sách gợi
+     * ý của ReorderService. Lọc theo supplier_id ngay ở query để không hiển
+     * thị nhầm sản phẩm của NCC khác (BR-07: 1 PO chỉ gửi cho 1 NCC).
+     */
+    public function getBySupplier(int $supplierId): array
+    {
+        $stmt = $this->conn->prepare(
+            "SELECT * FROM {$this->table} WHERE supplier_id = :supplier_id AND is_active = 1 ORDER BY product_name ASC"
+        );
+        $stmt->execute([':supplier_id' => $supplierId]);
+        return $stmt->fetchAll();
+    }
+
     // reorder_rules
 
     /* BR-05: Lấy rule đang có hiệu lực cho 1 sản phẩm. Ưu tiên rule riêng theo product_id; nếu không có, fallback về rule chung của category_id mà sản phẩm đó thuộc về. */
