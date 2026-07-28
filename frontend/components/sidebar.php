@@ -1,9 +1,19 @@
 <?php
 /**
  * File: frontend/components/sidebar.php
- * Purpose: Renders navigation menu based on $_SESSION['role'], bám sát đúng
- * cây Sitemap (Login -> Admin/Staff/Manager Homepage -> menu con) đã chốt
- * với nhóm - xem ảnh sitemap trong thư mục docs của repo.
+ * Purpose: Renders navigation menu based on $_SESSION['role'].
+ *
+ * CẬP NHẬT (flatten sidebar): Sidebar giờ CHỈ hiển thị các mục CHÍNH (main
+ * items) trong sitemap - KHÔNG còn render danh sách mục con (submenu mở
+ * rộng) ngay trong sidebar nữa. Với các nhóm trước đây có 'children' (VD
+ * "Users & Roles", "Inventory", "Orders", "Reports"), mục chính giờ là 1
+ * link phẳng duy nhất, trỏ tạm tới trang con đầu tiên còn tồn tại của nhóm
+ * đó (xem 'href' của từng mục bên dưới). Khi trang landing/overview thật
+ * của từng nhóm được triển khai (VD trang Inventory tổng có card/tab dẫn
+ * qua Stock Count, Good Receipt, Inventory Adjustment...), chỉ cần đổi lại
+ * 'href' của mục đó trỏ sang trang landing mới - phần "chỗ bấm vô để xem"
+ * mục con sẽ nằm NGAY TRONG trang đó, không còn nằm trong sidebar.
+ *
  * Warning: This controls menu VISIBILITY only. It does NOT enforce access —
  *          Middleware.php is the real access control. Never rely on a hidden
  *          menu item as a security measure.
@@ -12,20 +22,20 @@
  *   app_config.php (BASE_URL, ROLE_ADMIN/MANAGER/STAFF), Auth.php (đã Auth::start()).
  *
  * Biến tùy chọn có thể set TRƯỚC KHI include file này để tô sáng mục đang active:
- *   $activeMenu = 'dashboard'; // khớp với key của 1 mục PHẲNG (không nhóm), hoặc
- *                               // key của 1 mục CON trong 1 nhóm bên dưới.
- * Khi $activeMenu khớp 1 mục con, nhóm cha chứa nó tự động mở sẵn (is-open)
- * và tô sáng (has-active), không cần set thêm biến nào khác.
+ *   $activeMenu = 'dashboard'; // khớp key của 1 mục trong $menuItems bên dưới.
+ * Một số trang con cũ (từ thời còn submenu) set $activeMenu bằng key mục con
+ * (VD 'accounts', 'demand_trend'...) - những key này được liệt kê trong
+ * 'activeAlso' của mục cha tương ứng để mục cha vẫn được tô sáng đúng, không
+ * cần sửa lại từng file trang.
  *
- * CẤU TRÚC DỮ LIỆU $menuItems:
- *   - Mục PHẲNG (không có submenu):
- *       'key' => ['label' => ..., 'href' => ..., 'icon' => ...]
- *   - Mục NHÓM (có submenu, đúng 2 tầng theo sitemap - không hỗ trợ lồng sâu hơn):
- *       'key' => ['label' => ..., 'icon' => ..., 'children' => [
- *           'child_key' => ['label' => ..., 'href' => ..., 'icon' => ...],
- *           ...
- *       ]]
- *     Mục nhóm KHÔNG có 'href' - nút chỉ để mở/đóng submenu, không điều hướng.
+ * CẤU TRÚC DỮ LIỆU $menuItems (đã flatten - không còn 'children'):
+ *   'key' => [
+ *       'label'      => string,               // tên hiển thị
+ *       'href'       => string,                // đường dẫn tương đối (chưa gồm BASE_URL)
+ *       'icon'       => string,
+ *       'activeAlso' => string[] (optional),    // các $activeMenu key cũ của mục con
+ *                                                // (nếu có) để tô sáng đúng mục cha
+ *   ]
  *
  * GHI CHÚ ĐỐI CHIẾU VỚI SITEMAP (để không route vào file/link không tồn tại):
  *   - Admin > Inventory (Overview, Count History): sitemap có yêu cầu, nhưng
@@ -38,9 +48,10 @@
  *     trang UI riêng trong frontend/staff/. Tạm ẩn khỏi menu, xem TODO.
  *   - Manager > Reports: sitemap gộp thành 1 mục "Reports", nhưng repo hiện
  *     có 3 trang phân tích riêng biệt (Demand Trend, Product Performance,
- *     Supplier Lead-time) - không có trang "Reports" tổng hợp nào khác. Gom
- *     3 trang này làm submenu của "Reports" để khớp đúng nhãn sitemap, thay
- *     vì bịa thêm 1 trang reports.php không tồn tại.
+ *     Supplier Lead-time) - không có trang "Reports" tổng hợp nào khác. Mục
+ *     "Reports" trong sidebar tạm trỏ vào Demand Trend (trang đầu tiên);
+ *     khi có trang Reports tổng thật, đổi href của mục 'reports' để trỏ
+ *     sang đó, còn 3 trang trên trở thành các "chỗ bấm vô để xem" bên trong.
  *   - Đường dẫn có khoảng trắng/dấu & (VD "reorder & forecast", "account &
  *     permission") - PHP require (nằm ở các file admin/manager/*.php, xử lý
  *     filesystem path, không phải URL) chạy đúng với chuỗi thường không cần
@@ -65,10 +76,12 @@ $menuItems = [];
 if ($roleId === ROLE_ADMIN) {
     $menuItems = [
         'dashboard'   => ['label' => 'Dashboard / KPI', 'href' => '/admin/dashboard.php', 'icon' => 'grid'],
-        'users_roles' => ['label' => 'Users & Roles', 'icon' => 'users', 'children' => [
-            'accounts'    => ['label' => 'Accounts', 'href' => '/admin/account & permission/accounts.php', 'icon' => 'user'],
-            'permissions' => ['label' => 'Permissions', 'href' => '/admin/account & permission/permissions.php', 'icon' => 'shield'],
-        ]],
+        'users_roles' => [
+            'label' => 'Users & Roles',
+            'href'  => '/admin/account & permission/accounts.php',
+            'icon'  => 'users',
+            'activeAlso' => ['accounts', 'permissions'],
+        ],
         'rules'       => ['label' => 'Rules', 'href' => '/admin/setting/reorder_rules.php', 'icon' => 'sliders'],
         // TODO: sitemap yêu cầu "Inventory" (Overview + Count History) cho Admin,
         // nhưng chưa có file frontend/admin nào cho phần này - tạm ẩn khỏi menu
@@ -81,34 +94,39 @@ if ($roleId === ROLE_ADMIN) {
 } elseif ($roleId === ROLE_MANAGER) {
     $menuItems = [
         'dashboard' => ['label' => 'Dashboard', 'href' => '/manager/dashboard.php', 'icon' => 'grid'],
-        'inventory' => ['label' => 'Inventory', 'icon' => 'box', 'children' => [
+        'inventory' => [
+            'label' => 'Inventory',
             // "Inventory Health" chưa có trang riêng - forecast.php là màn hình
             // gần nghĩa nhất hiện có (theo dõi tồn kho + gợi ý dựa trên forecast).
-            'inventory_health' => ['label' => 'Inventory Health', 'href' => '/manager/reorder & forecast/forecast.php', 'icon' => 'activity'],
-            'ai_replenishment' => ['label' => 'AI Replenishment', 'href' => '/manager/reorder & forecast/reorder_suggestions.php', 'icon' => 'refresh-cw'],
-            'stock_incidents'  => ['label' => 'Stock Incidents', 'href' => '/manager/shortage_incidents.php', 'icon' => 'alert-triangle'],
-        ]],
-        'orders' => ['label' => 'Orders', 'icon' => 'file-text', 'children' => [
-            'purchase_orders' => ['label' => 'Purchase Orders', 'href' => '/manager/purchase_order/po_create.php', 'icon' => 'file-plus'],
-            'po_tracking'     => ['label' => 'PO Tracking', 'href' => '/manager/purchase_order/po-status.php', 'icon' => 'truck'],
-        ]],
-        'reports' => ['label' => 'Reports', 'icon' => 'bar-chart-2', 'children' => [
-            'demand_trend' => ['label' => 'Demand Trend', 'href' => '/manager/reorder & forecast/demand_trend.php', 'icon' => 'trending-up'],
-            'product_pfm'  => ['label' => 'Product Performance', 'href' => '/manager/vendor/product_pfm.php', 'icon' => 'bar-chart'],
-            'lead_time'    => ['label' => 'Supplier Lead-time', 'href' => '/manager/vendor/supplier_leadtime.php', 'icon' => 'clock'],
-        ]],
+            'href'  => '/manager/reorder & forecast/forecast.php',
+            'icon'  => 'box',
+            'activeAlso' => ['inventory_health', 'ai_replenishment', 'stock_incidents', 'forecast', 'reorder', 'shortage'],
+        ],
+        'orders' => [
+            'label' => 'Orders',
+            'href'  => '/manager/purchase_order/po_create.php',
+            'icon'  => 'file-text',
+            'activeAlso' => ['purchase_orders', 'po_tracking', 'po', 'po_status'],
+        ],
+        'reports' => [
+            'label' => 'Reports',
+            'href'  => '/manager/reorder & forecast/demand_trend.php',
+            'icon'  => 'bar-chart-2',
+            'activeAlso' => ['demand_trend', 'product_pfm', 'lead_time'],
+        ],
     ];
 } elseif ($roleId === ROLE_STAFF) {
     $menuItems = [
         'dashboard' => ['label' => 'Dashboard', 'href' => '/staff/dashboard.php', 'icon' => 'grid'],
-        'inventory' => ['label' => 'Inventory', 'icon' => 'box', 'children' => [
-            'stock_count'    => ['label' => 'Stock Count', 'href' => '/staff/inventory/stock_count.php', 'icon' => 'clipboard'],
-            'good_receipt'   => ['label' => 'Good Receipt', 'href' => '/staff/inventory/goods_receipt.php', 'icon' => 'inbox'],
-            'inv_adjustment' => ['label' => 'Inventory Adjustment', 'href' => '/staff/inventory/adjustments.php', 'icon' => 'sliders'],
+        'inventory' => [
+            'label' => 'Inventory',
+            'href'  => '/staff/inventory/stock_count.php',
+            'icon'  => 'box',
             // TODO: sitemap yêu cầu "FEFO Picking" - logic FEFO đã có ở backend
             // (StaffService/Product/Inventory model) nhưng chưa có trang UI
-            // riêng trong frontend/staff/ - tạm ẩn khỏi menu cho tới khi có.
-        ]],
+            // riêng trong frontend/staff/. Khi có trang, thêm key vào đây.
+            'activeAlso' => ['stock_count', 'good_receipt', 'inv_adjustment'],
+        ],
         // Không có trong sitemap ảnh, nhưng khớp FR-STF-01/03/10/11/13 (Stock
         // view, Sales History, Feedback) - giữ lại vì đã có trang thật, không
         // xóa chức năng đã code chỉ vì sitemap rút gọn không vẽ chi tiết.
@@ -118,19 +136,13 @@ if ($roleId === ROLE_ADMIN) {
     ];
 }
 
-/** Item con đang active không? (dùng để tô sáng .sidebar-sublink và mở nhóm cha) */
-function sidebarChildIsActive(string $childKey, string $activeMenu): bool
+/** Mục có đang active không? Khớp key chính, hoặc khớp 1 trong các key cũ liệt kê ở 'activeAlso'. */
+function sidebarIsActive(string $key, array $item, string $activeMenu): bool
 {
-    return $childKey === $activeMenu;
-}
-
-/** Nhóm có chứa item con đang active không? (dùng để mở nhóm + tô sáng nút cha) */
-function sidebarGroupHasActive(array $item, string $activeMenu): bool
-{
-    if (!isset($item['children'])) {
-        return false;
+    if ($activeMenu === $key) {
+        return true;
     }
-    return array_key_exists($activeMenu, $item['children']);
+    return isset($item['activeAlso']) && in_array($activeMenu, $item['activeAlso'], true);
 }
 
 /**
@@ -164,36 +176,12 @@ function sidebarHref(string $relativeHref): string
 
     <nav class="sidebar-nav">
         <?php foreach ($menuItems as $key => $item): ?>
-            <?php if (isset($item['children'])): ?>
-                <?php $groupActive = sidebarGroupHasActive($item, $activeMenu); ?>
-                <div class="sidebar-group<?= $groupActive ? ' is-open has-active' : '' ?>" data-menu-group="<?= htmlspecialchars($key, ENT_QUOTES, 'UTF-8') ?>">
-                    <button type="button" class="sidebar-group-toggle" data-group-toggle>
-                        <span class="sidebar-group-toggle-left">
-                            <span class="sidebar-link-icon" data-icon="<?= htmlspecialchars($item['icon'], ENT_QUOTES, 'UTF-8') ?>"></span>
-                            <span class="sidebar-link-label"><?= htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') ?></span>
-                        </span>
-                        <svg class="sidebar-group-caret" width="14" height="14" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M6 4l4 4-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                        </svg>
-                    </button>
-                    <div class="sidebar-submenu">
-                        <?php foreach ($item['children'] as $childKey => $child): ?>
-                            <a href="<?= sidebarHref($child['href']) ?>"
-                               class="sidebar-sublink<?= sidebarChildIsActive($childKey, $activeMenu) ? ' active' : '' ?>"
-                               data-menu="<?= htmlspecialchars($childKey, ENT_QUOTES, 'UTF-8') ?>">
-                                <span class="sidebar-link-label"><?= htmlspecialchars($child['label'], ENT_QUOTES, 'UTF-8') ?></span>
-                            </a>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            <?php else: ?>
-                <a href="<?= sidebarHref($item['href']) ?>"
-                   class="sidebar-link<?= $activeMenu === $key ? ' active' : '' ?>"
-                   data-menu="<?= htmlspecialchars($key, ENT_QUOTES, 'UTF-8') ?>">
-                    <span class="sidebar-link-icon" data-icon="<?= htmlspecialchars($item['icon'], ENT_QUOTES, 'UTF-8') ?>"></span>
-                    <span class="sidebar-link-label"><?= htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') ?></span>
-                </a>
-            <?php endif; ?>
+            <a href="<?= sidebarHref($item['href']) ?>"
+               class="sidebar-link<?= sidebarIsActive($key, $item, $activeMenu) ? ' active' : '' ?>"
+               data-menu="<?= htmlspecialchars($key, ENT_QUOTES, 'UTF-8') ?>">
+                <span class="sidebar-link-icon" data-icon="<?= htmlspecialchars($item['icon'], ENT_QUOTES, 'UTF-8') ?>"></span>
+                <span class="sidebar-link-label"><?= htmlspecialchars($item['label'], ENT_QUOTES, 'UTF-8') ?></span>
+            </a>
         <?php endforeach; ?>
     </nav>
 
@@ -201,12 +189,3 @@ function sidebarHref(string $relativeHref): string
         <a href="<?= BASE_URL ?>/logout.php" class="sidebar-logout">Log out</a>
     </div>
 </aside>
-
-<script>
-// Toggle nhóm menu cha/con - vanilla JS, không phụ thuộc thư viện ngoài (common.js hiện đang rỗng).
-document.querySelectorAll('.sidebar-group-toggle').forEach(function (btn) {
-    btn.addEventListener('click', function () {
-        btn.closest('.sidebar-group').classList.toggle('is-open');
-    });
-});
-</script>
