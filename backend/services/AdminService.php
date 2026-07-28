@@ -723,6 +723,7 @@ class AdminService
      *
      * @return array{
      *   kpi: array{active_users:int, total_products:int, total_suppliers:int, pending_pos:int, transactions_30d:int, deltas: array, trends: array},
+     *   performance: array{stockout_rate:float, inventory_value:float, avg_approval_hours:?float, approval_success_rate:?float, rejection_rate:?float},
      *   low_stock_alerts: array,
      *   pending_orders: array,
      *   recent_activity: array,
@@ -900,6 +901,50 @@ class AdminService
             ];
         }
 
+        // --- "Performance Comparison": CHỈ 2 chỉ số có dữ liệu thật để tính -
+        // Stock-out Rate (tỷ lệ SKU active đang = 0 tồn kho) và Inventory
+        // Value (SUM stock * unit_cost). KHÔNG thêm "Forecast Error (MAPE)"
+        // hay "Inventory Turnover" như mockup vì hệ thống hiện KHÔNG lưu
+        // lịch sử forecast-vs-actual hay COGS theo kỳ - thêm 2 chỉ số đó sẽ
+        // phải bịa số, không làm.
+        $stockoutRateRow = $pdo->query("
+            SELECT
+                COUNT(*) AS total_active,
+                SUM(CASE WHEN COALESCE(st.total_qty, 0) = 0 THEN 1 ELSE 0 END) AS stockout_count
+            FROM products p
+            LEFT JOIN (
+                SELECT product_id, SUM(quantity_on_hand) AS total_qty FROM stock GROUP BY product_id
+            ) st ON st.product_id = p.product_id
+            WHERE p.is_active = 1
+        ")->fetch();
+
+        $stockoutRate = ((int) $stockoutRateRow['total_active']) > 0
+            ? round(((int) $stockoutRateRow['stockout_count'] / (int) $stockoutRateRow['total_active']) * 100, 1)
+            : 0.0;
+
+        $inventoryValue = (float) $pdo->query("
+            SELECT COALESCE(SUM(s.quantity_on_hand * p.unit_cost), 0)
+            FROM stock s
+            JOIN products p ON p.product_id = s.product_id
+        ")->fetchColumn();
+
+        // --- PO approval performance (Admin duyệt/từ chối) - dùng created_at/
+        // approved_at đã có sẵn trên purchase_orders, không cần thêm cột nào.
+        $avgApprovalHours = $pdo->query("
+            SELECT AVG(TIMESTAMPDIFF(SECOND, created_at, approved_at)) / 3600
+            FROM purchase_orders
+            WHERE status IN ('Approved', 'Rejected') AND approved_at IS NOT NULL
+        ")->fetchColumn();
+        $avgApprovalHours = $avgApprovalHours !== false && $avgApprovalHours !== null ? round((float) $avgApprovalHours, 1) : null;
+
+        $poDecisionCounts = $pdo->query("
+            SELECT status, COUNT(*) AS total FROM purchase_orders
+            WHERE status IN ('Approved', 'Rejected') GROUP BY status
+        ")->fetchAll(PDO::FETCH_KEY_PAIR);
+        $totalDecided = array_sum($poDecisionCounts);
+        $approvalSuccessRate = $totalDecided > 0 ? round((($poDecisionCounts['Approved'] ?? 0) / $totalDecided) * 100, 1) : null;
+        $rejectionRate       = $totalDecided > 0 ? round((($poDecisionCounts['Rejected'] ?? 0) / $totalDecided) * 100, 1) : null;
+
         return [
             'kpi' => [
                 'active_users'     => $activeUsers,
@@ -920,6 +965,13 @@ class AdminService
                     'pending_pos'      => $pendingPosTrend,
                     'transactions_30d' => $transactionsTrend,
                 ],
+            ],
+            'performance' => [
+                'stockout_rate'          => $stockoutRate,
+                'inventory_value'        => $inventoryValue,
+                'avg_approval_hours'     => $avgApprovalHours,
+                'approval_success_rate'  => $approvalSuccessRate,
+                'rejection_rate'         => $rejectionRate,
             ],
             'low_stock_alerts'  => $lowStockAlerts,
             'pending_orders'    => $pendingOrders,

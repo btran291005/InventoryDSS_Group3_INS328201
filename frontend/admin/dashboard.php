@@ -29,6 +29,7 @@ $adminService = new AdminService();
 $summary      = $adminService->getSystemSummary();
 
 $kpi              = $summary['kpi'];
+$performance      = $summary['performance'];
 $lowStockAlerts   = $summary['low_stock_alerts'];
 $pendingOrders    = $summary['pending_orders'];
 $recentActivity   = $summary['recent_activity'];
@@ -132,9 +133,10 @@ function renderSparkline(array $values, string $color): string
  */
 function renderDonutChart(array $segments): array
 {
-    // Bảng màu cố định theo thứ tự - đủ 6 màu trước khi lặp lại, đồng bộ tinh
-    // thần "brand + semantic" đã dùng trong theme_variables.css.
-    $palette = ['#1e3a5f', '#c2410c', '#3b82f6', '#166534', '#92400e', '#9333ea'];
+    // Bảng màu pastel - nhạt hơn bản gốc (đậm/primary) nhưng vẫn đủ tương phản
+    // để đọc số liệu, đồng bộ tinh thần "brand + semantic" nhưng dịu mắt hơn
+    // cho biểu đồ nhiều lát cắt (donut) thay vì khối màu lớn (KPI card/badge).
+    $palette = ['#7C9CBF', '#E0A87A', '#8FB8D9', '#87B896', '#D9A5A0', '#B39DDB'];
 
     $radius = 70;
     $circumference = 2 * M_PI * $radius;
@@ -305,6 +307,53 @@ $activeMenu  = 'dashboard';
                     </div>
                 </div>
 
+                <!-- Performance Comparison: chỉ 2 chỉ số có dữ liệu thật (Stock-out
+                     Rate, Inventory Value) + 2 chỉ số duyệt PO. Bỏ "Forecast Error"/
+                     "Inventory Turnover" vì hệ thống không lưu forecast-vs-actual
+                     hay COGS theo kỳ - không bịa số. -->
+                <div class="mb-3">
+                    <h3 class="panel-card-title mb-1">Performance Comparison</h3>
+                    <span class="panel-card-note">Real-time inventory health indicators, computed from current stock and purchase-order records</span>
+                </div>
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-xl-3">
+                        <div class="kpi-card <?= $performance['stockout_rate'] > 10 ? 'kpi-card-warn' : '' ?>">
+                            <div class="kpi-card-top">
+                                <span class="kpi-label">Stock-out Rate</span>
+                            </div>
+                            <span class="kpi-value"><?= number_format($performance['stockout_rate'], 1) ?>%</span>
+                            <span class="kpi-delta">Share of active SKUs at zero stock</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-xl-3">
+                        <div class="kpi-card">
+                            <div class="kpi-card-top">
+                                <span class="kpi-label">Inventory Value</span>
+                            </div>
+                            <span class="kpi-value">$<?= number_format($performance['inventory_value']) ?></span>
+                            <span class="kpi-delta">On-hand stock at unit cost</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-xl-3">
+                        <div class="kpi-card">
+                            <div class="kpi-card-top">
+                                <span class="kpi-label">Avg Approval Time</span>
+                            </div>
+                            <span class="kpi-value"><?= $performance['avg_approval_hours'] !== null ? number_format($performance['avg_approval_hours'], 1) . 'h' : '—' ?></span>
+                            <span class="kpi-delta">Created &rarr; Approved/Rejected</span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-xl-3">
+                        <div class="kpi-card <?= ($performance['rejection_rate'] ?? 0) > 15 ? 'kpi-card-warn' : '' ?>">
+                            <div class="kpi-card-top">
+                                <span class="kpi-label">Approval Success</span>
+                            </div>
+                            <span class="kpi-value"><?= $performance['approval_success_rate'] !== null ? number_format($performance['approval_success_rate'], 1) . '%' : '—' ?></span>
+                            <span class="kpi-delta"><?= $performance['rejection_rate'] !== null ? number_format($performance['rejection_rate'], 1) . '% rejected' : 'No decided orders yet' ?></span>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="row g-3">
                     <!-- Low stock alerts (BR-04, BR-13) -->
                     <div class="col-12 col-xl-7">
@@ -459,7 +508,7 @@ $activeMenu  = 'dashboard';
                     </div>
 
                     <div class="col-12 col-xl-5">
-                        <div class="panel-card h-100">
+                        <div class="panel-card">
                             <div class="panel-card-header">
                                 <h3 class="panel-card-title">Product Mix</h3>
                             </div>

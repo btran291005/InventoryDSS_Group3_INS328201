@@ -614,6 +614,23 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    max-height: 120px;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 6px;
+}
+
+.product-mix-legend::-webkit-scrollbar {
+    width: 5px;
+}
+
+.product-mix-legend::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.product-mix-legend::-webkit-scrollbar-thumb {
+    background: var(--surface-border);
+    border-radius: 999px;
 }
 
 .product-mix-legend-item {
@@ -621,6 +638,7 @@ body {
     align-items: center;
     justify-content: space-between;
     font-size: .84rem;
+    flex-shrink: 0;
 }
 
 .product-mix-legend-left {
