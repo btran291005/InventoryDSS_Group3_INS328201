@@ -1,17 +1,4 @@
 <?php
-/**
- * File: frontend/components/sidebar.php
- * Purpose: Renders navigation menu based on $_SESSION['role'] (Sitemap - Project 2).
- * Warning: This controls menu VISIBILITY only. It does NOT enforce access —
- *          Middleware.php is the real access control. Never rely on a hidden
- *          menu item as a security measure.
- *
- * Yêu cầu: file gọi include component này phải include trước đó:
- *   app_config.php (BASE_URL, ROLE_ADMIN/MANAGER/STAFF), Auth.php (đã Auth::start()).
- *
- * Biến tùy chọn có thể set TRƯỚC KHI include file này để tô sáng mục đang active:
- *   $activeMenu = 'dashboard'; // khớp với key trong mảng $menuItems bên dưới
- */
 
 if (!defined('BASE_URL')) {
     // An toàn: nếu ai đó include thiếu config, không cho sidebar render sai đường dẫn
@@ -21,20 +8,6 @@ if (!defined('BASE_URL')) {
 $roleId = Auth::roleId();
 $activeMenu = $activeMenu ?? '';
 
-/**
- * Cấu trúc menu theo đúng Sitemap - Project 2:
- *   Admin Homepage   -> Dashboard/KPI, Accounts, Permissions, Master Data, PO Approval,
- *                        Audit Log, Backup/Restore, Settings
- *   Manager Homepage -> Dashboard, Reorder, Purchase Order (PO), Demand Trend,
- *                        Product Performance, Supplier Lead-time, Shortage Incidents
- *   Store Staff Homepage -> Dashboard, Stock, Goods Receipt, Stock Count, Adjustments,
- *                        Sales History, Customer Feedback Records
- *
- * "Master Data" trong sitemap chưa có 1 file riêng trong repo hiện tại - tạm trỏ về
- * setting/categories.php (dữ liệu danh mục sản phẩm, gần nghĩa nhất hiện có).
- * "Stock" (Staff) gộp 2 file thật: stock/stock_view.php + stock/low_stock_alerts.php
- * -> dùng stock_view.php làm điểm vào chính, low-stock alert là mục con.
- */
 $menuItems = [];
 
 if ($roleId === ROLE_ADMIN) {
@@ -42,32 +15,34 @@ if ($roleId === ROLE_ADMIN) {
         'dashboard'   => ['label' => 'Dashboard / KPI', 'href' => '/admin/dashboard.php', 'icon' => 'grid'],
         'accounts'    => ['label' => 'Accounts', 'href' => '/admin/accounts.php', 'icon' => 'users'],
         'permissions' => ['label' => 'Permissions', 'href' => '/admin/permissions.php', 'icon' => 'shield'],
-        'master_data' => ['label' => 'Master Data', 'href' => '/admin/setting/categories.php', 'icon' => 'database'],
         'po_approval' => ['label' => 'PO Approval', 'href' => '/admin/po_approval.php', 'icon' => 'check-square'],
         'audit_log'   => ['label' => 'Audit Log', 'href' => '/admin/audit_log.php', 'icon' => 'clock'],
-        'backup'      => ['label' => 'Backup / Restore', 'href' => '/admin/backup_restore.php', 'icon' => 'archive'],
-        'settings'    => ['label' => 'Settings', 'href' => '/admin/api-config.php', 'icon' => 'settings'],
+        // GỘP: Master Data (setting/categories.php + setting/reorder_rules.php)
+        // + API Config (api-config.php) + Backup/Restore (backup_restore.php)
+        // -> trỏ vào file đầu tiên của nhóm; xem TAB_GROUPS['settings'] trong tab-nav.php
+        'settings'    => ['label' => 'Settings', 'href' => '/admin/setting/categories.php', 'icon' => 'settings'],
     ];
 } elseif ($roleId === ROLE_MANAGER) {
     $menuItems = [
-        'dashboard'    => ['label' => 'Dashboard', 'href' => '/manager/dashboard.php', 'icon' => 'grid'],
-        'forecast'     => ['label' => 'Demand Forecast', 'href' => '/manager/forecast.php', 'icon' => 'activity'],
-        'reorder'      => ['label' => 'Reorder', 'href' => '/manager/reorder/reorder_suggestions.php', 'icon' => 'refresh-cw'],
-        'po'           => ['label' => 'Purchase Order (PO)', 'href' => '/manager/purchase_order/po_submit.php', 'icon' => 'file-text'],
-        'demand_trend' => ['label' => 'Demand Trend', 'href' => '/manager/demand_trend.php', 'icon' => 'trending-up'],
-        'product_pfm'  => ['label' => 'Product Performance', 'href' => '/manager/product_pfm.php', 'icon' => 'bar-chart-2'],
-        'lead_time'    => ['label' => 'Supplier Lead-time', 'href' => '/manager/supplier_leadtime.php', 'icon' => 'truck'],
-        'shortage'     => ['label' => 'Shortage Incidents', 'href' => '/manager/shortage_incidents.php', 'icon' => 'alert-triangle'],
+        'dashboard' => ['label' => 'Dashboard', 'href' => '/manager/dashboard.php', 'icon' => 'grid'],
+        // GỘP: Stock-out Risk + Demand Forecast + Reorder Suggestions +
+        // Demand Trend -> trỏ vào file đầu tiên; xem TAB_GROUPS['reorder']
+        'reorder'   => ['label' => 'Reorder & Forecast', 'href' => '/manager/reorder/stockout_risk.php', 'icon' => 'activity'],
+        // GỘP: Create/Submit PO + PO Status -> xem TAB_GROUPS['po']
+        'po'        => ['label' => 'Purchase Order (PO)', 'href' => '/manager/purchase_order/po_submit.php', 'icon' => 'file-text'],
+        // GỘP: Product Performance + Supplier Lead-time -> xem TAB_GROUPS['vendor']
+        'vendor'    => ['label' => 'Vendor Management', 'href' => '/manager/vendor/product_pfm.php', 'icon' => 'bar-chart-2'],
+        'shortage'  => ['label' => 'Shortage Incidents', 'href' => '/manager/shortage_incidents.php', 'icon' => 'alert-triangle'],
     ];
 } elseif ($roleId === ROLE_STAFF) {
     $menuItems = [
-        'dashboard'  => ['label' => 'Dashboard', 'href' => '/staff/dashboard.php', 'icon' => 'grid'],
-        'stock'      => ['label' => 'Stock', 'href' => '/staff/stock/stock_view.php', 'icon' => 'box'],
-        'goods_recv' => ['label' => 'Goods Receipt', 'href' => '/staff/goods_receipt.php', 'icon' => 'inbox'],
-        'stock_count'=> ['label' => 'Stock Count', 'href' => '/staff/stock_count.php', 'icon' => 'clipboard'],
-        'adjustments'=> ['label' => 'Adjustments', 'href' => '/staff/adjustments.php', 'icon' => 'sliders'],
-        'sales_hist' => ['label' => 'Sales History', 'href' => '/staff/sales_history.php', 'icon' => 'shopping-cart'],
-        'feedback'   => ['label' => 'Customer Feedback Records', 'href' => '/staff/customer_feedback.php', 'icon' => 'message-square'],
+        'dashboard'     => ['label' => 'Dashboard', 'href' => '/staff/dashboard.php', 'icon' => 'grid'],
+        // Đã gộp sẵn từ trước: Stock View + Low-stock Alerts -> xem TAB_GROUPS['stock']
+        'stock'         => ['label' => 'Stock', 'href' => '/staff/stock/stock_view.php', 'icon' => 'box'],
+        // GỘP MỚI: Goods Receipt + Stock Count + Adjustments -> xem TAB_GROUPS['inventory_ops']
+        'inventory_ops' => ['label' => 'Inventory Operations', 'href' => '/staff/inventory_ops/goods_receipt.php', 'icon' => 'inbox'],
+        'sales_hist'    => ['label' => 'Sales History', 'href' => '/staff/sales_history.php', 'icon' => 'shopping-cart'],
+        'feedback'      => ['label' => 'Customer Feedback Records', 'href' => '/staff/customer_feedback.php', 'icon' => 'message-square'],
     ];
 }
 ?>
