@@ -1208,6 +1208,155 @@ class AdminService
     }
 
     // =====================================================================
+    // 8B. INVENTORY OVERVIEW (FR-ADM-01, FR-ADM-05, BR-04)
+    // =====================================================================
+    // Dữ liệu phục vụ frontend/admin/inventory/inventory_overview.php -
+    // danh sách sản phẩm kèm tồn kho tổng hợp, ngưỡng reorder/safety hiệu
+    // lực, và KPI snapshot (tổng SKU/NCC/kho/inactive/low stock).
+
+    /**
+     * FR-ADM-01: danh sách sản phẩm kèm tồn kho tổng (SUM quantity_on_hand),
+     * ngưỡng Safety/Reorder hiệu lực (product rule ưu tiên hơn category rule),
+     * kho chính (kho có SL tồn cao nhất) và số kho đang giữ hàng.
+     *
+     * @return array<int, array{
+     *   product_id:int, sku_code:string, product_name:string, category_name:string,
+     *   is_active:int, current_stock:int, reorder_point:int, safety_stock:int,
+     *   unit_cost:float, selling_price:float,
+     *   primary_warehouse_name:?string, warehouse_count:int
+     * }>
+     */
+    public function getInventoryStockOverview(
+        bool $includeInactive = false,
+        ?int $categoryId = null,
+        ?string $keyword = null
+    ): array {
+        $pdo = Database::getConnection();
+
+        $sql = "
+            SELECT
+                p.product_id,
+                p.sku_code,
+                p.product_name,
+                p.is_active,
+                p.unit_cost,
+                p.selling_price,
+                c.category_name,
+                COALESCE(SUM(st.quantity_on_hand), 0) AS current_stock,
+                COALESCE((
+                    SELECT rr.reorder_point FROM reorder_rules rr
+                    WHERE rr.product_id = p.product_id
+                    LIMIT 1
+                ), (
+                    SELECT rr2.reorder_point FROM reorder_rules rr2
+                    WHERE rr2.category_id = p.category_id AND rr2.product_id IS NULL
+                    LIMIT 1
+                ), 0) AS reorder_point,
+                COALESCE((
+                    SELECT rr.safety_stock FROM reorder_rules rr
+                    WHERE rr.product_id = p.product_id
+                    LIMIT 1
+                ), (
+                    SELECT rr2.safety_stock FROM reorder_rules rr2
+                    WHERE rr2.category_id = p.category_id AND rr2.product_id IS NULL
+                    LIMIT 1
+                ), 0) AS safety_stock,
+                (
+                    SELECT w.warehouse_name
+                    FROM stock s2
+                    JOIN warehouses w ON w.warehouse_id = s2.warehouse_id
+                    WHERE s2.product_id = p.product_id AND s2.quantity_on_hand > 0
+                    ORDER BY s2.quantity_on_hand DESC
+                    LIMIT 1
+                ) AS primary_warehouse_name,
+                (
+                    SELECT COUNT(DISTINCT s3.warehouse_id)
+                    FROM stock s3
+                    WHERE s3.product_id = p.product_id AND s3.quantity_on_hand > 0
+                ) AS warehouse_count
+            FROM products p
+            JOIN categories c ON c.category_id = p.category_id
+            LEFT JOIN stock st ON st.product_id = p.product_id
+            WHERE 1=1";
+
+        $params = [];
+
+        if (!$includeInactive) {
+            $sql .= " AND p.is_active = 1";
+        }
+
+        if ($categoryId !== null) {
+            $sql .= " AND p.category_id = :category_id";
+            $params[':category_id'] = $categoryId;
+        }
+
+        if ($keyword !== null && $keyword !== '') {
+            $sql .= " AND (p.product_name LIKE :keyword OR p.sku_code LIKE :keyword)";
+            $params[':keyword'] = '%' . $keyword . '%';
+        }
+
+        $sql .= "
+            GROUP BY p.product_id, p.sku_code, p.product_name, p.is_active,
+                     p.unit_cost, p.selling_price, p.category_id, c.category_name
+            ORDER BY p.product_name ASC";
+
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * FR-ADM-01: KPI snapshot cho panel "Inventory Snapshot" trên Inventory Overview.
+     *
+     * @return array{
+     *   total_products:int, total_suppliers:int, total_warehouses:int,
+     *   inactive_count:int, low_stock_count:int
+     * }
+     */
+    public function getInventoryOverviewSummary(): array
+    {
+        $pdo = Database::getConnection();
+
+        $totalProducts = (int) $pdo->query("SELECT COUNT(*) FROM products")->fetchColumn();
+        $totalSuppliers = (int) $pdo->query("SELECT COUNT(*) FROM suppliers")->fetchColumn();
+        $totalWarehouses = (int) $pdo->query("SELECT COUNT(*) FROM warehouses")->fetchColumn();
+        $inactiveCount = (int) $pdo->query(
+            "SELECT COUNT(*) FROM products WHERE is_active = 0"
+        )->fetchColumn();
+
+        $lowStockCount = (int) $pdo->query("
+            SELECT COUNT(*) FROM (
+                SELECT
+                    p.product_id,
+                    COALESCE(SUM(st.quantity_on_hand), 0) AS current_stock,
+                    COALESCE((
+                        SELECT rr.reorder_point FROM reorder_rules rr
+                        WHERE rr.product_id = p.product_id
+                        LIMIT 1
+                    ), (
+                        SELECT rr2.reorder_point FROM reorder_rules rr2
+                        WHERE rr2.category_id = p.category_id AND rr2.product_id IS NULL
+                        LIMIT 1
+                    ), 0) AS reorder_point
+                FROM products p
+                LEFT JOIN stock st ON st.product_id = p.product_id
+                WHERE p.is_active = 1
+                GROUP BY p.product_id, p.category_id
+            ) AS ranked
+            WHERE ranked.current_stock <= ranked.reorder_point
+        ")->fetchColumn();
+
+        return [
+            'total_products'   => $totalProducts,
+            'total_suppliers'  => $totalSuppliers,
+            'total_warehouses' => $totalWarehouses,
+            'inactive_count'   => $inactiveCount,
+            'low_stock_count'  => $lowStockCount,
+        ];
+    }
+
+    // =====================================================================
     // 9. INVENTORY COUNT HISTORY (FR-ADM-09)
     // =====================================================================
 

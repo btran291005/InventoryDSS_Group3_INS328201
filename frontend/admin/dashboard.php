@@ -377,7 +377,7 @@ $activeMenu  = 'dashboard';
                             <div class="kpi-card-top">
                                 <span class="kpi-label">Inventory Value</span>
                             </div>
-                            <span class="kpi-value">$<?= number_format($performance['inventory_value']) ?></span>
+                            <span class="kpi-value"><?= number_format($performance['inventory_value']) ?> đ</span>
                             <span class="kpi-delta">On-hand stock at unit cost</span>
                         </div>
                     </div>
