@@ -216,7 +216,7 @@ $activeMenu  = 'po_status';
 
                                 <?php if ($viewingPo['status'] === 'Rejected'): ?>
                                     <div class="alert alert-danger py-2 px-3 mt-3 mb-0" style="font-size: .82rem;">
-                                        Đơn đã bị Admin từ chối. Tạo lại đơn nháp mới ở <a href="../reorder & forecast/reorder_suggestions.php">Reorder Suggestions</a> nếu vẫn cần đặt hàng (BR-20).
+                                        Đơn đã bị Admin từ chối. Tạo lại đơn nháp mới ở <a href="../inventory/reorder_suggestions.php">Reorder Suggestions</a> nếu vẫn cần đặt hàng (BR-20).
                                     </div>
                                 <?php elseif ($viewingPo['status'] === 'Pending'): ?>
                                     <div class="alert alert-warning py-2 px-3 mt-3 mb-0" style="font-size: .82rem;">

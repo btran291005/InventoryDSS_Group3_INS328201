@@ -1,4 +1,21 @@
 <?php
+/**
+ * File: frontend/manager/inventory/forecast.php
+ * Purpose: GỘP 2 trang cũ (forecast.php + demand_trend.php) làm 1, vì cùng
+ * chủ đề "nhu cầu của 1 sản phẩm đang chọn" chỉ khác chiều thời gian:
+ *   - Phần 1 (Demand Trend, FR-MGR-08): xu hướng bán THỰC TẾ 7/30 ngày qua,
+ *     render ngay bằng SVG PHP-side khi load trang (không cần JS/API).
+ *   - Phần 2 (AI Forecast): dự báo 7 ngày TỚI cho cùng sản phẩm đang chọn,
+ *     gọi backend/api/forecast_request.php bằng JS khi bấm nút (có thể chậm/
+ *     gọi ngoài nên giữ tách biệt khỏi phần render tức thời ở Phần 1).
+ * Dùng CHUNG 1 dropdown chọn sản phẩm cho cả 2 phần để khỏi chọn 2 lần.
+ * demand_trend.php cũ đã bị XÓA - toàn bộ nội dung nằm ở đây (Phần 1).
+ *
+ * Related: FR-MGR-02, FR-MGR-08, BR-05
+ * Calls: ManagerService::getForecastProducts(), ManagerService::getDemandTrend(),
+ *        backend/api/forecast_request.php (IntegrationService::getForecastForProduct())
+ */
+
 declare(strict_types=1);
 
 require_once __DIR__ . '/../../../backend/config/app_config.php';
@@ -14,17 +31,59 @@ if (empty($_SESSION['forecast_csrf_token'])) {
     $_SESSION['forecast_csrf_token'] = bin2hex(random_bytes(32));
 }
 
+$managerService = new ManagerService();
+
 try {
-    $managerService = new ManagerService();
     $products = $managerService->getForecastProducts();
 } catch (Exception $e) {
     error_log('[forecast.php] Error loading products: ' . $e->getMessage());
     $products = [];
 }
 
+// Sản phẩm đang chọn: lấy từ query string (dùng chung cho cả Demand Trend
+// và ô mặc định của AI Forecast dropdown), mặc định sản phẩm đầu tiên.
+$selectedProductId = isset($_GET['product_id']) && $_GET['product_id'] !== ''
+    ? (int) $_GET['product_id']
+    : (int) ($products[0]['product_id'] ?? 0);
+
+// Khoảng ngày cho Demand Trend: chỉ chấp nhận 7 hoặc 30 (Sales::getSalesHistory()).
+$selectedDays = isset($_GET['days']) && (int) $_GET['days'] === SALES_HISTORY_LONG_RANGE_DAYS
+    ? SALES_HISTORY_LONG_RANGE_DAYS
+    : SALES_HISTORY_SHORT_RANGE_DAYS;
+
+$selectedProduct = null;
+foreach ($products as $p) {
+    if ((int) $p['product_id'] === $selectedProductId) {
+        $selectedProduct = $p;
+        break;
+    }
+}
+
+$rawHistory = $selectedProductId > 0 ? $managerService->getDemandTrend($selectedProductId, $selectedDays) : [];
+
+// Điền đủ $selectedDays ngày liên tục (kể cả ngày không có giao dịch = 0).
+$byDate = [];
+foreach ($rawHistory as $row) {
+    $byDate[$row['sale_date']] = (int) $row['total_quantity'];
+}
+
+$trend = [];
+for ($i = $selectedDays - 1; $i >= 0; $i--) {
+    $date = date('Y-m-d', strtotime("-{$i} day"));
+    $trend[] = [
+        'date'  => $date,
+        'label' => $selectedDays === SALES_HISTORY_SHORT_RANGE_DAYS ? date('D', strtotime($date)) : date('d/m', strtotime($date)),
+        'count' => $byDate[$date] ?? 0,
+    ];
+}
+
+$totalSold = array_sum(array_column($trend, 'count'));
+$avgPerDay = $selectedDays > 0 ? round($totalSold / $selectedDays, 1) : 0.0;
+$peakDay   = !empty($trend) ? array_reduce($trend, fn($carry, $row) => ($carry === null || $row['count'] > $carry['count']) ? $row : $carry) : null;
+
 $activeMenu = 'forecast';
-$pageTitle = 'Demand Forecast';
-$breadcrumbs = ['Manager', 'Demand Forecast'];
+$pageTitle = 'Demand Trend & Forecast';
+$breadcrumbs = ['Manager', 'Demand Trend & Forecast'];
 $forecastEndpoint = str_replace('/frontend', '', BASE_URL) . '/backend/api/forecast_request.php';
 ?>
 <!doctype html>
@@ -32,15 +91,11 @@ $forecastEndpoint = str_replace('/frontend', '', BASE_URL) . '/backend/api/forec
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Demand Forecast - InventoryDSS</title>
+    <title>Demand Trend & Forecast - InventoryDSS</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/theme_variables.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/custom.css">
     <style>
-        .forecast-page { padding: 24px; max-width: 1400px; margin: 0 auto; }
-        .forecast-intro { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; margin-bottom: 24px; }
-        .forecast-intro h2 { margin: 0 0 8px; color: #172b4d; font-size: 26px; font-weight: 700; }
-        .forecast-intro p { margin: 0; color: #5e6c84; max-width: 700px; line-height: 1.6; font-size: 14px; }
-
         .forecast-panel { background: #fff; border: 1px solid #e7ecf2; border-radius: 14px; box-shadow: 0 3px 10px rgba(9,30,66,.05); padding: 20px; display: grid; grid-template-columns: minmax(280px, 1fr) auto; gap: 16px; align-items: end; margin-bottom: 20px; }
 
         .forecast-field { display: flex; flex-direction: column; gap: 7px; }
@@ -70,10 +125,8 @@ $forecastEndpoint = str_replace('/frontend', '', BASE_URL) . '/backend/api/forec
 
         .forecast-card.api { border-top: 4px solid #0052cc; }
         .forecast-card.api h3 { color: #0052cc; }
-
         .forecast-card.rule { border-top: 4px solid #00875a; }
         .forecast-card.rule h3 { color: #00875a; }
-
         .forecast-card.stock { border-top: 4px solid #6554c0; }
         .forecast-card.stock h3 { color: #6554c0; }
 
@@ -94,11 +147,11 @@ $forecastEndpoint = str_replace('/frontend', '', BASE_URL) . '/backend/api/forec
         .forecast-table tbody tr:hover { background: #f7f8fa; }
         .forecast-table tbody tr:last-child td { border-bottom: none; }
 
-        .empty-state { padding: 48px 20px; text-align: center; color: #6b778c; background: #fff; border: 1px dashed #c1c7d0; border-radius: 14px; font-size: 14px; }
+        .section-divider { border: 0; border-top: 1px solid var(--surface-border); margin: 32px 0 24px; }
+        .section-heading { font-size: 18px; font-weight: 700; color: #172b4d; margin: 0 0 4px; }
+        .section-subheading { font-size: 13px; color: #5e6c84; margin: 0 0 16px; }
 
         @media (max-width: 900px) {
-            .forecast-page { padding: 16px; }
-            .forecast-intro { display: block; }
             .forecast-panel { grid-template-columns: 1fr; }
             .forecast-button { width: 100%; }
             .forecast-grid { grid-template-columns: 1fr; }
@@ -113,33 +166,153 @@ $forecastEndpoint = str_replace('/frontend', '', BASE_URL) . '/backend/api/forec
         <?php require __DIR__ . '/../../components/header.php'; ?>
 
         <main class="app-main">
-            <section class="forecast-page">
-                <div class="forecast-intro">
-                    <div>
-                        <h2 class="page-heading mb-1">Dự báo nhu cầu (Demand Forecast)</h2>
-                        <p class="page-subheading mb-0">Dự báo nhu cầu 7 ngày tới cho từng sản phẩm bằng AI Forecast API. So sánh gợi ý từ API với quy tắc Reorder Point. Nếu API không khả dụng, hệ thống tự động dùng quy tắc dự phòng.</p>
-                    </div>
-                </div>
 
-                <div class="forecast-panel">
-                    <div class="forecast-field">
-                        <label for="forecastProduct">Chọn sản phẩm</label>
-                        <select id="forecastProduct">
-                            <option value="">-- Chọn sản phẩm --</option>
-                            <?php foreach ($products as $product): ?>
-                                <option value="<?= (int) $product['product_id'] ?>" data-stock="<?= (int) $product['current_stock'] ?>">
-                                    <?= htmlspecialchars($product['sku_code'] . ' — ' . $product['product_name'] . ' (' . $product['category_type'] . ')', ENT_QUOTES, 'UTF-8') ?>
+            <div class="mb-4">
+                <h2 class="page-heading mb-1">Demand Trend &amp; Forecast</h2>
+                <p class="page-subheading mb-0">Xem xu hướng bán thực tế 7/30 ngày qua và tạo dự báo AI cho 7 ngày tới, cùng trên 1 sản phẩm đang chọn.</p>
+            </div>
+
+            <!-- ================= CHỌN SẢN PHẨM + KHOẢNG NGÀY (Demand Trend) ================= -->
+            <div class="panel-card mb-3">
+                <form method="get" class="filter-bar p-1">
+                    <div style="min-width: 260px;">
+                        <label class="form-label">Sản phẩm</label>
+                        <select name="product_id" id="forecastProduct" class="form-select form-select-sm" onchange="this.form.submit()">
+                            <?php if (empty($products)): ?>
+                                <option value="">Không có sản phẩm nào</option>
+                            <?php endif; ?>
+                            <?php foreach ($products as $p): ?>
+                                <option value="<?= (int) $p['product_id'] ?>"
+                                        data-stock="<?= (int) $p['current_stock'] ?>"
+                                        <?= $selectedProductId === (int) $p['product_id'] ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($p['sku_code'] . ' - ' . $p['product_name'], ENT_QUOTES, 'UTF-8') ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <button type="button" class="forecast-button" id="runForecast" <?= empty($products) ? 'disabled' : '' ?>>Tạo dự báo 7 ngày</button>
+                    <div>
+                        <label class="form-label">Khoảng thời gian (xu hướng)</label>
+                        <div class="btn-group" role="group">
+                            <a href="?product_id=<?= $selectedProductId ?>&days=7"
+                               class="btn btn-sm <?= $selectedDays === 7 ? 'btn-brand' : 'btn-outline-secondary' ?>">7 ngày</a>
+                            <a href="?product_id=<?= $selectedProductId ?>&days=30"
+                               class="btn btn-sm <?= $selectedDays === 30 ? 'btn-brand' : 'btn-outline-secondary' ?>">30 ngày</a>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <?php if ($selectedProduct === null): ?>
+                <div class="panel-card">
+                    <div class="empty-state">Chưa có sản phẩm nào để xem xu hướng nhu cầu.</div>
+                </div>
+            <?php else: ?>
+
+                <!-- ================= PHẦN 1: DEMAND TREND (lịch sử thực tế) ================= -->
+                <h3 class="section-heading">📊 Xu hướng bán thực tế</h3>
+                <p class="section-subheading">Dữ liệu bán hàng ghi nhận thật từ hệ thống POS (FR-MGR-08).</p>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-xl-4">
+                        <div class="kpi-card">
+                            <span class="kpi-label">Tổng bán (<?= $selectedDays ?> ngày)</span>
+                            <span class="kpi-value"><?= number_format($totalSold) ?></span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-xl-4">
+                        <div class="kpi-card">
+                            <span class="kpi-label">Trung bình / ngày</span>
+                            <span class="kpi-value"><?= number_format($avgPerDay, 1) ?></span>
+                        </div>
+                    </div>
+                    <div class="col-6 col-xl-4">
+                        <div class="kpi-card">
+                            <span class="kpi-label">Ngày bán nhiều nhất</span>
+                            <span class="kpi-value"><?= $peakDay ? number_format($peakDay['count']) : '—' ?></span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel-card mb-4">
+                    <div class="panel-card-header">
+                        <h3 class="panel-card-title"><?= htmlspecialchars($selectedProduct['product_name'], ENT_QUOTES, 'UTF-8') ?></h3>
+                        <span class="panel-card-note"><?= htmlspecialchars($selectedProduct['sku_code'], ENT_QUOTES, 'UTF-8') ?> &middot; <?= $selectedDays ?> ngày gần nhất</span>
+                    </div>
+
+                    <?php if ($totalSold === 0): ?>
+                        <div class="empty-state">Không có giao dịch bán nào trong khoảng thời gian này.</div>
+                    <?php else: ?>
+                        <?php
+                            $chartW = 900; $chartH = 240;
+                            $padTop = 24; $padBottom = 12; $padLeft = 40; $padRight = 14;
+                            $plotW = $chartW - $padLeft - $padRight;
+                            $plotH = $chartH - $padTop - $padBottom;
+
+                            $counts = array_column($trend, 'count');
+                            $maxCount = max($counts) ?: 1;
+                            $axisMax = (int) max(4, ceil($maxCount / 4) * 4);
+                            $yTicks = [0, (int) round($axisMax * 0.25), (int) round($axisMax * 0.5), (int) round($axisMax * 0.75), $axisMax];
+
+                            $n = count($trend);
+                            $stepX = $n > 1 ? $plotW / ($n - 1) : 0;
+
+                            $pts = [];
+                            foreach ($trend as $i => $row) {
+                                $x = round($padLeft + ($i * $stepX), 1);
+                                $y = round($padTop + $plotH - (($row['count'] / $axisMax) * $plotH), 1);
+                                $pts[] = ['x' => $x, 'y' => $y, 'count' => $row['count'], 'label' => $row['label']];
+                            }
+                            $lineStr = implode(' ', array_map(fn($p) => $p['x'] . ',' . $p['y'], $pts));
+                            $areaStr = $padLeft . ',' . ($padTop + $plotH) . ' ' . $lineStr . ' ' . ($padLeft + $plotW) . ',' . ($padTop + $plotH);
+                            $labelStride = $selectedDays > 14 ? (int) ceil($n / 10) : 1;
+                        ?>
+                        <div class="activity-chart-wrap">
+                            <svg class="activity-chart-svg" viewBox="0 0 <?= $chartW ?> <?= $chartH ?>" preserveAspectRatio="xMidYMid meet">
+                                <?php foreach ($yTicks as $tick): ?>
+                                    <?php $tickY = round($padTop + $plotH - (($tick / $axisMax) * $plotH), 1); ?>
+                                    <line x1="<?= $padLeft ?>" y1="<?= $tickY ?>" x2="<?= $padLeft + $plotW ?>" y2="<?= $tickY ?>" stroke="var(--surface-border)" stroke-width="1"></line>
+                                    <text x="<?= $padLeft - 8 ?>" y="<?= $tickY + 3 ?>" text-anchor="end" class="activity-chart-axis-label"><?= $tick ?></text>
+                                <?php endforeach; ?>
+
+                                <polygon points="<?= htmlspecialchars($areaStr, ENT_QUOTES, 'UTF-8') ?>" fill="var(--brand-primary)" opacity="0.12"></polygon>
+                                <polyline points="<?= htmlspecialchars($lineStr, ENT_QUOTES, 'UTF-8') ?>" fill="none" stroke="var(--brand-primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></polyline>
+
+                                <?php foreach ($pts as $p): ?>
+                                    <circle cx="<?= $p['x'] ?>" cy="<?= $p['y'] ?>" r="3.5" fill="#fff" stroke="var(--brand-primary)" stroke-width="2"></circle>
+                                    <?php if ($selectedDays === 7): ?>
+                                        <text x="<?= $p['x'] ?>" y="<?= max(12, $p['y'] - 10) ?>" text-anchor="middle" class="activity-chart-point-label"><?= (int) $p['count'] ?></text>
+                                    <?php endif; ?>
+                                <?php endforeach; ?>
+                            </svg>
+                            <div class="activity-chart-labels">
+                                <?php foreach ($trend as $i => $row): ?>
+                                    <span><?= $i % $labelStride === 0 ? htmlspecialchars($row['label'], ENT_QUOTES, 'UTF-8') : '' ?></span>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <hr class="section-divider">
+
+                <!-- ================= PHẦN 2: AI FORECAST (dự báo 7 ngày tới) ================= -->
+                <h3 class="section-heading">🔮 Dự báo AI cho 7 ngày tới</h3>
+                <p class="section-subheading">Gọi AI Forecast API cho sản phẩm đang chọn ở trên. Nếu API không khả dụng, hệ thống tự động dùng quy tắc Reorder Point dự phòng.</p>
+
+                <div class="forecast-panel">
+                    <div class="forecast-field">
+                        <label>Sản phẩm đang chọn</label>
+                        <div style="padding: 11px 12px; border: 1px solid #dfe1e6; border-radius: 8px; background: #f7f8fa; font-size: 14px; color: #172b4d;">
+                            <?= htmlspecialchars($selectedProduct['sku_code'] . ' — ' . $selectedProduct['product_name'], ENT_QUOTES, 'UTF-8') ?>
+                        </div>
+                    </div>
+                    <button type="button" class="forecast-button" id="runForecast">Tạo dự báo 7 ngày</button>
                 </div>
 
                 <div id="forecastStatus" class="forecast-status" role="status"></div>
 
                 <div id="emptyForecast" class="empty-state">
-                    <strong>Chọn sản phẩm</strong> từ dropdown bên trên rồi bấm nút <strong>"Tạo dự báo 7 ngày"</strong> để xem kết quả dự báo nhu cầu.
+                    Bấm <strong>"Tạo dự báo 7 ngày"</strong> để xem kết quả dự báo nhu cầu cho sản phẩm đang chọn.
                 </div>
 
                 <div id="forecastResult" hidden>
@@ -183,9 +356,15 @@ $forecastEndpoint = str_replace('/frontend', '', BASE_URL) . '/backend/api/forec
                         </table>
                     </div>
                 </div>
-            </section>
+
+            <?php endif; ?>
+
         </main>
-        <script>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
 const endpoint = <?= json_encode($forecastEndpoint, JSON_UNESCAPED_SLASHES) ?>;
 const csrfToken = <?= json_encode($_SESSION['forecast_csrf_token']) ?>;
 const button = document.getElementById('runForecast');
@@ -228,27 +407,22 @@ function renderChart(points) {
         return el;
     };
 
-    // Draw axes
     svg.append(makeElement('line', {x1: left, y1: height - bottom, x2: width - right, y2: height - bottom, class: 'axis-line'}));
     svg.append(makeElement('line', {x1: left, y1: top, x2: left, y2: height - bottom, class: 'axis-line'}));
 
-    // Draw area (upper/lower bounds)
     const upperPath = points.map((p, i) => `${xPos(i)},${yPos(Number(p.upper_bound) || 0)}`).join(' ');
     const lowerPath = points.slice().reverse().map((p, i) => `${xPos(points.length - 1 - i)},${yPos(Number(p.lower_bound) || 0)}`).join(' ');
     svg.append(makeElement('polygon', {points: upperPath + ' ' + lowerPath, class: 'forecast-area'}));
 
-    // Draw forecast line
     const forecastPath = points.map((p, i) => `${xPos(i)},${yPos(Number(p.predicted_quantity) || 0)}`).join(' ');
     svg.append(makeElement('polyline', {points: forecastPath, class: 'forecast-line'}));
 
-    // Draw Y-axis labels
     [0, Math.ceil(max / 2), max].forEach(v => {
         const label = makeElement('text', {x: '4', y: String(yPos(v) + 4), class: 'chart-label'});
         label.textContent = format(v);
         svg.append(label);
     });
 
-    // Draw X-axis date labels
     points.forEach((p, i) => {
         const label = makeElement('text', {x: String(xPos(i)), y: String(height - 10), 'text-anchor': 'middle', class: 'chart-label'});
         label.textContent = p.forecast_date.slice(5).replace('-', '/');
@@ -274,7 +448,6 @@ function renderResults(data) {
     setText('stockValue', format(currentStock) + ' đơn vị');
     setText('stockMeta', `Reorder point: ${format(rule.reorder_point || 0)} · Max stock: ${format(rule.max_stock || 0)}`);
 
-    // Render table
     const tbody = document.getElementById('forecastTable');
     tbody.replaceChildren();
     points.forEach(p => {
@@ -322,10 +495,6 @@ button?.addEventListener('click', async () => {
             body: JSON.stringify(payload)
         });
 
-        // Đọc response dạng text trước rồi mới parse JSON thủ công: nếu server
-        // trả về HTML (trang lỗi PHP, 404, warning rò rỉ...) thay vì JSON,
-        // ta báo lỗi rõ ràng cho người dùng thay vì để JSON.parse ném ra
-        // thông báo khó hiểu kiểu `"...</...>"... is not valid JSON`.
         const rawText = await response.text();
         let data;
         try {
@@ -356,7 +525,5 @@ button?.addEventListener('click', async () => {
         button.textContent = 'Tạo dự báo 7 ngày';
     }
 });
-        </script>
-    </div>
-</div>
+</script>
 <?php require __DIR__ . '/../../components/footer.php'; ?>

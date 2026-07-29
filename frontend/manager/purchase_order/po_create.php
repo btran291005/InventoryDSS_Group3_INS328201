@@ -139,7 +139,7 @@ $activeMenu  = 'po';
                         <h2 class="page-heading mb-1">Tạo PO thủ công</h2>
                         <p class="page-subheading mb-0">
                             Tự chọn nhà cung cấp, sản phẩm và số lượng - không phụ thuộc vào danh sách gợi ý.
-                            Muốn dùng gợi ý theo Reorder Point? Vào <a href="../reorder & forecast/reorder_suggestions.php">Reorder Suggestions</a>.
+                            Muốn dùng gợi ý theo Reorder Point? Vào <a href="../inventory/reorder_suggestions.php">Reorder Suggestions</a>.
                         </p>
                     </div>
                     <a href="po_submit.php" class="btn btn-outline-secondary btn-sm">&larr; Quay lại danh sách PO</a>

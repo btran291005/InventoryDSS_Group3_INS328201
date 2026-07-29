@@ -1,6 +1,6 @@
 <?php
 /**
- * File: frontend/manager/reorder & forecast/reorder_suggestions.php
+ * File: frontend/manager/inventory/reorder_suggestions.php
  * Purpose: UI xem danh sách gợi ý đặt hàng (BR-05), Manager chọn dòng cần đặt
  * rồi tạo Purchase Order Draft. Gợi ý được GOM THEO NHÀ CUNG CẤP vì mỗi PO chỉ
  * gửi cho đúng 1 supplier (BR-07/Order::createDraft()).

@@ -51,7 +51,7 @@
  *     "Reports" trong sidebar tạm trỏ vào Demand Trend (trang đầu tiên);
  *     khi có trang Reports tổng thật, đổi href của mục 'reports' để trỏ
  *     sang đó, còn 3 trang trên trở thành các "chỗ bấm vô để xem" bên trong.
- *   - Đường dẫn có khoảng trắng/dấu & (VD "reorder & forecast", "account &
+ *   - Đường dẫn có khoảng trắng/dấu & (VD "inventory", "account &
  *     permission") - PHP require (nằm ở các file admin/manager/*.php, xử lý
  *     filesystem path, không phải URL) chạy đúng với chuỗi thường không cần
  *     encode gì. NHƯNG href render ra HTML LÀ URL - khoảng trắng và dấu '&'
@@ -99,9 +99,12 @@ if ($roleId === ROLE_ADMIN) {
         'dashboard' => ['label' => 'Dashboard', 'href' => '/manager/dashboard.php', 'icon' => 'grid'],
         'inventory' => [
             'label' => 'Inventory',
-            // "Inventory Health" chưa có trang riêng - forecast.php là màn hình
-            // gần nghĩa nhất hiện có (theo dõi tồn kho + gợi ý dựa trên forecast).
-            'href'  => '/manager/reorder & forecast/forecast.php',
+            // "Inventory Health" chưa có trang landing riêng - reorder_suggestions.php
+            // (danh sách gợi ý đặt hàng theo Reorder Point/Safety Stock, BR-05) là
+            // màn hình gần nghĩa nhất hiện có, trỏ vào đây trước theo yêu cầu.
+            // Khi có trang Inventory Health landing thật (tab dẫn qua AI
+            // Replenishment/Stock Incidents), đổi href sang đó.
+            'href'  => '/manager/inventory/reorder_suggestions.php',
             'icon'  => 'box',
             'activeAlso' => ['inventory_health', 'ai_replenishment', 'stock_incidents', 'forecast', 'reorder', 'shortage'],
         ],
@@ -113,9 +116,11 @@ if ($roleId === ROLE_ADMIN) {
         ],
         'reports' => [
             'label' => 'Reports',
-            'href'  => '/manager/reorder & forecast/demand_trend.php',
+            // demand_trend.php đã được GỘP vào forecast.php (Phần 1: Demand Trend,
+            // Phần 2: AI Forecast) - file demand_trend.php cũ đã xóa khỏi repo.
+            'href'  => '/manager/inventory/forecast.php',
             'icon'  => 'bar-chart-2',
-            'activeAlso' => ['demand_trend', 'product_pfm', 'lead_time'],
+            'activeAlso' => ['demand_trend', 'forecast', 'product_pfm', 'lead_time'],
         ],
     ];
 } elseif ($roleId === ROLE_STAFF) {
@@ -157,7 +162,7 @@ function sidebarIsActive(string $key, array $item, string $activeMenu): bool
  *
  * Bắt buộc dùng hàm này cho MỌI href render ra <a> trong sidebar, vì 1 số
  * thư mục thật trong repo có khoảng trắng/dấu & trong tên (VD "account &
- * permission", "reorder & forecast") - nếu ghép thẳng chuỗi không qua hàm
+ * permission", "inventory") - nếu ghép thẳng chuỗi không qua hàm
  * này, dấu '&' cắt đứt URL tại đó (bị hiểu thành query string), href sẽ trỏ
  * sai và trả về 404.
  */
