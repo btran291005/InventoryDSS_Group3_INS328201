@@ -99,14 +99,12 @@ if ($roleId === ROLE_ADMIN) {
         'dashboard' => ['label' => 'Dashboard', 'href' => '/manager/dashboard.php', 'icon' => 'grid'],
         'inventory' => [
             'label' => 'Inventory',
-            // "Inventory Health" chưa có trang landing riêng - reorder_suggestions.php
-            // (danh sách gợi ý đặt hàng theo Reorder Point/Safety Stock, BR-05) là
-            // màn hình gần nghĩa nhất hiện có, trỏ vào đây trước theo yêu cầu.
-            // Khi có trang Inventory Health landing thật (tab dẫn qua AI
-            // Replenishment/Stock Incidents), đổi href sang đó.
-            // LƯU Ý: forecast/demand_trend KHÔNG còn thuộc nhóm này nữa - đã tách
-            // thành mục 'forecast' riêng bên dưới theo yêu cầu.
-            'href'  => '/manager/reorder & forecast/reorder_suggestions.php',
+            // Trỏ vào reorder_suggestions.php (danh sách gợi ý đặt hàng theo
+            // Reorder Point/Safety Stock, BR-05) - màn hình gần nghĩa nhất với
+            // "Inventory" hiện có. inventory_health.php/ai_replenishment.php/
+            // stock_incidents.php đều nằm cùng thư mục inventory/, tô sáng qua
+            // 'activeAlso' bên dưới khi mở từ đó.
+            'href'  => '/manager/inventory/reorder_suggestions.php',
             'icon'  => 'box',
             'activeAlso' => ['inventory_health', 'ai_replenishment', 'stock_incidents', 'reorder', 'shortage'],
         ],
@@ -116,7 +114,7 @@ if ($roleId === ROLE_ADMIN) {
             // Inventory lẫn Reports vì đây là công cụ tra cứu/dự báo theo TỪNG
             // sản phẩm, khác với Reports (KPI TỔNG toàn hệ thống).
             'label' => 'Demand & Forecast',
-            'href'  => '/manager/reorder & forecast/forecast.php',
+            'href'  => '/manager/forecast.php',
             'icon'  => 'trending-up',
             'activeAlso' => ['demand_trend'],
         ],

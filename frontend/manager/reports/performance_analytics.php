@@ -101,6 +101,10 @@ $pageSubtitle = 'Từ ' . date('d/m/Y', strtotime($fromDate)) . ' đến ' . dat
                         <h2 class="page-heading mb-1">Performance Analytics</h2>
                         <p class="page-subheading mb-0"><?= htmlspecialchars($pageSubtitle, ENT_QUOTES, 'UTF-8') ?></p>
                     </div>
+                    <div class="d-flex gap-2">
+                        <a href="product_pfm.php" class="btn btn-outline-secondary btn-sm">Xếp hạng sản phẩm chi tiết &rarr;</a>
+                        <a href="supplier_leadtime.php" class="btn btn-outline-secondary btn-sm">Lead-time nhà cung cấp &rarr;</a>
+                    </div>
                 </div>
 
                 <!-- Filter khoảng ngày -->

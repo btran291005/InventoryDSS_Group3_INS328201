@@ -1,6 +1,6 @@
 <?php
 /**
- * File: frontend/manager/shortage_incidents.php
+ * File: frontend/manager/inventory/stock_incidents.php
  * Purpose: Ghi nhận sự cố thiếu hàng (VD: phát hiện qua phản hồi khách hàng
  * dù dashboard chưa cảnh báo kịp) và xử lý đóng sự cố. Dùng
  * ManagerService::logShortageIncident()/resolveShortageIncident()/
@@ -20,13 +20,13 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../backend/config/app_config.php';
-require_once __DIR__ . '/../../backend/config/database.php';
-require_once __DIR__ . '/../../backend/core/Logger.php';
-require_once __DIR__ . '/../../backend/core/Auth.php';
-require_once __DIR__ . '/../../backend/core/Middleware.php';
-require_once __DIR__ . '/../../backend/services/ManagerService.php';
-require_once __DIR__ . '/../../backend/models/Product.php';
+require_once __DIR__ . '/../../../backend/config/app_config.php';
+require_once __DIR__ . '/../../../backend/config/database.php';
+require_once __DIR__ . '/../../../backend/core/Logger.php';
+require_once __DIR__ . '/../../../backend/core/Auth.php';
+require_once __DIR__ . '/../../../backend/core/Middleware.php';
+require_once __DIR__ . '/../../../backend/services/ManagerService.php';
+require_once __DIR__ . '/../../../backend/models/Product.php';
 
 Middleware::guard([ROLE_MANAGER]);
 
@@ -78,10 +78,10 @@ $activeMenu  = 'shortage';
 </head>
 <body>
     <div class="app-shell">
-        <?php require __DIR__ . '/../components/sidebar.php'; ?>
+        <?php require __DIR__ . '/../../components/sidebar.php'; ?>
 
         <div class="app-content">
-            <?php require __DIR__ . '/../components/header.php'; ?>
+            <?php require __DIR__ . '/../../components/header.php'; ?>
 
             <main class="app-main">
 
@@ -114,7 +114,7 @@ $activeMenu  = 'shortage';
                             </select>
                         </div>
                         <?php if ($filterStatus): ?>
-                            <a href="shortage_incidents.php" class="btn btn-outline-secondary btn-sm">Xóa lọc</a>
+                            <a href="stock_incidents.php" class="btn btn-outline-secondary btn-sm">Xóa lọc</a>
                         <?php endif; ?>
                     </form>
                 </div>
@@ -240,4 +240,4 @@ $activeMenu  = 'shortage';
     <?php endforeach; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <?php require __DIR__ . '/../components/footer.php'; ?>
+    <?php require __DIR__ . '/../../components/footer.php'; ?>

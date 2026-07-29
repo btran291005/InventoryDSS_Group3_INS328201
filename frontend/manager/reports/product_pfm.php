@@ -59,6 +59,8 @@ $activeMenu  = 'product_pfm';
 
             <main class="app-main">
 
+                <a href="performance_analytics.php" class="btn btn-outline-secondary btn-sm mb-3">&larr; Reports Overview</a>
+
                 <div class="mb-4">
                     <h2 class="page-heading mb-1">Product Performance Analysis</h2>
                     <p class="page-subheading mb-0">Xếp hạng sản phẩm theo sản lượng bán và vòng quay tồn kho (FR-MGR-09).</p>

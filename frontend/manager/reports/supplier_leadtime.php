@@ -69,6 +69,8 @@ $activeMenu  = 'lead_time';
 
             <main class="app-main">
 
+                <a href="performance_analytics.php" class="btn btn-outline-secondary btn-sm mb-3">&larr; Reports Overview</a>
+
                 <div class="mb-4">
                     <h2 class="page-heading mb-1">Supplier Lead-Time & Delivery Accuracy</h2>
                     <p class="page-subheading mb-0">Đánh giá độ tin cậy nhà cung cấp dựa trên lịch sử giao hàng thực tế (FR-MGR-11).</p>
