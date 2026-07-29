@@ -119,7 +119,7 @@ if ($roleId === ROLE_ADMIN) {
             'activeAlso' => ['demand_trend'],
         ],
         'orders' => [
-            'label' => 'Orders',
+            'label' => 'Purchase Orders',
             'href'  => '/manager/purchase_order/po_create.php',
             'icon'  => 'file-text',
             'activeAlso' => ['purchase_orders', 'po_tracking', 'po', 'po_status'],
