@@ -235,19 +235,35 @@ $activeMenu  = 'dashboard';
                                 <h3 class="panel-card-title">Thao tác nhanh</h3>
                             </div>
                             <div class="quick-action-grid">
-                                <a href="reorder%20%26%20forecast/reorder_suggestions.php" class="quick-action-btn">Gợi ý đặt hàng</a>
-                                <a href="purchase_order/po-status.php" class="quick-action-btn">Theo dõi PO</a>
-                                <a href="shortage_incidents.php" class="quick-action-btn">Sự cố thiếu hàng</a>
-                                <a href="vendor/product_pfm.php" class="quick-action-btn">Hiệu suất sản phẩm</a>
+                                <a href="reorder%20%26%20forecast/reorder_suggestions.php" class="quick-action-btn">
+                                    <svg class="quick-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20a1 1 0 100-2 1 1 0 000 2zM20 20a1 1 0 100-2 1 1 0 000 2zM1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
+                                    Gợi ý đặt hàng
+                                </a>
+                                <a href="purchase_order/po-status.php" class="quick-action-btn">
+                                    <svg class="quick-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/><path d="M9 13l2 2 4-4"/></svg>
+                                    Theo dõi PO
+                                </a>
+                                <a href="shortage_incidents.php" class="quick-action-btn">
+                                    <svg class="quick-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                                    Sự cố thiếu hàng
+                                </a>
+                                <a href="vendor/product_pfm.php" class="quick-action-btn">
+                                    <svg class="quick-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.1-2.8-2.8L7 14"/></svg>
+                                    Hiệu suất sản phẩm
+                                </a>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="row g-3 mt-0">
-                    <!-- Top Stock-out Risk (FR-MGR-12) -->
-                    <div class="col-12 col-xl-7">
-                        <div class="panel-card h-100">
+                    <!-- Top Stock-out Risk (FR-MGR-12) - full-width riêng vì đây
+                         là bảng 10 dòng, dài hơn nhiều so với các panel cảnh báo
+                         ngắn gọn bên cạnh (trước đây ép chung 1 hàng col-xl-7/5
+                         khiến panel Cảnh báo bị kéo cao theo, để lại khoảng trắng
+                         rất lớn phía dưới nội dung thật của nó). -->
+                    <div class="col-12">
+                        <div class="panel-card">
                             <div class="panel-card-header">
                                 <h3 class="panel-card-title">
                                     Top 10 rủi ro hết hàng
@@ -267,6 +283,7 @@ $activeMenu  = 'dashboard';
                                             <tr>
                                                 <th>Sản phẩm</th>
                                                 <th class="text-end">Tồn kho</th>
+                                                <th class="text-end">Reorder Point</th>
                                                 <th class="text-end">Bán TB/ngày</th>
                                                 <th>Mức độ rủi ro</th>
                                             </tr>
@@ -287,6 +304,7 @@ $activeMenu  = 'dashboard';
                                                         <div class="text-muted small"><?= htmlspecialchars($risk['sku_code'], ENT_QUOTES, 'UTF-8') ?></div>
                                                     </td>
                                                     <td class="text-end"><?= number_format((int) $risk['current_stock']) ?></td>
+                                                    <td class="text-end text-muted"><?= $risk['reorder_point'] !== null ? number_format((int) $risk['reorder_point']) : '—' ?></td>
                                                     <td class="text-end text-muted"><?= number_format((float) $risk['avg_daily_sales_7d'], 1) ?></td>
                                                     <td style="min-width: 130px;">
                                                         <div class="d-flex align-items-center gap-2">
@@ -304,12 +322,112 @@ $activeMenu  = 'dashboard';
                             <?php endif; ?>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Alerts panel: ưu tiên nghiệp vụ Manager thật - sự cố thiếu hàng, PO
-                         đang chờ duyệt, rủi ro hết hàng khẩn cấp - không lấy audit log
-                         (đó là view của Admin, Manager không có quyền xem audit log - FR-ADM-07). -->
-                    <div class="col-12 col-xl-5">
+                <!-- Xu hướng bán hàng (chart) + cột phải xếp chồng Cảnh báo/Đơn
+                     đặt hàng của tôi - 2 panel ngắn gộp dọc để tổng chiều cao
+                     khớp với chart bên trái, thay vì mỗi panel ngắn phải tự kéo
+                     giãn ngang hàng với 1 khối dài hơn nhiều. -->
+                <div class="row g-3 mt-0">
+                    <div class="col-12 col-xl-7">
                         <div class="panel-card h-100">
+                            <div class="panel-card-header">
+                                <div>
+                                    <h3 class="panel-card-title mb-0">Xu hướng bán hàng</h3>
+                                    <?php if (array_sum($salesTrendCounts) > 0): ?>
+                                        <span class="fw-bold" style="font-size: 1.05rem; color: var(--brand-primary);"><?= number_format(array_sum($salesTrendCounts)) ?></span>
+                                        <span class="text-muted small"> giao dịch trong 7 ngày</span>
+                                    <?php endif; ?>
+                                </div>
+                                <span class="panel-card-note">Số giao dịch/ngày, 7 ngày gần nhất</span>
+                            </div>
+
+                            <?php if (array_sum($salesTrendCounts) === 0): ?>
+                                <div class="empty-state">Chưa có giao dịch bán hàng nào trong 7 ngày qua.</div>
+                            <?php else: ?>
+                                <?php
+                                    $chartW = 700; $chartH = 220;
+                                    $padTop = 20; $padBottom = 12; $padLeft = 34; $padRight = 14;
+                                    $plotW = $chartW - $padLeft - $padRight;
+                                    $plotH = $chartH - $padTop - $padBottom;
+
+                                    $maxCount = max($salesTrendCounts) ?: 1;
+                                    $axisMax = max(4, (int) ceil($maxCount / 4) * 4);
+                                    $yTicks = [0, (int) round($axisMax * 0.25), (int) round($axisMax * 0.5), (int) round($axisMax * 0.75), $axisMax];
+
+                                    $n = count($salesTrend7d);
+                                    $pts = [];
+                                    foreach ($salesTrend7d as $i => $row) {
+                                        $x = $n > 1 ? $padLeft + ($i / ($n - 1)) * $plotW : $padLeft;
+                                        $y = $padTop + $plotH - (($row['count'] / $axisMax) * $plotH);
+                                        $pts[] = ['x' => round($x, 1), 'y' => round($y, 1), 'count' => $row['count']];
+                                    }
+
+                                    $linePath = '';
+                                    if ($n > 0) {
+                                        $linePath = 'M ' . $pts[0]['x'] . ',' . $pts[0]['y'];
+                                        for ($i = 1; $i < $n; $i++) {
+                                            $linePath .= ' L ' . $pts[$i]['x'] . ',' . $pts[$i]['y'];
+                                        }
+                                    }
+                                    $areaPath = $linePath . ' L ' . ($padLeft + $plotW) . ',' . ($padTop + $plotH)
+                                              . ' L ' . $padLeft . ',' . ($padTop + $plotH) . ' Z';
+                                ?>
+                                <div class="activity-chart-wrap">
+                                    <svg class="activity-chart-svg" viewBox="0 0 <?= $chartW ?> <?= $chartH ?>" preserveAspectRatio="xMidYMid meet">
+                                        <defs>
+                                            <linearGradient id="salesTrendAreaFill" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="0%" stop-color="var(--brand-primary)" stop-opacity="0.32"></stop>
+                                                <stop offset="70%" stop-color="var(--brand-primary)" stop-opacity="0.06"></stop>
+                                                <stop offset="100%" stop-color="var(--brand-primary)" stop-opacity="0"></stop>
+                                            </linearGradient>
+                                        </defs>
+
+                                        <?php foreach ($yTicks as $tickIdx => $tick): ?>
+                                            <?php
+                                                $tickY = round($padTop + $plotH - (($tick / $axisMax) * $plotH), 1);
+                                                // Đường trục 0 (đáy) vẽ đậm + liền nét để làm mốc neo rõ ràng; các
+                                                // gridline phụ phía trên vẫn nhạt/đứt nét để không lấn át dữ liệu.
+                                                $isBaseline = $tickIdx === 0;
+                                            ?>
+                                            <line x1="<?= $padLeft ?>" y1="<?= $tickY ?>" x2="<?= $padLeft + $plotW ?>" y2="<?= $tickY ?>"
+                                                  stroke="<?= $isBaseline ? 'var(--surface-border)' : 'var(--surface-border-soft)' ?>"
+                                                  stroke-width="<?= $isBaseline ? 1.5 : 1 ?>"
+                                                  <?= $isBaseline ? '' : 'stroke-dasharray="3 4"' ?>></line>
+                                            <text x="<?= $padLeft - 8 ?>" y="<?= $tickY + 3 ?>" text-anchor="end" class="activity-chart-axis-label"><?= $tick ?></text>
+                                        <?php endforeach; ?>
+
+                                        <path d="<?= htmlspecialchars($areaPath, ENT_QUOTES, 'UTF-8') ?>" fill="url(#salesTrendAreaFill)"></path>
+                                        <path d="<?= htmlspecialchars($linePath, ENT_QUOTES, 'UTF-8') ?>" fill="none" stroke="var(--brand-primary)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
+
+                                        <?php foreach ($pts as $i => $p): ?>
+                                            <?php $isLast = $i === $n - 1; ?>
+                                            <?php if ($isLast): ?>
+                                                <circle cx="<?= $p['x'] ?>" cy="<?= $p['y'] ?>" r="9" fill="var(--brand-primary)" opacity="0.15"></circle>
+                                            <?php endif; ?>
+                                            <circle cx="<?= $p['x'] ?>" cy="<?= $p['y'] ?>" r="<?= $isLast ? 5 : 4 ?>" fill="#fff" stroke="var(--brand-primary)" stroke-width="<?= $isLast ? 3 : 2.25 ?>"></circle>
+                                            <text x="<?= $p['x'] ?>" y="<?= max(12, $p['y'] - 12) ?>" text-anchor="middle" class="activity-chart-point-label<?= $isLast ? ' activity-chart-point-label-current' : '' ?>"><?= (int) $p['count'] ?></text>
+                                        <?php endforeach; ?>
+                                    </svg>
+                                    <div class="activity-chart-labels">
+                                        <?php foreach ($salesTrend7d as $i => $row): ?>
+                                            <span class="<?= $i === $n - 1 ? 'activity-chart-label-current' : '' ?>"><?= htmlspecialchars($row['label'], ENT_QUOTES, 'UTF-8') ?></span>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <!-- Cột phải: Cảnh báo (trên) + Đơn đặt hàng của tôi (dưới) -
+                         xếp chồng dọc, mỗi panel cao đúng theo nội dung, tổng lại
+                         khớp chiều cao chart bên trái thay vì 1 panel ngắn đơn lẻ
+                         bị ép giãn ngang hàng với chart cao hơn hẳn. -->
+                    <div class="col-12 col-xl-5 d-flex flex-column gap-3">
+                        <!-- Alerts panel: ưu tiên nghiệp vụ Manager thật - sự cố thiếu hàng, PO
+                             đang chờ duyệt, rủi ro hết hàng khẩn cấp - không lấy audit log
+                             (đó là view của Admin, Manager không có quyền xem audit log - FR-ADM-07). -->
+                        <div class="panel-card">
                             <div class="panel-card-header">
                                 <h3 class="panel-card-title">
                                     Cảnh báo
@@ -375,89 +493,9 @@ $activeMenu  = 'dashboard';
                                 </div>
                             <?php endif; ?>
                         </div>
-                    </div>
-                </div>
 
-                <!-- Sales trend (7 ngày) + PO status (của Manager hiện tại) -->
-                <div class="row g-3 mt-0">
-                    <div class="col-12 col-xl-7">
-                        <div class="panel-card h-100">
-                            <div class="panel-card-header">
-                                <h3 class="panel-card-title">Xu hướng bán hàng</h3>
-                                <span class="panel-card-note">Số giao dịch/ngày, 7 ngày gần nhất</span>
-                            </div>
-
-                            <?php if (array_sum($salesTrendCounts) === 0): ?>
-                                <div class="empty-state">Chưa có giao dịch bán hàng nào trong 7 ngày qua.</div>
-                            <?php else: ?>
-                                <?php
-                                    $chartW = 700; $chartH = 220;
-                                    $padTop = 24; $padBottom = 12; $padLeft = 34; $padRight = 14;
-                                    $plotW = $chartW - $padLeft - $padRight;
-                                    $plotH = $chartH - $padTop - $padBottom;
-
-                                    $maxCount = max($salesTrendCounts) ?: 1;
-                                    $axisMax = max(4, (int) ceil($maxCount / 4) * 4);
-                                    $yTicks = [0, (int) round($axisMax * 0.25), (int) round($axisMax * 0.5), (int) round($axisMax * 0.75), $axisMax];
-
-                                    $n = count($salesTrend7d);
-                                    $pts = [];
-                                    foreach ($salesTrend7d as $i => $row) {
-                                        $x = $n > 1 ? $padLeft + ($i / ($n - 1)) * $plotW : $padLeft;
-                                        $y = $padTop + $plotH - (($row['count'] / $axisMax) * $plotH);
-                                        $pts[] = ['x' => round($x, 1), 'y' => round($y, 1), 'count' => $row['count']];
-                                    }
-
-                                    $linePath = '';
-                                    if ($n > 0) {
-                                        $linePath = 'M ' . $pts[0]['x'] . ',' . $pts[0]['y'];
-                                        for ($i = 1; $i < $n; $i++) {
-                                            $linePath .= ' L ' . $pts[$i]['x'] . ',' . $pts[$i]['y'];
-                                        }
-                                    }
-                                    $areaPath = $linePath . ' L ' . ($padLeft + $plotW) . ',' . ($padTop + $plotH)
-                                              . ' L ' . $padLeft . ',' . ($padTop + $plotH) . ' Z';
-                                ?>
-                                <div class="activity-chart-wrap">
-                                    <svg class="activity-chart-svg" viewBox="0 0 <?= $chartW ?> <?= $chartH ?>" preserveAspectRatio="xMidYMid meet">
-                                        <defs>
-                                            <linearGradient id="salesTrendAreaFill" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stop-color="var(--brand-primary)" stop-opacity="0.22"></stop>
-                                                <stop offset="100%" stop-color="var(--brand-primary)" stop-opacity="0"></stop>
-                                            </linearGradient>
-                                        </defs>
-
-                                        <?php foreach ($yTicks as $tick): ?>
-                                            <?php $tickY = round($padTop + $plotH - (($tick / $axisMax) * $plotH), 1); ?>
-                                            <line x1="<?= $padLeft ?>" y1="<?= $tickY ?>" x2="<?= $padLeft + $plotW ?>" y2="<?= $tickY ?>" stroke="var(--surface-border-soft)" stroke-width="1" stroke-dasharray="3 4"></line>
-                                            <text x="<?= $padLeft - 8 ?>" y="<?= $tickY + 3 ?>" text-anchor="end" class="activity-chart-axis-label"><?= $tick ?></text>
-                                        <?php endforeach; ?>
-
-                                        <path d="<?= htmlspecialchars($areaPath, ENT_QUOTES, 'UTF-8') ?>" fill="url(#salesTrendAreaFill)"></path>
-                                        <path d="<?= htmlspecialchars($linePath, ENT_QUOTES, 'UTF-8') ?>" fill="none" stroke="var(--brand-primary)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"></path>
-
-                                        <?php foreach ($pts as $i => $p): ?>
-                                            <?php $isLast = $i === $n - 1; ?>
-                                            <?php if ($isLast): ?>
-                                                <circle cx="<?= $p['x'] ?>" cy="<?= $p['y'] ?>" r="9" fill="var(--brand-primary)" opacity="0.15"></circle>
-                                            <?php endif; ?>
-                                            <circle cx="<?= $p['x'] ?>" cy="<?= $p['y'] ?>" r="<?= $isLast ? 5 : 3.5 ?>" fill="#fff" stroke="var(--brand-primary)" stroke-width="<?= $isLast ? 3 : 2 ?>"></circle>
-                                            <text x="<?= $p['x'] ?>" y="<?= max(12, $p['y'] - 12) ?>" text-anchor="middle" class="activity-chart-point-label<?= $isLast ? ' activity-chart-point-label-current' : '' ?>"><?= (int) $p['count'] ?></text>
-                                        <?php endforeach; ?>
-                                    </svg>
-                                    <div class="activity-chart-labels">
-                                        <?php foreach ($salesTrend7d as $i => $row): ?>
-                                            <span class="<?= $i === $n - 1 ? 'activity-chart-label-current' : '' ?>"><?= htmlspecialchars($row['label'], ENT_QUOTES, 'UTF-8') ?></span>
-                                        <?php endforeach; ?>
-                                    </div>
-                                </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-
-                    <!-- PO status (chỉ PO của Manager hiện tại - khác PO Workflow bên Admin) -->
-                    <div class="col-12 col-xl-5">
-                        <div class="panel-card h-100">
+                        <!-- PO status (chỉ PO của Manager hiện tại - khác PO Workflow bên Admin) -->
+                        <div class="panel-card flex-fill">
                             <div class="panel-card-header">
                                 <h3 class="panel-card-title">Đơn đặt hàng của tôi</h3>
                                 <a href="purchase_order/po-status.php" class="panel-card-link">Xem tất cả &rarr;</a>
@@ -471,7 +509,7 @@ $activeMenu  = 'dashboard';
                             <?php if ($totalPoCount === 0): ?>
                                 <div class="empty-state">Bạn chưa tạo đơn đặt hàng nào.</div>
                             <?php else: ?>
-                                <div class="po-workflow-chart" style="height: 170px;">
+                                <div class="po-workflow-chart" style="height: 140px;">
                                     <?php foreach ($poStatusDistribution as $col): ?>
                                         <?php
                                             $barHeightPct = $col['count'] > 0 ? max(3, round(($col['count'] / $poAxisMax) * 100)) : 0;
@@ -493,51 +531,6 @@ $activeMenu  = 'dashboard';
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Low-stock alerts chi tiết (FR-MGR-03, BR-04, BR-13) -->
-                <div class="row g-3 mt-0">
-                    <div class="col-12">
-                        <div class="panel-card">
-                            <div class="panel-card-header">
-                                <h3 class="panel-card-title">Danh sách cảnh báo tồn thấp</h3>
-                                <span class="panel-card-note"><?= number_format($lowStockCount) ?> sản phẩm dưới Reorder Point</span>
-                            </div>
-
-                            <?php if (empty($lowStockAlerts)): ?>
-                                <div class="empty-state">Không có sản phẩm nào dưới Reorder Point.</div>
-                            <?php else: ?>
-                                <div class="table-responsive">
-                                    <table class="table data-table align-middle mb-0">
-                                        <thead>
-                                            <tr>
-                                                <th>Sản phẩm</th>
-                                                <th class="text-end">Tồn kho</th>
-                                                <th class="text-end">Reorder Point</th>
-                                                <th class="text-end">Bán TB/ngày (7d)</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            <?php foreach (array_slice($lowStockAlerts, 0, 8) as $alert): ?>
-                                                <tr>
-                                                    <td>
-                                                        <span class="fw-semibold"><?= htmlspecialchars($alert['product_name'], ENT_QUOTES, 'UTF-8') ?></span>
-                                                        <div class="text-muted small"><?= htmlspecialchars($alert['sku_code'], ENT_QUOTES, 'UTF-8') ?></div>
-                                                    </td>
-                                                    <td class="text-end fw-semibold"><?= number_format((int) $alert['current_quantity']) ?></td>
-                                                    <td class="text-end text-muted"><?= number_format((int) $alert['reorder_point']) ?></td>
-                                                    <td class="text-end text-muted"><?= number_format((int) $alert['sales_volume_7d']) ?></td>
-                                                </tr>
-                                            <?php endforeach; ?>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <?php if (count($lowStockAlerts) > 8): ?>
-                                    <div class="text-muted small mt-2">và <?= count($lowStockAlerts) - 8 ?> sản phẩm khác...</div>
-                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>

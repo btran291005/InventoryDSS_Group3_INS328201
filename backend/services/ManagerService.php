@@ -188,11 +188,18 @@ class ManagerService
             $daysOfStockLeft = $currentStock / $avgDailySales;
             $hoursOfStockLeft = $daysOfStockLeft * 24;
 
+            // Lấy thêm reorder_point (rule riêng theo product, fallback theo
+            // category - BR-05) để hiển thị chung 1 bảng duy nhất với ngưỡng
+            // đặt hàng, thay vì phải tách 2 bảng riêng (Top rủi ro / Cảnh báo
+            // tồn thấp) như trước - tránh trùng lặp thông tin trên dashboard.
+            $rule = $this->productModel->getEffectiveReorderRule($productId);
+
             $risks[] = [
                 'product_id'         => $productId,
                 'sku_code'           => $stockRow['sku_code'],
                 'product_name'       => $stockRow['product_name'],
                 'current_stock'      => $currentStock,
+                'reorder_point'      => $rule ? (int) $rule['reorder_point'] : null,
                 'avg_daily_sales_7d' => round($avgDailySales, 2),
                 'risk_hours'         => round($hoursOfStockLeft, 1),
             ];

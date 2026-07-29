@@ -1042,12 +1042,19 @@ body {
 .restock-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    /* KHÔNG dùng grid-auto-rows:1fr - nó ép MỌI hàng (kể cả hàng cuối chỉ có
+       1 card lẻ) cao bằng hàng cao nhất trong toàn lưới, tạo khoảng trống
+       thừa rất lớn phía dưới hàng cuối. align-content:start để mỗi hàng chỉ
+       cao đúng theo item của chính nó. */
+    align-content: start;
     gap: 12px;
 }
 
 .restock-card {
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-start;
     gap: 8px;
     padding: 14px 16px;
     background: var(--surface-card-bg);
@@ -1066,6 +1073,13 @@ body {
     font-weight: 700;
     color: var(--text-primary);
     line-height: 1.3;
+    /* Giới hạn 2 dòng - tên sản phẩm dài (VD "Tteokbokki Cay Ngọt Truyền
+       Thống") không còn kéo card đó cao hơn hẳn các card cùng hàng grid;
+       chiều cao mọi card trở nên đồng đều và dễ đoán. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .restock-card-sku {
@@ -1088,13 +1102,25 @@ body {
     letter-spacing: .04em;
 }
 
+/* status-badge dùng lại ở đây với align-self:flex-start - mặc định
+   .restock-card là flex-column nên children full-width theo hàng ngang;
+   badge cần co lại đúng theo nội dung (pill nhỏ gọn) thay vì kéo dài hết
+   chiều rộng card như 1 thanh nền. */
+.restock-card .status-badge {
+    align-self: flex-start;
+}
+
 /* Lưới nút Quick Actions (2 cột trên mobile, 2x2 mặc định) - mỗi nút dẫn
    thẳng tới 1 trang chức năng thật, không phải hành động ẩn/JS. */
 .quick-action-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
+    /* Chiều cao MỖI hàng cố định 120px thay vì height:100% (kéo giãn 2 hàng
+       theo chiều cao panel-card bên trái, khiến nút tràn ra ngoài khung khi
+       panel bên trái cao hơn dự kiến - đúng lỗi trong ảnh). */
+    grid-auto-rows: 120px;
+    align-content: start;
     gap: 10px;
-    height: 100%;
 }
 
 .quick-action-btn {
@@ -1102,8 +1128,8 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 16px 10px;
+    gap: 10px;
+    padding: 10px;
     background: var(--surface-card-bg);
     border: 1px solid var(--surface-border);
     border-radius: var(--radius-sm);
@@ -1112,7 +1138,7 @@ body {
     font-size: .78rem;
     font-weight: 600;
     text-align: center;
-    transition: background .15s, border-color .15s;
+    transition: background .15s, border-color .15s, transform .1s;
 }
 
 .quick-action-btn:hover {
@@ -1120,4 +1146,19 @@ body {
     border-color: var(--brand-primary);
     color: var(--brand-primary);
     text-decoration: none;
+    transform: translateY(-1px);
+}
+
+.quick-action-btn:hover .quick-action-icon {
+    color: var(--brand-primary);
+}
+
+/* Icon SVG inline (24x24, stroke hiện tại kế thừa currentColor) - thay cho
+   khoảng trống trên đầu chữ trước đây khi HTML không thực sự chèn icon nào
+   dù CSS đã chừa gap cho nó. */
+.quick-action-icon {
+    width: 24px;
+    height: 24px;
+    color: var(--text-muted);
+    transition: color .15s;
 }
