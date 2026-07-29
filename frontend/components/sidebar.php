@@ -38,11 +38,10 @@
  *   ]
  *
  * GHI CHÚ ĐỐI CHIẾU VỚI SITEMAP (để không route vào file/link không tồn tại):
- *   - Admin > Inventory (Overview, Count History): sitemap có yêu cầu, nhưng
- *     BACKEND/FRONTEND CHƯA CÓ file admin nào cho phần này (đã rà toàn bộ
- *     frontend/admin/ - chỉ có audit_log, po_approval, dashboard, account &
- *     permission/, setting/). KHÔNG tạo link chết - tạm ẩn khỏi menu, xem
- *     TODO ngay dưới định nghĩa $menuItems của Admin.
+ *   - Admin > Inventory (Overview, Count History): đã có 2 trang thật trong
+ *     frontend/admin/inventory/ (inventory_overview.php, inventory_count_history.php)
+ *     - mục 'inventory' bên dưới trỏ vào Overview, trang đó có tab nội bộ dẫn
+ *     sang Count History.
  *   - Staff > Inventory > FEFO Picking: sitemap có yêu cầu, logic FEFO đã có
  *     ở backend (StaffService.php/Product.php/Inventory.php) nhưng CHƯA CÓ
  *     trang UI riêng trong frontend/staff/. Tạm ẩn khỏi menu, xem TODO.
@@ -83,15 +82,6 @@ if ($roleId === ROLE_ADMIN) {
             'activeAlso' => ['accounts', 'permissions'],
         ],
         'rules'       => ['label' => 'Rules', 'href' => '/admin/reorder_rules.php', 'icon' => 'sliders'],
-        // Inventory: mục cha PHẲNG (giống pattern "Users & Roles" ở trên) - href
-        // trỏ vào trang landing "Overview" tại frontend/admin/inventory/inventory_overview.php
-        // (2 file stub đã có sẵn trong thư mục con "inventory/" - KHÔNG nằm
-        // thẳng dưới admin/). Trang con "Count History"
-        // (frontend/admin/inventory/inventory_count_history.php) KHÔNG có link
-        // riêng trong sidebar (đúng quy ước flatten-sidebar ở đầu file) - chỗ
-        // bấm vào để xem trang đó nằm NGAY TRONG trang Overview.
-        // activeAlso liệt kê key của cả 2 trang con để mục cha vẫn tô sáng đúng
-        // khi đang đứng ở Count History.
         'inventory'   => [
             'label' => 'Inventory',
             'href'  => '/admin/inventory/inventory_overview.php',
