@@ -609,4 +609,224 @@ class ManagerService
 
         return $summary;
     }
+
+    // =====================================================================
+    // 9. PERFORMANCE ANALYTICS (frontend/manager/reports/performance_analytics.php)
+    // =====================================================================
+
+    /**
+     * Dữ liệu tổng hợp cho trang Performance Analytics của Manager. Khác với
+     * getProductPerformanceReport() (xếp hạng CHI TIẾT từng sản phẩm), hàm
+     * này tính các KPI TỔNG toàn hệ thống trong 1 khoảng ngày cho trang tổng
+     * quan (Avg Inventory Value, Waste Rate, Revenue, xu hướng, v.v).
+     *
+     * ⚠️ selling_price ĐÃ CÓ SẴN trong bảng products (khác với ghi chú cũ ở
+     * getProductPerformanceReport() nói "chưa có giá bán lẻ" - ghi chú đó lỗi
+     * thời so với schema hiện tại) - hàm này là nơi ĐẦU TIÊN dùng
+     * selling_price để tính doanh thu bằng tiền thật (SUM(quantity_sold *
+     * selling_price)), không còn phải dùng số lượng làm proxy nữa.
+     *
+     * KHÔNG bao gồm (không có backing data thật trong DB, xem trao đổi lúc
+     * thiết kế): "AI Demand Accuracy %" (demand_forecasts không lưu
+     * actual/predicted theo ngày để so sánh), "Sales vs Target" (không có
+     * cột target ở đâu), "Forecast Variance" (không có lead-time-variance
+     * theo từng đơn để đối chiếu quantity-error). Các card này được thay
+     * bằng Top Suppliers/Waste theo category - đều tính từ dữ liệu thật.
+     *
+     * @return array{
+     *   from_date:string, to_date:string,
+     *   avg_inventory_value:float,
+     *   waste:array{waste_qty:int, waste_value:float, stock_in_qty:int, waste_rate_percent:?float, by_category: array},
+     *   revenue:array{total_revenue:float, total_quantity_sold:int, by_month: array},
+     *   stockout_trend: array (sự cố theo ngày),
+     *   category_strength: array (turnover value ratio trung bình theo category),
+     *   top_suppliers: array,
+     *   top_overstock_risks: array
+     * }
+     */
+    public function getPerformanceAnalytics(string $fromDate, string $toDate): array
+    {
+        $pdo = Database::getConnection();
+
+        // --- 1. Avg Inventory Value: giá trị tồn kho hiện tại theo giá nhập,
+        // cùng công thức đã dùng ở AdminService/inventory_health.php. ---
+        $stmt = $pdo->query(
+            "SELECT COALESCE(SUM(s.quantity_on_hand * p.unit_cost), 0) AS total_value
+             FROM stock s
+             JOIN products p ON p.product_id = s.product_id
+             WHERE p.is_active = 1"
+        );
+        $avgInventoryValue = (float) $stmt->fetch()['total_value'];
+
+        // --- 2. Waste: dựa trên stock_movements loại 'adjustment' có lý do
+        // thuộc nhóm hao hụt thật (Expired/Damaged/Lost/Defective) - KHÁC với
+        // 'count_correction' (điều chỉnh do sai lệch kiểm kê, không hẳn là hao hụt). ---
+        $stmt = $pdo->prepare(
+            "SELECT COALESCE(SUM(-m.quantity_change), 0) AS waste_qty,
+                    COALESCE(SUM(-m.quantity_change * p.unit_cost), 0) AS waste_value
+             FROM stock_movements m
+             JOIN products p ON p.product_id = m.product_id
+             WHERE m.movement_type = 'adjustment'
+               AND m.quantity_change < 0
+               AND (m.reason LIKE '%Expired%' OR m.reason LIKE '%Damage%' OR m.reason LIKE '%Loss%' OR m.reason LIKE '%Defective%')
+               AND m.created_at BETWEEN :from_date AND :to_date"
+        );
+        $stmt->execute([':from_date' => $fromDate, ':to_date' => $toDate]);
+        $wasteRow = $stmt->fetch();
+        $wasteQty   = (int) $wasteRow['waste_qty'];
+        $wasteValue = (float) $wasteRow['waste_value'];
+
+        // Mẫu số cho tỉ lệ hao hụt: tổng SL nhập kho (stock_in) cùng kỳ -
+        // nếu không có nhập hàng nào thì không tính được tỉ lệ (tránh chia 0).
+        $stmt = $pdo->prepare(
+            "SELECT COALESCE(SUM(quantity_change), 0) AS stock_in_qty
+             FROM stock_movements
+             WHERE movement_type = 'stock_in' AND created_at BETWEEN :from_date AND :to_date"
+        );
+        $stmt->execute([':from_date' => $fromDate, ':to_date' => $toDate]);
+        $stockInQty = (int) $stmt->fetch()['stock_in_qty'];
+        $wasteRatePercent = $stockInQty > 0 ? round(($wasteQty / $stockInQty) * 100, 2) : null;
+
+        // Waste theo category (thay cho "Forecast Variance" - không có data thật).
+        $stmt = $pdo->prepare(
+            "SELECT c.category_name,
+                    COALESCE(SUM(-m.quantity_change), 0) AS waste_qty,
+                    COALESCE(SUM(-m.quantity_change * p.unit_cost), 0) AS waste_value
+             FROM stock_movements m
+             JOIN products p ON p.product_id = m.product_id
+             JOIN categories c ON c.category_id = p.category_id
+             WHERE m.movement_type = 'adjustment'
+               AND m.quantity_change < 0
+               AND (m.reason LIKE '%Expired%' OR m.reason LIKE '%Damage%' OR m.reason LIKE '%Loss%' OR m.reason LIKE '%Defective%')
+               AND m.created_at BETWEEN :from_date AND :to_date
+             GROUP BY c.category_id, c.category_name
+             ORDER BY waste_value DESC"
+        );
+        $stmt->execute([':from_date' => $fromDate, ':to_date' => $toDate]);
+        $wasteByCategory = $stmt->fetchAll();
+
+        // --- 3. Revenue: SUM(quantity_sold * selling_price) - LẦN ĐẦU dùng
+        // selling_price để tính doanh thu bằng tiền thật trong toàn bộ codebase. ---
+        $stmt = $pdo->prepare(
+            "SELECT COALESCE(SUM(std.quantity_sold * p.selling_price), 0) AS total_revenue,
+                    COALESCE(SUM(std.quantity_sold), 0) AS total_quantity_sold
+             FROM sales_transaction_details std
+             JOIN sales_transactions st ON st.transaction_id = std.transaction_id
+             JOIN products p ON p.product_id = std.product_id
+             WHERE st.transaction_time BETWEEN :from_date AND :to_date"
+        );
+        $stmt->execute([':from_date' => $fromDate, ':to_date' => $toDate]);
+        $revenueRow = $stmt->fetch();
+
+        // Doanh thu theo tháng (thay cho "Sales vs Target" - không có cột target).
+        $stmt = $pdo->prepare(
+            "SELECT DATE_FORMAT(st.transaction_time, '%Y-%m') AS month,
+                    COALESCE(SUM(std.quantity_sold * p.selling_price), 0) AS revenue
+             FROM sales_transaction_details std
+             JOIN sales_transactions st ON st.transaction_id = std.transaction_id
+             JOIN products p ON p.product_id = std.product_id
+             WHERE st.transaction_time BETWEEN :from_date AND :to_date
+             GROUP BY month
+             ORDER BY month ASC"
+        );
+        $stmt->execute([':from_date' => $fromDate, ':to_date' => $toDate]);
+        $revenueByMonth = $stmt->fetchAll();
+
+        // --- 4. Stock-out trend: số sự cố (shortage_incidents) theo ngày. ---
+        $stmt = $pdo->prepare(
+            "SELECT DATE(created_at) AS incident_date, COUNT(*) AS incident_count
+             FROM shortage_incidents
+             WHERE created_at BETWEEN :from_date AND :to_date
+             GROUP BY incident_date
+             ORDER BY incident_date ASC"
+        );
+        $stmt->execute([':from_date' => $fromDate, ':to_date' => $toDate]);
+        $stockoutTrend = $stmt->fetchAll();
+
+        // --- 5. Category Strength: turnover theo giá trị trung bình mỗi category
+        // (dùng lại công thức COGS/stock_value đã chuẩn hóa ở getProductPerformanceReport()). ---
+        $stmt = $pdo->prepare(
+            "SELECT c.category_name,
+                    COALESCE(SUM(std.quantity_sold), 0) AS total_quantity_sold,
+                    COALESCE(SUM(std.quantity_sold * p.unit_cost), 0) AS cogs_value,
+                    COALESCE(stock_total.stock_value, 0) AS stock_value
+             FROM categories c
+             JOIN products p ON p.category_id = c.category_id AND p.is_active = 1
+             LEFT JOIN sales_transaction_details std ON std.product_id = p.product_id
+             LEFT JOIN sales_transactions st
+                    ON st.transaction_id = std.transaction_id
+                   AND st.transaction_time BETWEEN :from_date AND :to_date
+             LEFT JOIN (
+                 SELECT s.product_id, SUM(s.quantity_on_hand * p2.unit_cost) AS stock_value
+                 FROM stock s
+                 JOIN products p2 ON p2.product_id = s.product_id
+                 GROUP BY s.product_id
+             ) stock_total ON stock_total.product_id = p.product_id
+             GROUP BY c.category_id, c.category_name"
+        );
+        $stmt->execute([':from_date' => $fromDate, ':to_date' => $toDate]);
+        $categoryRows = $stmt->fetchAll();
+        foreach ($categoryRows as &$catRow) {
+            $stockValue = (float) $catRow['stock_value'];
+            $cogsValue  = (float) $catRow['cogs_value'];
+            $catRow['turnover_value_ratio'] = $stockValue > 0 ? round($cogsValue / $stockValue, 2) : 0.0;
+        }
+        unset($catRow);
+
+        // --- 6. Top Suppliers tin cậy nhất (thay cho "AI Demand Accuracy" - không có data thật). ---
+        $topSuppliers = $this->supplierModel->getMostReliable(5);
+
+        // --- 7. Top Overstock Risks: tồn kho cao NHƯNG bán rất chậm/không bán
+        // trong kỳ - ngược lại với "Top Priority Reorder" (đã có ở trang
+        // Inventory Health) vốn liệt kê SP tồn THẤP. ---
+        $stmt = $pdo->prepare(
+            "SELECT p.product_id, p.sku_code, p.product_name, c.category_name,
+                    COALESCE(stock_total.total_stock, 0) AS current_stock,
+                    COALESCE(sold.total_quantity_sold, 0) AS quantity_sold
+             FROM products p
+             JOIN categories c ON c.category_id = p.category_id
+             LEFT JOIN (
+                 SELECT product_id, SUM(quantity_on_hand) AS total_stock
+                 FROM stock
+                 GROUP BY product_id
+             ) stock_total ON stock_total.product_id = p.product_id
+             LEFT JOIN (
+                 SELECT std.product_id, SUM(std.quantity_sold) AS total_quantity_sold
+                 FROM sales_transaction_details std
+                 JOIN sales_transactions st ON st.transaction_id = std.transaction_id
+                 WHERE st.transaction_time BETWEEN :from_date AND :to_date
+                 GROUP BY std.product_id
+             ) sold ON sold.product_id = p.product_id
+             WHERE p.is_active = 1 AND COALESCE(stock_total.total_stock, 0) > 0
+             ORDER BY (COALESCE(stock_total.total_stock, 0) - COALESCE(sold.total_quantity_sold, 0)) DESC
+             LIMIT 10"
+        );
+        $stmt->execute([':from_date' => $fromDate, ':to_date' => $toDate]);
+        $topOverstockRisks = $stmt->fetchAll();
+
+        return [
+            'from_date' => $fromDate,
+            'to_date'   => $toDate,
+            'avg_inventory_value' => $avgInventoryValue,
+            'waste' => [
+                'waste_qty'           => $wasteQty,
+                'waste_value'         => $wasteValue,
+                'stock_in_qty'        => $stockInQty,
+                'waste_rate_percent'  => $wasteRatePercent,
+                'by_category'         => $wasteByCategory,
+            ],
+            'revenue' => [
+                'total_revenue'        => (float) $revenueRow['total_revenue'],
+                'total_quantity_sold'  => (int) $revenueRow['total_quantity_sold'],
+                'by_month'             => $revenueByMonth,
+            ],
+            'stockout_trend'      => $stockoutTrend,
+            'category_strength'   => $categoryRows,
+            'top_suppliers'       => $topSuppliers,
+            'top_overstock_risks' => $topOverstockRisks,
+            'note' => 'Doanh thu và giá trị hao hụt (waste) tính bằng selling_price/unit_cost thật từ DB. '
+                     . 'Không hiển thị "AI Demand Accuracy %", "Sales vs Target", "Forecast Variance" vì '
+                     . 'hệ thống chưa lưu actual-vs-predicted theo ngày hay chỉ tiêu (target) doanh số.',
+        ];
+    }
 }
