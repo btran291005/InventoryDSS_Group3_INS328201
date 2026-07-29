@@ -16,12 +16,12 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../../backend/config/app_config.php';
-require_once __DIR__ . '/../../backend/config/database.php';
-require_once __DIR__ . '/../../backend/core/Logger.php';
-require_once __DIR__ . '/../../backend/core/Auth.php';
-require_once __DIR__ . '/../../backend/core/Middleware.php';
-require_once __DIR__ . '/../../backend/services/ManagerService.php';
+require_once __DIR__ . '/../../../backend/config/app_config.php';
+require_once __DIR__ . '/../../../backend/config/database.php';
+require_once __DIR__ . '/../../../backend/core/Logger.php';
+require_once __DIR__ . '/../../../backend/core/Auth.php';
+require_once __DIR__ . '/../../../backend/core/Middleware.php';
+require_once __DIR__ . '/../../../backend/services/ManagerService.php';
 
 Middleware::guard([ROLE_MANAGER]);
 
@@ -52,10 +52,10 @@ $activeMenu  = 'product_pfm';
 </head>
 <body>
     <div class="app-shell">
-        <?php require __DIR__ . '/../components/sidebar.php'; ?>
+        <?php require __DIR__ . '/../../components/sidebar.php'; ?>
 
         <div class="app-content">
-            <?php require __DIR__ . '/../components/header.php'; ?>
+            <?php require __DIR__ . '/../../components/header.php'; ?>
 
             <main class="app-main">
 
@@ -226,4 +226,4 @@ $activeMenu  = 'product_pfm';
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <?php require __DIR__ . '/../components/footer.php'; ?>
+    <?php require __DIR__ . '/../../components/footer.php'; ?>

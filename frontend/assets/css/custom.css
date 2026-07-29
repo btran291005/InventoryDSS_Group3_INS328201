@@ -1032,3 +1032,92 @@ body {
         overflow-x: auto;
     }
 }
+
+/* =========================================================================
+   17. MANAGER DASHBOARD - Recommended Restocking cards + Quick Actions grid
+   ========================================================================= */
+
+/* Lưới card gợi ý đặt hàng (BR-05/FR-MGR-02) - mỗi card 1 sản phẩm cần bổ
+   sung, kèm mức ưu tiên (status-badge dùng lại, không tạo màu mới). */
+.restock-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+}
+
+.restock-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px;
+    background: var(--surface-card-bg);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius-sm);
+    transition: box-shadow .15s, border-color .15s;
+}
+
+.restock-card:hover {
+    box-shadow: var(--shadow-card-hover);
+    border-color: var(--surface-border);
+}
+
+.restock-card-name {
+    font-size: .86rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.restock-card-sku {
+    font-size: .72rem;
+    color: var(--text-muted);
+    margin-top: -4px;
+}
+
+.restock-card-qty {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--brand-primary);
+}
+
+.restock-card-qty-label {
+    font-size: .7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+/* Lưới nút Quick Actions (2 cột trên mobile, 2x2 mặc định) - mỗi nút dẫn
+   thẳng tới 1 trang chức năng thật, không phải hành động ẩn/JS. */
+.quick-action-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    height: 100%;
+}
+
+.quick-action-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 16px 10px;
+    background: var(--surface-card-bg);
+    border: 1px solid var(--surface-border);
+    border-radius: var(--radius-sm);
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: .78rem;
+    font-weight: 600;
+    text-align: center;
+    transition: background .15s, border-color .15s;
+}
+
+.quick-action-btn:hover {
+    background: var(--brand-primary-light);
+    border-color: var(--brand-primary);
+    color: var(--brand-primary);
+    text-decoration: none;
+}

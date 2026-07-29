@@ -531,4 +531,75 @@ class ManagerService
     {
         return $this->supplierModel->getMostReliable($limit);
     }
+
+    // =====================================================================
+    // 8. DASHBOARD TỔNG HỢP MỞ RỘNG (FR-MGR-01) - cho manager/dashboard.php
+    // =====================================================================
+
+    /**
+     * Bản mở rộng của getDashboardSummary() - gộp thêm dữ liệu cho các panel
+     * dashboard mới (xu hướng bán 7 ngày, phân bố trạng thái PO của CHÍNH
+     * Manager này, sự cố thiếu hàng đang mở, gợi ý đặt hàng BR-05) mà KHÔNG
+     * lặp lại query đã có: sales_trend_7d tính trực tiếp từ recent_sales của
+     * getDashboardSummary(), đúng tinh thần NFR-02 (hạn chế query dư thừa).
+     *
+     * @return array Tất cả khóa của getDashboardSummary() + các khóa mới:
+     *   'reorder_suggestions' (array{success:bool,suggestions?:array,message:string}),
+     *   'sales_trend_7d' (7 phần tử ['date','label','count']),
+     *   'po_status_distribution' (5 phần tử ['status','count'], đúng thứ tự Draft->Delivered),
+     *   'open_shortages' (array), 'open_shortage_count' (int)
+     */
+    public function getDashboardOverview(int $managerId): array
+    {
+        $summary = $this->getDashboardSummary();
+
+        // Sales trend 7 ngày: đếm SỐ GIAO DỊCH mỗi ngày từ recent_sales đã lấy sẵn
+        // ở getDashboardSummary() - không query CSDL thêm lần nào.
+        $salesByDate = [];
+        foreach ($summary['recent_sales'] as $sale) {
+            $day = substr((string) $sale['transaction_time'], 0, 10);
+            $salesByDate[$day] = ($salesByDate[$day] ?? 0) + 1;
+        }
+        $salesTrend7d = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $day = date('Y-m-d', strtotime("-{$i} days"));
+            $salesTrend7d[] = [
+                'date'  => $day,
+                'label' => date('d/m', strtotime($day)),
+                'count' => $salesByDate[$day] ?? 0,
+            ];
+        }
+
+        // Phân bố trạng thái PO CHỈ của Manager hiện tại (FR-MGR-06) - không phải
+        // toàn hệ thống (khác PO Workflow bên Admin, vốn tính trên TOÀN BỘ PO).
+        $myOrders = $this->listMyPurchaseOrders($managerId);
+        $statusCounts = ['Draft' => 0, 'Pending' => 0, 'Approved' => 0, 'Rejected' => 0, 'Delivered' => 0];
+        foreach ($myOrders as $po) {
+            $status = $po['status'];
+            if (isset($statusCounts[$status])) {
+                $statusCounts[$status]++;
+            }
+        }
+        $poStatusDistribution = [];
+        foreach ($statusCounts as $status => $count) {
+            $poStatusDistribution[] = ['status' => $status, 'count' => $count];
+        }
+
+        // FR-MGR-07: sự cố thiếu hàng đang mở (chưa Resolved).
+        $openShortages = $this->listShortageIncidents('Open');
+
+        // PO của CHÍNH Manager này đang chờ Admin duyệt - khác 'pending_po_count'
+        // ở getDashboardSummary() (đếm TOÀN HỆ THỐNG, dùng cho KPI); danh sách này
+        // dùng cho Alerts panel nên chỉ cần đúng PO của Manager đang xem dashboard.
+        $myPendingOrders = array_values(array_filter($myOrders, static fn(array $po): bool => $po['status'] === 'Pending'));
+
+        $summary['reorder_suggestions']     = $this->getReorderSuggestions(); // BR-05, FR-MGR-02
+        $summary['sales_trend_7d']          = $salesTrend7d;
+        $summary['po_status_distribution']  = $poStatusDistribution;
+        $summary['open_shortages']          = $openShortages;
+        $summary['my_pending_orders']       = $myPendingOrders;
+        $summary['open_shortage_count']     = count($openShortages);
+
+        return $summary;
+    }
 }

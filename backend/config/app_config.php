@@ -80,7 +80,7 @@ if (APP_ENV === 'development') {
 // MySQL/MariaDB cài riêng (không qua XAMPP), SỬA LẠI hằng số này cho khớp -
 // đây là điểm DUY NHẤT cần đổi, code gọi shell_exec() không cần sửa gì thêm.
 // Trên Linux, nếu mysqldump/mysql đã có sẵn trong $PATH, để chuỗi rỗng ''.
-define('BACKUP_MYSQL_BIN_DIR', 'C:\\xampp\\mysql\\bin\\');
+define('BACKUP_MYSQL_BIN_DIR', 'D:\\xampp\\mysql\\bin\\');
 
 // Thư mục lưu file .sql backup - phải có quyền ghi (XAMPP mặc định user chạy
 // PHP có quyền ghi trong htdocs). KHÔNG đặt trong frontend/ hay bất kỳ thư

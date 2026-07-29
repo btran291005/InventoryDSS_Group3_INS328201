@@ -90,9 +90,9 @@ if ($roleId === ROLE_ADMIN) {
         ],
         'approvals'   => ['label' => 'Approvals', 'href' => '/admin/po_approval.php', 'icon' => 'check-square'],
         'audit_log'   => ['label' => 'Audit Log', 'href' => '/admin/audit_log.php', 'icon' => 'clock'],
-        // FIX: file thật là /admin/backup_restore.php (KHÔNG có subfolder
-        // 'setting/' - thư mục đó không tồn tại trong repo, path cũ 404).
-        'system_backup' => ['label' => 'System Backup', 'href' => '/admin/backup_restore.php', 'icon' => 'archive'],
+        // File thật nằm trong subfolder: /admin/backup/backup_restore.php
+        // (đã xác minh qua `find frontend/admin -iname backup_restore.php`).
+        'system_backup' => ['label' => 'System Backup', 'href' => '/admin/backup/backup_restore.php', 'icon' => 'archive'],
     ];
 } elseif ($roleId === ROLE_MANAGER) {
     $menuItems = [
