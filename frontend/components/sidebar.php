@@ -83,9 +83,21 @@ if ($roleId === ROLE_ADMIN) {
             'activeAlso' => ['accounts', 'permissions'],
         ],
         'rules'       => ['label' => 'Rules', 'href' => '/admin/reorder_rules.php', 'icon' => 'sliders'],
-        // TODO: sitemap yêu cầu "Inventory" (Overview + Count History) cho Admin,
-        // nhưng chưa có file frontend/admin nào cho phần này - tạm ẩn khỏi menu
-        // cho tới khi 2 trang đó được code, để tránh trỏ vào link 404.
+        // Inventory: mục cha PHẲNG (giống pattern "Users & Roles" ở trên) - href
+        // trỏ vào trang landing "Overview" tại frontend/admin/inventory/inventory_overview.php
+        // (2 file stub đã có sẵn trong thư mục con "inventory/" - KHÔNG nằm
+        // thẳng dưới admin/). Trang con "Count History"
+        // (frontend/admin/inventory/inventory_count_history.php) KHÔNG có link
+        // riêng trong sidebar (đúng quy ước flatten-sidebar ở đầu file) - chỗ
+        // bấm vào để xem trang đó nằm NGAY TRONG trang Overview.
+        // activeAlso liệt kê key của cả 2 trang con để mục cha vẫn tô sáng đúng
+        // khi đang đứng ở Count History.
+        'inventory'   => [
+            'label' => 'Inventory',
+            'href'  => '/admin/inventory/inventory_overview.php',
+            'icon'  => 'box',
+            'activeAlso' => ['inventory_overview', 'inventory_count_history'],
+        ],
         'approvals'   => ['label' => 'Approvals', 'href' => '/admin/po_approval.php', 'icon' => 'check-square'],
         'audit_log'   => ['label' => 'Audit Log', 'href' => '/admin/audit_log.php', 'icon' => 'clock'],
         'system_backup' => ['label' => 'System Backup', 'href' => '/admin/setting/backup_restore.php', 'icon' => 'archive'],
