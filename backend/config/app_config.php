@@ -71,3 +71,32 @@ if (APP_ENV === 'development') {
     error_reporting(0);
     ini_set('display_errors', '0');
 }
+
+// 7. FR-ADM-10: Backup/Restore CSDL - cấu hình hạ tầng cho AdminService::backupDatabase()/restoreDatabase()
+//
+// ⚠️ MÔI TRƯỜNG LOCAL (XAMPP trên Windows, khớp backend/config/database.php).
+// BACKUP_MYSQL_BIN_DIR là THƯ MỤC chứa mysqldump.exe/mysql.exe - đường dẫn
+// XAMPP mặc định trên Windows. Nếu máy bạn cài XAMPP ở ổ đĩa khác hoặc dùng
+// MySQL/MariaDB cài riêng (không qua XAMPP), SỬA LẠI hằng số này cho khớp -
+// đây là điểm DUY NHẤT cần đổi, code gọi shell_exec() không cần sửa gì thêm.
+// Trên Linux, nếu mysqldump/mysql đã có sẵn trong $PATH, để chuỗi rỗng ''.
+define('BACKUP_MYSQL_BIN_DIR', 'C:\\xampp\\mysql\\bin\\');
+
+// Thư mục lưu file .sql backup - phải có quyền ghi (XAMPP mặc định user chạy
+// PHP có quyền ghi trong htdocs). KHÔNG đặt trong frontend/ hay bất kỳ thư
+// mục nào web server có thể serve trực tiếp - file backup chứa toàn bộ dữ
+// liệu (kể cả password_hash), lộ ra ngoài Internet là rủi ro bảo mật nghiêm
+// trọng. backend/storage/ nằm ngoài frontend/ nên an toàn theo kiến trúc
+// hiện tại của repo (chỉ frontend/ được cấu hình làm document root).
+define('BACKUP_STORAGE_DIR', ROOT_PATH . '/backend/storage/backups');
+
+// Credential DB tách riêng cho module backup (Database.php giữ private const,
+// không expose ra ngoài để PDO connection không bị truy cập trái phép từ
+// code khác - nhưng mysqldump/mysql CLI cần credential dạng tham số dòng
+// lệnh, nên khai báo lại ở đây. PHẢI LUÔN khớp với backend/config/database.php -
+// nếu đổi 1 chỗ, nhớ đổi luôn chỗ còn lại).
+define('BACKUP_DB_HOST', '127.0.0.1');
+define('BACKUP_DB_PORT', '3306');
+define('BACKUP_DB_NAME', 'project2');
+define('BACKUP_DB_USER', 'root');
+define('BACKUP_DB_PASS', '');

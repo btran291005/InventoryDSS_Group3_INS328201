@@ -35,6 +35,7 @@ require_once __DIR__ . '/../models/Supplier.php';
 require_once __DIR__ . '/../models/Warehouse.php';
 require_once __DIR__ . '/../models/Order.php';
 require_once __DIR__ . '/../models/StockCount.php';
+require_once __DIR__ . '/../models/BackupHistory.php';
 
 class AdminService
 {
@@ -44,6 +45,7 @@ class AdminService
     private Warehouse $warehouseModel;
     private Order $orderModel;
     private StockCount $stockCountModel;
+    private BackupHistory $backupHistoryModel;
 
     public function __construct()
     {
@@ -53,6 +55,7 @@ class AdminService
         $this->warehouseModel  = new Warehouse();
         $this->orderModel      = new Order();
         $this->stockCountModel = new StockCount();
+        $this->backupHistoryModel = new BackupHistory();
     }
 
     // =====================================================================
@@ -1205,143 +1208,8 @@ class AdminService
     }
 
     // =====================================================================
-    // 9. INVENTORY OVERVIEW & COUNT HISTORY (FR-ADM-01 companion, FR-ADM-09)
+    // 9. INVENTORY COUNT HISTORY (FR-ADM-09)
     // =====================================================================
-    // ⚠️ GHI CHÚ: chưa có Model riêng cho phần tổng quan tồn kho (Inventory
-    // model hiện có KHÔNG được inject vào Service này - xem QUY ƯỚC ở đầu
-    // file). Query trực tiếp qua PDO tại đây, theo đúng style getSystemSummary()
-    // ở trên, tái sử dụng cùng công thức "effective reorder rule" (ưu tiên rule
-    // theo product, fallback rule theo category) đã dùng cho $lowStockSql.
-
-    /**
-     * FR-ADM-01 (xem tồn kho làm nền cho việc quản lý master data Product):
-     * danh sách sản phẩm đang active kèm tổng tồn kho, kho đang giữ nhiều nhất
-     * (để hiển thị 1 mã kho đại diện trên bảng, giống cột "WH" của mockup),
-     * và safety_stock/reorder_point CÓ HIỆU LỰC (effective rule).
-     *
-     * KHÔNG có cột "status Inactive/New" hay "data quality %" trong schema thật
-     * (products chỉ có is_active) - $activeOnly=false vẫn chỉ trả sản phẩm
-     * is_active=1 vì sản phẩm ngừng kinh doanh không còn ý nghĩa theo dõi tồn
-     * kho vận hành hàng ngày; trang inventory_overview.php lọc riêng theo
-     * is_active nếu cần xem cả 2 trạng thái (xem tham số $includeInactive).
-     *
-     * @return array<int, array{product_id:int, sku_code:string, product_name:string,
-     *   category_id:int, category_name:string, is_active:int, unit_cost:string,
-     *   selling_price:string, current_stock:int, warehouse_count:int,
-     *   primary_warehouse_id:?int, primary_warehouse_name:?string,
-     *   safety_stock:int, reorder_point:int}>
-     */
-    public function getInventoryStockOverview(bool $includeInactive = false, ?int $categoryId = null, ?string $keyword = null): array
-    {
-        $pdo = Database::getConnection();
-
-        $sql = "
-            SELECT
-                p.product_id, p.sku_code, p.product_name, p.category_id,
-                c.category_name, p.is_active, p.unit_cost, p.selling_price,
-                COALESCE(stock_sum.current_stock, 0) AS current_stock,
-                COALESCE(stock_sum.warehouse_count, 0) AS warehouse_count,
-                primary_wh.warehouse_id AS primary_warehouse_id,
-                primary_wh.warehouse_name AS primary_warehouse_name,
-                COALESCE((
-                    SELECT rr.safety_stock FROM reorder_rules rr
-                    WHERE rr.product_id = p.product_id LIMIT 1
-                ), (
-                    SELECT rr2.safety_stock FROM reorder_rules rr2
-                    WHERE rr2.category_id = p.category_id AND rr2.product_id IS NULL LIMIT 1
-                ), 0) AS safety_stock,
-                COALESCE((
-                    SELECT rr.reorder_point FROM reorder_rules rr
-                    WHERE rr.product_id = p.product_id LIMIT 1
-                ), (
-                    SELECT rr2.reorder_point FROM reorder_rules rr2
-                    WHERE rr2.category_id = p.category_id AND rr2.product_id IS NULL LIMIT 1
-                ), 0) AS reorder_point
-            FROM products p
-            JOIN categories c ON c.category_id = p.category_id
-            LEFT JOIN (
-                SELECT product_id, SUM(quantity_on_hand) AS current_stock, COUNT(*) AS warehouse_count
-                FROM stock GROUP BY product_id
-            ) AS stock_sum ON stock_sum.product_id = p.product_id
-            LEFT JOIN (
-                SELECT s.product_id, s.warehouse_id, w.warehouse_name
-                FROM stock s
-                JOIN warehouses w ON w.warehouse_id = s.warehouse_id
-                WHERE s.quantity_on_hand = (
-                    SELECT MAX(s2.quantity_on_hand) FROM stock s2 WHERE s2.product_id = s.product_id
-                )
-                GROUP BY s.product_id
-            ) AS primary_wh ON primary_wh.product_id = p.product_id
-            WHERE 1 = 1";
-        $params = [];
-
-        if (!$includeInactive) {
-            $sql .= " AND p.is_active = 1";
-        }
-        if ($categoryId !== null) {
-            $sql .= " AND p.category_id = :category_id";
-            $params[':category_id'] = $categoryId;
-        }
-        if ($keyword !== null && $keyword !== '') {
-            $sql .= " AND (p.product_name LIKE :kw OR p.sku_code LIKE :kw)";
-            $params[':kw'] = '%' . $keyword . '%';
-        }
-
-        $sql .= " ORDER BY p.product_name ASC";
-
-        $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
-        return $stmt->fetchAll();
-    }
-
-    /**
-     * KPI tóm tắt cho đầu trang inventory_overview.php - đếm TRỰC TIẾP từ dữ
-     * liệu thật (is_active, so sánh current_stock với reorder_point/safety_stock
-     * đã tính effective ở trên), KHÔNG bịa "Missing Supplier/Missing Category/
-     * Duplicate SKU" như mockup tham khảo vì supplier_id/category_id là NOT
-     * NULL + sku_code UNIQUE ở tầng DB (products không thể ở trạng thái đó).
-     *
-     * @return array{total_products:int, total_suppliers:int, total_warehouses:int,
-     *   inactive_count:int, low_stock_count:int}
-     */
-    public function getInventoryOverviewSummary(): array
-    {
-        $pdo = Database::getConnection();
-
-        $totalProducts   = (int) $pdo->query("SELECT COUNT(*) FROM products WHERE is_active = 1")->fetchColumn();
-        $inactiveCount   = (int) $pdo->query("SELECT COUNT(*) FROM products WHERE is_active = 0")->fetchColumn();
-        $totalSuppliers  = (int) $pdo->query("SELECT COUNT(*) FROM suppliers")->fetchColumn();
-        $totalWarehouses = (int) $pdo->query("SELECT COUNT(*) FROM warehouses")->fetchColumn();
-
-        // Sản phẩm active có tồn kho <= reorder point hiệu lực (cùng công thức
-        // effective rule dùng ở getInventoryStockOverview()/getSystemSummary()).
-        $lowStockCount = (int) $pdo->query("
-            SELECT COUNT(*) FROM (
-                SELECT p.product_id,
-                    COALESCE(SUM(st.quantity_on_hand), 0) AS current_stock,
-                    COALESCE((
-                        SELECT rr.reorder_point FROM reorder_rules rr
-                        WHERE rr.product_id = p.product_id LIMIT 1
-                    ), (
-                        SELECT rr2.reorder_point FROM reorder_rules rr2
-                        WHERE rr2.category_id = p.category_id AND rr2.product_id IS NULL LIMIT 1
-                    ), 0) AS reorder_point
-                FROM products p
-                LEFT JOIN stock st ON st.product_id = p.product_id
-                WHERE p.is_active = 1
-                GROUP BY p.product_id, p.category_id
-            ) AS ranked
-            WHERE ranked.current_stock <= ranked.reorder_point
-        ")->fetchColumn();
-
-        return [
-            'total_products'   => $totalProducts,
-            'total_suppliers'  => $totalSuppliers,
-            'total_warehouses' => $totalWarehouses,
-            'inactive_count'   => $inactiveCount,
-            'low_stock_count'  => $lowStockCount,
-        ];
-    }
 
     /** FR-ADM-09: lịch sử kiểm kê toàn hệ thống, kèm số dòng lệch mỗi phiên. */
     public function getInventoryCountHistory(): array
@@ -1357,36 +1225,168 @@ class AdminService
     // =====================================================================
     // 10. DATA BACKUP / RESTORE (FR-ADM-10)
     // =====================================================================
-    // ⚠️ GHI CHÚ: mysqldump/mysql binary cần được gọi qua exec()/shell_exec(),
-    // đây là hành động nhạy cảm cấp hệ điều hành (không chỉ là 1 SQL query như
-    // các hàm khác trong Service này). Cân nhắc kỹ về quyền thực thi trên môi
-    // trường host thực tế (XAMPP local vs server production) trước khi bật tính
-    // năng này cho người dùng cuối. Vì đây là mức ưu tiên "Could" (thấp nhất
-    // theo MoSCoW) và cần thông tin hạ tầng cụ thể (đường dẫn mysqldump, quyền
-    // ghi file) mà nhóm chưa cung cấp, tạm để placeholder rõ ràng thay vì đoán
-    // đường dẫn binary có thể sai trên máy người dùng.
+    // ⚠️ GHI CHÚ HẠ TẦNG: mysqldump/mysql binary được gọi qua shell_exec() -
+    // đây là hành động cấp hệ điều hành, không chỉ là 1 SQL query. Yêu cầu
+    // để chạy được thật trên máy:
+    //   1. PHP không bị chặn shell_exec() qua disable_functions trong php.ini
+    //      (mặc định XAMPP KHÔNG chặn, nhưng 1 số shared hosting có chặn).
+    //   2. Đường dẫn mysqldump.exe/mysql.exe đúng với BACKUP_MYSQL_BIN_DIR
+    //      trong app_config.php (mặc định XAMPP Windows) - đổi hằng số đó
+    //      nếu máy bạn cài khác chuẩn, KHÔNG sửa code trong Service này.
+    //   3. Thư mục BACKUP_STORAGE_DIR (backend/storage/backups/) có quyền
+    //      ghi cho user chạy PHP-CGI/Apache.
+    // File backup được đặt tên theo timestamp để không tự ghi đè lẫn nhau.
 
     /**
-     * FR-ADM-10: sao lưu dữ liệu ra file .sql.
-     * TODO: cần nhóm xác nhận đường dẫn mysqldump.exe và thư mục lưu backup trước khi implement.
+     * FR-ADM-10: sao lưu toàn bộ CSDL ra file .sql qua mysqldump.
+     * Ghi 1 dòng backup_history TRƯỚC khi chạy lệnh (status='running'), rồi
+     * cập nhật lại kết quả thật (thành công/thất bại kèm stderr) sau khi
+     * tiến trình kết thúc - đảm bảo có bản ghi audit trail kể cả khi
+     * mysqldump bị crash/timeout giữa chừng.
+     *
+     * @return array{success: bool, message: string, backup_id?: int, file_size_bytes?: int}
      */
     public function backupDatabase(int $actorId): array
     {
+        if (!is_dir(BACKUP_STORAGE_DIR) && !mkdir(BACKUP_STORAGE_DIR, 0755, true) && !is_dir(BACKUP_STORAGE_DIR)) {
+            return ['success' => false, 'message' => 'Không thể tạo thư mục lưu backup (' . BACKUP_STORAGE_DIR . ') - kiểm tra quyền ghi.'];
+        }
+
+        $backupId = $this->backupHistoryModel->createRunning('full', $actorId);
+
+        $fileName = 'backup_' . date('Y-m-d_His') . '.sql';
+        $filePath = BACKUP_STORAGE_DIR . DIRECTORY_SEPARATOR . $fileName;
+
+        $mysqldumpBin = BACKUP_MYSQL_BIN_DIR . 'mysqldump';
+        $passArg = BACKUP_DB_PASS !== '' ? '-p' . escapeshellarg(BACKUP_DB_PASS) : '';
+
+        // 2>&1 để bắt được cả stderr (thông báo lỗi thật của mysqldump) vào cùng output,
+        // dùng để ghi lại error_message khi thất bại - không đoán mò lý do lỗi.
+        $command = sprintf(
+            '%s --host=%s --port=%s --user=%s %s %s > %s 2> %s',
+            escapeshellarg($mysqldumpBin),
+            escapeshellarg(BACKUP_DB_HOST),
+            escapeshellarg(BACKUP_DB_PORT),
+            escapeshellarg(BACKUP_DB_USER),
+            $passArg,
+            escapeshellarg(BACKUP_DB_NAME),
+            escapeshellarg($filePath),
+            escapeshellarg($filePath . '.err')
+        );
+
+        exec($command, $outputLines, $exitCode);
+
+        $stderr = file_exists($filePath . '.err') ? trim((string) file_get_contents($filePath . '.err')) : '';
+        if (file_exists($filePath . '.err')) {
+            unlink($filePath . '.err'); // file lỗi tạm chỉ dùng để đọc stderr, không cần giữ lại
+        }
+
+        // exit code 0 VÀ file .sql thực sự tồn tại + có nội dung mới coi là thành công -
+        // không tin riêng exit code, vì 1 số bản mysqldump vẫn trả 0 dù output rỗng do lỗi quyền ghi file đích.
+        $fileSizeBytes = file_exists($filePath) ? filesize($filePath) : false;
+        $success = $exitCode === 0 && $fileSizeBytes !== false && $fileSizeBytes > 0;
+
+        if (!$success && file_exists($filePath)) {
+            unlink($filePath); // dọn file rỗng/lỗi, không để lại rác trong thư mục backup
+        }
+
+        $errorMessage = $success ? null : ($stderr !== '' ? $stderr : 'mysqldump kết thúc với exit code ' . $exitCode . ' nhưng không có thông báo lỗi chi tiết.');
+
+        $this->backupHistoryModel->markFinished(
+            $backupId,
+            $success,
+            $success ? $filePath : null,
+            $success ? (int) $fileSizeBytes : null,
+            $errorMessage
+        );
+
+        if ($success) {
+            Logger::log($actorId, 'CREATE_BACKUP', 'backup_history', $backupId);
+            return [
+                'success'         => true,
+                'message'         => 'Đã sao lưu CSDL thành công.',
+                'backup_id'       => $backupId,
+                'file_size_bytes' => (int) $fileSizeBytes,
+            ];
+        }
+
         return [
-            'success' => false,
-            'message' => 'Chức năng backup chưa được cấu hình - cần xác nhận đường dẫn mysqldump và thư mục lưu trữ.',
+            'success'   => false,
+            'message'   => 'Sao lưu thất bại: ' . $errorMessage,
+            'backup_id' => $backupId,
         ];
     }
 
     /**
-     * FR-ADM-10: phục hồi dữ liệu từ file .sql đã backup.
-     * TODO: tương tự backupDatabase() - cần xác nhận đường dẫn mysql.exe.
+     * FR-ADM-10: phục hồi dữ liệu từ 1 file .sql đã backup trước đó qua mysql CLI.
+     * BẮT BUỘC $sourceBackupId phải trỏ tới 1 dòng backup_history có
+     * status='success' VÀ backup_type='full' - không cho phục hồi từ file
+     * tùy ý người dùng tải lên (rủi ro command injection/restore nhầm file
+     * rác), chỉ cho chọn trong số các bản backup THẬT đã tạo qua chính hệ
+     * thống này.
+     *
+     * @return array{success: bool, message: string}
      */
-    public function restoreDatabase(string $backupFilePath, int $actorId): array
+    public function restoreDatabase(int $sourceBackupId, int $actorId): array
     {
-        return [
-            'success' => false,
-            'message' => 'Chức năng restore chưa được cấu hình - cần xác nhận đường dẫn mysql binary và quy trình an toàn trước khi phục hồi.',
-        ];
+        $source = $this->backupHistoryModel->getById($sourceBackupId);
+
+        if ($source === false || $source['backup_type'] !== 'full' || $source['status'] !== 'success') {
+            return ['success' => false, 'message' => 'Chỉ có thể phục hồi từ 1 bản backup đã tạo thành công trong danh sách.'];
+        }
+
+        $filePath = $source['file_path'];
+        if ($filePath === null || !file_exists($filePath)) {
+            return ['success' => false, 'message' => 'File backup không còn tồn tại trên server (có thể đã bị xóa thủ công).'];
+        }
+
+        $restoreId = $this->backupHistoryModel->createRunning('restore', $actorId);
+
+        $mysqlBin = BACKUP_MYSQL_BIN_DIR . 'mysql';
+        $passArg = BACKUP_DB_PASS !== '' ? '-p' . escapeshellarg(BACKUP_DB_PASS) : '';
+        $errFile = $filePath . '.restore.err';
+
+        $command = sprintf(
+            '%s --host=%s --port=%s --user=%s %s %s < %s 2> %s',
+            escapeshellarg($mysqlBin),
+            escapeshellarg(BACKUP_DB_HOST),
+            escapeshellarg(BACKUP_DB_PORT),
+            escapeshellarg(BACKUP_DB_USER),
+            $passArg,
+            escapeshellarg(BACKUP_DB_NAME),
+            escapeshellarg($filePath),
+            escapeshellarg($errFile)
+        );
+
+        exec($command, $outputLines, $exitCode);
+
+        $stderr = file_exists($errFile) ? trim((string) file_get_contents($errFile)) : '';
+        if (file_exists($errFile)) {
+            unlink($errFile);
+        }
+
+        $success = $exitCode === 0;
+        $errorMessage = $success ? null : ($stderr !== '' ? $stderr : 'mysql (restore) kết thúc với exit code ' . $exitCode);
+
+        $this->backupHistoryModel->markFinished($restoreId, $success, $filePath, null, $errorMessage);
+
+        if ($success) {
+            Logger::log($actorId, 'RESTORE_BACKUP', 'backup_history', $sourceBackupId);
+            return ['success' => true, 'message' => 'Đã phục hồi CSDL từ bản backup #' . $sourceBackupId . '.'];
+        }
+
+        return ['success' => false, 'message' => 'Phục hồi thất bại: ' . $errorMessage];
+    }
+
+    /** FR-ADM-10: lịch sử backup/restore cho bảng "Recent Backups" trên UI. */
+    public function listBackupHistory(int $limit = 50): array
+    {
+        return $this->backupHistoryModel->getAll($limit);
+    }
+
+    /** FR-ADM-10: thống kê THẬT cho các KPI card (Latest Backup, Total Backups, Storage Used, Success Rate). */
+    public function getBackupStats(): array
+    {
+        return $this->backupHistoryModel->getStats();
     }
 }

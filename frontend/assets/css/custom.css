@@ -392,6 +392,75 @@ body {
     color: var(--color-warning);
 }
 
+/* Nhãn trạng thái semantic (Active/Locked, action severity, PO status...) -
+   khác badge-count (chỉ dành cho SỐ ĐẾM) ở chỗ đây là nhãn TEXT có màu ngữ
+   nghĩa, dùng ở audit_log.php, accounts.php và bất kỳ đâu cần hiện trạng
+   thái/mức độ nghiêm trọng bằng màu thay vì chỉ chữ đen thông thường. */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    font-size: .72rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.status-badge-success { background: var(--color-success-bg); color: var(--color-success); }
+.status-badge-warning { background: var(--color-warning-bg); color: var(--color-warning); }
+.status-badge-danger  { background: var(--color-danger-bg); color: var(--color-danger); }
+.status-badge-info    { background: var(--color-info-bg); color: var(--color-info); }
+.status-badge-muted   { background: var(--surface-border-soft); color: var(--text-muted); }
+
+/* Form filter ngắn gọn dùng ở đầu các trang danh sách (audit log, PO list,
+   reorder rules...) - input/select nhỏ gọn, canh hàng ngang, tự xuống dòng
+   trên màn hình hẹp. */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 10px;
+}
+
+.filter-bar .form-label {
+    font-size: .8rem;
+    color: var(--text-muted);
+    margin-bottom: 2px;
+}
+
+/* Bootstrap .form-control/.form-select mặc định width:100%, và flex item mặc
+   định có min-width:auto (không chịu co nhỏ hơn nội dung bên trong) - 2 yếu
+   tố này cộng lại khiến chỉ set flex-basis KHÔNG ĐỦ để ép field co về đúng
+   kích thước, dẫn tới mỗi field vẫn giãn hết dòng. Set width TƯỜNG MINH +
+   min-width:0 trên từng div con để chắc chắn field co đúng kích thước mong
+   muốn, không phụ thuộc vào nội dung input bên trong nó. Width thu hẹp sát
+   nội dung thật của từng field (thay vì 200px đồng loạt, rộng thừa so với
+   nội dung ngắn như "24 giờ qua"/"Tất cả"), giảm khoảng trống dư thừa.
+   Dùng riêng cho từng field qua nth-child, vì HTML hiện không gắn class
+   riêng cho "date-range"/"account"/"action-type". */
+.filter-bar > div {
+    width: 160px;
+    min-width: 0;
+    flex: 0 0 auto;
+}
+
+.filter-bar > div.filter-bar-search {
+    width: 240px;
+    flex: 1 1 200px;
+}
+
+.filter-bar > div.filter-bar-actions {
+    width: auto;
+    flex: 0 0 auto;
+}
+
+/* Panel bọc filter-bar cần padding mỏng hơn panel-card thường (vốn thiết kế
+   cho nội dung nhiều dòng) - 1 hàng filter ngắn không cần khoảng đệm lớn như
+   vậy, nên trông "trống" quá mức. */
+.panel-card-compact {
+    padding: 14px 18px;
+}
+
 .empty-state {
     padding: 24px 8px;
     text-align: center;
@@ -438,33 +507,6 @@ body {
 .stock-pill-critical {
     background: var(--color-danger-bg);
     color: var(--color-danger);
-}
-
-/* Trạng thái tài khoản 'active' (accounts.php) - xanh lá, tách biệt với
-   stock-pill-warn/critical vốn dành cho cảnh báo tồn kho. */
-.stock-pill-success {
-    background: var(--color-success-bg);
-    color: var(--color-success);
-}
-
-/* Badge role Admin - dùng brand-accent để nổi bật nhất trong 3 role (đúng
-   thứ bậc quyền hạn: Admin > Manager > Staff). */
-.stock-pill-accent {
-    background: var(--brand-primary-light);
-    color: var(--brand-accent);
-}
-
-/* Badge role Manager - dùng info (xanh dương), phân biệt với Admin (accent)
-   và Staff (muted/trung tính). */
-.stock-pill-info-role {
-    background: var(--color-info-bg);
-    color: var(--color-info);
-}
-
-/* Badge role Store Staff - trung tính, thấp nhất trong thứ bậc quyền hạn. */
-.stock-pill-muted {
-    background: var(--surface-border-soft);
-    color: var(--text-muted);
 }
 
 /* --- Danh sách hoạt động (pending PO / recent activity) --- */
@@ -629,16 +671,13 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 20px;
-    height: 100%;
-    min-height: 260px;
+    gap: 18px;
 }
 
 .product-mix-donut {
     position: relative;
-    width: 200px;
-    height: 200px;
+    width: 180px;
+    height: 180px;
     flex-shrink: 0;
 }
 
@@ -722,66 +761,13 @@ body {
     color: var(--text-primary);
 }
 
-.product-mix-legend-item-other .product-mix-legend-left {
-    font-style: italic;
-    color: var(--text-muted);
-}
-
-.product-mix-legend-item-other .product-mix-legend-pct {
-    color: var(--text-muted);
-}
-
 /* --- Purchase Order Workflow (bar chart theo status) --- */
-
-/* Container quan hệ để gridline (nền) và chart (cột, z-index cao hơn) chồng
-   đúng vị trí lên nhau - cùng chiều cao 200px như .po-workflow-chart trước
-   đây, chỉ thêm 1 lớp phía sau chứ không đổi kích thước tổng thể. */
-.po-workflow-chart-wrap {
-    position: relative;
-    height: 200px;
-}
-
-.po-workflow-gridlines {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    /* Padding dưới chừa đúng chỗ cho nhãn status bên dưới cột (label nằm
-       ngoài vùng 200px của track trong .po-workflow-col), để gridline 0%
-       thẳng hàng với chân cột thật chứ không lệch xuống dưới label. */
-    padding-bottom: 26px;
-    pointer-events: none;
-}
-
-.po-workflow-gridline {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.po-workflow-gridline-label {
-    font-size: .68rem;
-    color: var(--text-muted);
-    width: 18px;
-    text-align: right;
-    flex-shrink: 0;
-}
-
-.po-workflow-gridline-rule {
-    flex: 1;
-    height: 1px;
-    background: var(--surface-border-soft);
-    border-top: 1px dashed var(--surface-border-soft);
-}
-
 .po-workflow-chart {
-    position: relative;
     display: flex;
     align-items: flex-end;
     justify-content: space-between;
     gap: 20px;
-    height: 100%;
+    height: 200px;
     padding: 0 8px;
 }
 
@@ -934,7 +920,7 @@ body {
 }
 
 /* =========================================================================
-   12. RESPONSIVE - sidebar thu gọn thành overlay trên màn hình nhỏ
+   11. RESPONSIVE - sidebar thu gọn thành overlay trên màn hình nhỏ
    ========================================================================= */
 
 @media (max-width: 991.98px) {

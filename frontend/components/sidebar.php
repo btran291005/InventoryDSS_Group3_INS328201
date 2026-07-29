@@ -90,11 +90,6 @@ if ($roleId === ROLE_ADMIN) {
         ],
         'approvals'   => ['label' => 'Approvals', 'href' => '/admin/po_approval.php', 'icon' => 'check-square'],
         'audit_log'   => ['label' => 'Audit Log', 'href' => '/admin/audit_log.php', 'icon' => 'clock'],
-        // Master Data: chưa có trang CRUD Product riêng trong repo hiện tại -
-        // theo quyết định của người dùng, trỏ tạm vào inventory_overview.php
-        // (cùng file với mục 'inventory' ở trên - đây là trang gần nghĩa
-        // "Master Data" nhất hiện có: xem tồn kho + category + ngưỡng reorder).
-        'master_data' => ['label' => 'Master Data', 'href' => '/admin/inventory/inventory_overview.php', 'icon' => 'database'],
         // FIX: file thật là /admin/backup_restore.php (KHÔNG có subfolder
         // 'setting/' - thư mục đó không tồn tại trong repo, path cũ 404).
         'system_backup' => ['label' => 'System Backup', 'href' => '/admin/backup_restore.php', 'icon' => 'archive'],
