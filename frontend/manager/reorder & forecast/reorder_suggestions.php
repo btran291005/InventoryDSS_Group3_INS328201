@@ -1,6 +1,6 @@
 <?php
 /**
- * File: frontend/manager/reorder/reorder_suggestions.php
+ * File: frontend/manager/reorder & forecast/reorder_suggestions.php
  * Purpose: UI xem danh sách gợi ý đặt hàng (BR-05), Manager chọn dòng cần đặt
  * rồi tạo Purchase Order Draft. Gợi ý được GOM THEO NHÀ CUNG CẤP vì mỗi PO chỉ
  * gửi cho đúng 1 supplier (BR-07/Order::createDraft()).
@@ -106,6 +106,23 @@ $pageTitle   = 'Reorder Suggestions';
 $breadcrumbs = ['Manager', 'Reorder', 'Suggestions'];
 $activeMenu  = 'reorder';
 
+// =========================================================================
+// SỐ LIỆU TỔNG QUAN (summary cards) - tính trực tiếp từ dữ liệu đã gom nhóm,
+// KHÔNG query thêm, chỉ để Manager có cái nhìn nhanh trước khi lướt bảng.
+// =========================================================================
+$totalItems    = 0;
+$totalCritical = 0;
+$totalSuppliers = count($groupedBySupplier);
+foreach ($groupedBySupplier as $group) {
+    foreach ($group['items'] as $item) {
+        $totalItems++;
+        if ((int) $item['current_stock'] <= (int) $item['safety_stock']) {
+            $totalCritical++;
+        }
+    }
+}
+$totalLow = $totalItems - $totalCritical;
+
 /**
  * Phân loại mức độ khẩn cấp của 1 dòng gợi ý - dựa TRỰC TIẾP trên
  * current_stock/safety_stock/reorder_point thật (ReorderService::suggestQuantity()
@@ -166,14 +183,54 @@ function reorderUrgency(array $item): array
                     </div>
                 <?php elseif (empty($groupedBySupplier)): ?>
                     <div class="panel-card">
-                        <div class="empty-state">Hiện không có sản phẩm nào chạm/dưới Reorder Point - chưa cần đặt hàng thêm.</div>
+                        <div class="empty-state">✅ Hiện không có sản phẩm nào chạm/dưới Reorder Point - chưa cần đặt hàng thêm.</div>
                     </div>
                 <?php else: ?>
 
-                    <div class="d-flex flex-column gap-3">
+                    <div class="row g-3 mb-4">
+                        <div class="col-6 col-lg-3">
+                            <div class="kpi-card">
+                                <span class="kpi-label">Tổng SP cần đặt</span>
+                                <span class="kpi-value"><?= number_format($totalItems) ?></span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="kpi-card kpi-card-warn">
+                                <span class="kpi-label">Critical (dưới Safety Stock)</span>
+                                <span class="kpi-value" style="color:#ae2e24;"><?= number_format($totalCritical) ?></span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="kpi-card">
+                                <span class="kpi-label">Low (dưới Reorder Point)</span>
+                                <span class="kpi-value"><?= number_format($totalLow) ?></span>
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <div class="kpi-card">
+                                <span class="kpi-label">Nhà cung cấp liên quan</span>
+                                <span class="kpi-value"><?= number_format($totalSuppliers) ?></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="panel-card panel-card-compact mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <input
+                                type="search"
+                                id="reorderSearchInput"
+                                class="form-control form-control-sm"
+                                placeholder="Tìm theo tên sản phẩm, SKU hoặc nhà cung cấp..."
+                                autocomplete="off"
+                            >
+                            <span class="panel-card-note text-nowrap" id="reorderSearchCount"></span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-column gap-3" id="reorderSupplierGroups">
                         <?php foreach ($groupedBySupplier as $supplierId => $group): ?>
                             <?php $formId = 'poForm' . $supplierId; ?>
-                            <div class="panel-card">
+                            <div class="panel-card" data-supplier-group>
                                 <form method="POST" id="<?= $formId ?>" onsubmit="return confirm('Tạo đơn đặt hàng nháp (Draft) cho <?= htmlspecialchars(addslashes($group['supplier_name']), ENT_QUOTES, 'UTF-8') ?> với các dòng đã chọn?');">
                                     <input type="hidden" name="action" value="create_po">
                                     <input type="hidden" name="supplier_id" value="<?= (int) $supplierId ?>">
@@ -208,7 +265,7 @@ function reorderUrgency(array $item): array
                                             <tbody>
                                                 <?php foreach ($group['items'] as $item): ?>
                                                     <?php $urgency = reorderUrgency($item); ?>
-                                                    <tr>
+                                                    <tr data-row-search="<?= htmlspecialchars(mb_strtolower($item['product_name'] . ' ' . $item['sku_code'] . ' ' . $group['supplier_name']), ENT_QUOTES, 'UTF-8') ?>">
                                                         <td>
                                                             <input type="checkbox" class="form-check-input line-checkbox" name="product_id[]" value="<?= (int) $item['product_id'] ?>" form="<?= $formId ?>">
                                                             <input type="hidden" name="suggested_qty[]" value="<?= (int) $item['suggested_qty'] ?>" form="<?= $formId ?>">
@@ -227,9 +284,17 @@ function reorderUrgency(array $item): array
                                             </tbody>
                                         </table>
                                     </div>
+
+                                    <div class="empty-state d-none" data-group-empty-state style="padding: 12px 0 2px;">
+                                        Không có dòng nào khớp từ khóa tìm kiếm trong nhóm này.
+                                    </div>
                                 </form>
                             </div>
                         <?php endforeach; ?>
+                    </div>
+
+                    <div class="panel-card d-none" id="reorderNoResults">
+                        <div class="empty-state">Không tìm thấy sản phẩm/nhà cung cấp nào khớp với từ khóa.</div>
                     </div>
 
                 <?php endif; ?>
@@ -251,5 +316,46 @@ function reorderUrgency(array $item): array
                 });
             });
         });
+
+        // Tim kiem nhanh (client-side, khong doi DOM/form) - loc theo ten SP,
+        // SKU hoac ten nha cung cap da gan san o data-row-search moi <tr>.
+        (function () {
+            const searchInput   = document.getElementById('reorderSearchInput');
+            const searchCount   = document.getElementById('reorderSearchCount');
+            const noResultsBox  = document.getElementById('reorderNoResults');
+            const supplierGroups = document.querySelectorAll('[data-supplier-group]');
+
+            if (!searchInput) { return; }
+
+            searchInput.addEventListener('input', function () {
+                const term = this.value.trim().toLowerCase();
+                let visibleRowsTotal = 0;
+                let visibleGroupsTotal = 0;
+
+                supplierGroups.forEach(function (groupEl) {
+                    const rows = groupEl.querySelectorAll('tr[data-row-search]');
+                    let visibleInGroup = 0;
+
+                    rows.forEach(function (row) {
+                        const matches = term === '' || row.getAttribute('data-row-search').indexOf(term) !== -1;
+                        row.style.display = matches ? '' : 'none';
+                        if (matches) { visibleInGroup++; }
+                    });
+
+                    const groupHasAnyMatch = visibleInGroup > 0;
+                    groupEl.style.display = groupHasAnyMatch ? '' : 'none';
+
+                    if (groupHasAnyMatch) {
+                        visibleGroupsTotal++;
+                        visibleRowsTotal += visibleInGroup;
+                    }
+                });
+
+                noResultsBox.classList.toggle('d-none', visibleGroupsTotal > 0 || term === '');
+                searchCount.textContent = term === ''
+                    ? ''
+                    : visibleRowsTotal + ' san pham khop trong ' + visibleGroupsTotal + ' nha cung cap';
+            });
+        })();
     </script>
     <?php require __DIR__ . '/../../components/footer.php'; ?>
