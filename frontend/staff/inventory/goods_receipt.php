@@ -127,6 +127,12 @@ $breadcrumbs = ['Staff', 'Inventory', 'Goods Receipt'];
                     <p class="page-subheading mb-0">Nhận và xác minh lô hàng đến từ nhà cung cấp.</p>
                 </div>
 
+                <nav class="inv-tab-nav">
+                    <a href="goods_receipt.php" class="inv-tab-link active">Goods Receipt</a>
+                    <a href="stock_count.php" class="inv-tab-link">Stock Count</a>
+                    <a href="adjustments.php" class="inv-tab-link">Adjustment</a>
+                </nav>
+
                 <?php if ($errorMessage): ?>
                     <div class="alert alert-danger"><?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?></div>
                 <?php endif; ?>

@@ -99,12 +99,14 @@ if ($roleId === ROLE_ADMIN) {
         'dashboard' => ['label' => 'Dashboard', 'href' => '/manager/dashboard.php', 'icon' => 'grid'],
         'inventory' => [
             'label' => 'Inventory',
-            // Trỏ vào reorder_suggestions.php (danh sách gợi ý đặt hàng theo
-            // Reorder Point/Safety Stock, BR-05) - màn hình gần nghĩa nhất với
-            // "Inventory" hiện có. inventory_health.php/ai_replenishment.php/
-            // stock_incidents.php đều nằm cùng thư mục inventory/, tô sáng qua
-            // 'activeAlso' bên dưới khi mở từ đó.
-            'href'  => '/manager/inventory/reorder_suggestions.php',
+            // "Inventory Health" chưa có trang landing riêng - reorder_suggestions.php
+            // (danh sách gợi ý đặt hàng theo Reorder Point/Safety Stock, BR-05) là
+            // màn hình gần nghĩa nhất hiện có, trỏ vào đây trước theo yêu cầu.
+            // Khi có trang Inventory Health landing thật (tab dẫn qua AI
+            // Replenishment/Stock Incidents), đổi href sang đó.
+            // LƯU Ý: forecast/demand_trend KHÔNG còn thuộc nhóm này nữa - đã tách
+            // thành mục 'forecast' riêng bên dưới theo yêu cầu.
+            'href'  => '/manager/reorder & forecast/reorder_suggestions.php',
             'icon'  => 'box',
             'activeAlso' => ['inventory_health', 'ai_replenishment', 'stock_incidents', 'reorder', 'shortage'],
         ],
@@ -114,12 +116,12 @@ if ($roleId === ROLE_ADMIN) {
             // Inventory lẫn Reports vì đây là công cụ tra cứu/dự báo theo TỪNG
             // sản phẩm, khác với Reports (KPI TỔNG toàn hệ thống).
             'label' => 'Demand & Forecast',
-            'href'  => '/manager/forecast.php',
+            'href'  => '/manager/reorder & forecast/forecast.php',
             'icon'  => 'trending-up',
             'activeAlso' => ['demand_trend'],
         ],
         'orders' => [
-            'label' => 'Purchase Orders',
+            'label' => 'Orders',
             'href'  => '/manager/purchase_order/po_create.php',
             'icon'  => 'file-text',
             'activeAlso' => ['purchase_orders', 'po_tracking', 'po', 'po_status'],
@@ -140,7 +142,11 @@ if ($roleId === ROLE_ADMIN) {
         'dashboard' => ['label' => 'Dashboard', 'href' => '/staff/dashboard.php', 'icon' => 'grid'],
         'inventory' => [
             'label' => 'Inventory',
-            'href'  => '/staff/inventory/stock_count.php',
+            // Mặc định vào Goods Receipt trước - đúng thứ tự quy trình thật:
+            // hàng về (Goods Receipt) -> kiểm kê định kỳ (Stock Count) ->
+            // điều chỉnh khi phát hiện lệch (Adjustment). Cả 3 trang đều có
+            // tab điều hướng riêng (.inv-tab-nav) để chuyển qua lại.
+            'href'  => '/staff/inventory/goods_receipt.php',
             'icon'  => 'box',
             // TODO: sitemap yêu cầu "FEFO Picking" - logic FEFO đã có ở backend
             // (StaffService/Product/Inventory model) nhưng chưa có trang UI

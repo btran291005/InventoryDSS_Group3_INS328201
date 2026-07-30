@@ -153,6 +153,12 @@ $breadcrumbs = ['Staff', 'Inventory', 'Stock Count'];
                     </form>
                 </div>
 
+                <nav class="inv-tab-nav">
+                    <a href="goods_receipt.php" class="inv-tab-link">Goods Receipt</a>
+                    <a href="stock_count.php" class="inv-tab-link active">Stock Count</a>
+                    <a href="adjustments.php" class="inv-tab-link">Adjustment</a>
+                </nav>
+
                 <?php if ($errorMessage): ?>
                     <div class="alert alert-danger"><?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?></div>
                 <?php endif; ?>

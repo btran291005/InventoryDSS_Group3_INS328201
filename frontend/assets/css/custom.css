@@ -1162,59 +1162,31 @@ body {
     color: var(--text-muted);
     transition: color .15s;
 }
-
-/* Quick Actions dạng card ngang (icon lớn + title + mô tả) - dùng ở
-   frontend/staff/dashboard.php, KHÁC .quick-action-btn ở trên (nút vuông nhỏ
-   xếp lưới 2x2) vì đây chỉ có 3 lối tắt, cần đủ chỗ cho mô tả ngắn giải
-   thích rõ hành động, không chỉ 1 nhãn ngắn. */
-.quick-action-card {
+/* =====================================================================
+   TAB ĐIỀU HƯỚNG NỘI BỘ (dùng chung cho các nhóm trang con - VD: Manager
+   Inventory Health/AI Replenishment/Stock Incidents, Staff Inventory
+   Stock Count/Goods Receipt/Adjustment). Trước đây định nghĩa riêng lẻ
+   trong <style> của từng trang (inventory_health.php) - chuyển vào đây
+   để dùng chung, tránh lặp code 3-4 lần cho mỗi nhóm trang mới.
+   ===================================================================== */
+.inv-tab-nav {
     display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 16px 18px;
-    height: 100%;
-    background: var(--surface-card-bg);
-    border: 1px solid var(--surface-border);
-    border-radius: var(--radius-md);
+    gap: 6px;
+    border-bottom: 1px solid var(--surface-border);
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.inv-tab-link {
+    padding: 10px 16px;
+    font-size: .87rem;
+    font-weight: 600;
+    color: var(--text-muted);
     text-decoration: none;
-    color: inherit;
-    transition: border-color .15s, transform .1s, box-shadow .15s;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
 }
-
-.quick-action-card:hover {
-    border-color: var(--brand-primary);
-    box-shadow: var(--shadow-card);
-    transform: translateY(-1px);
-    color: inherit;
-    text-decoration: none;
-}
-
-.quick-action-card-brand {
-    background: var(--brand-primary);
-    border-color: var(--brand-primary);
-    color: #fff;
-}
-
-.quick-action-card-brand:hover {
-    color: #fff;
-    border-color: var(--brand-primary);
-}
-
-.quick-action-card .quick-action-icon {
-    width: auto;
-    height: auto;
-    font-size: 1.6rem;
-    flex-shrink: 0;
-}
-
-.quick-action-title {
-    font-size: .92rem;
-    font-weight: 700;
-    margin-bottom: 2px;
-}
-
-.quick-action-desc {
-    font-size: .76rem;
-    opacity: .85;
-    line-height: 1.35;
+.inv-tab-link:hover { color: var(--brand-primary); }
+.inv-tab-link.active {
+    color: var(--brand-primary);
+    border-bottom-color: var(--brand-primary);
 }
