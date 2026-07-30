@@ -327,4 +327,96 @@ class StaffService
     {
         return $this->stockCountModel->getCustomerFeedback($productId);
     }
+
+    // =====================================================================
+    // 9. DASHBOARD TỔNG HỢP (cho frontend/staff/dashboard.php)
+    // =====================================================================
+
+    /**
+     * Xu hướng bán hàng 7 ngày TOÀN STORE (đếm SỐ GIAO DỊCH mỗi ngày) + Top 5
+     * sản phẩm bán chạy nhất trong 7 ngày đó. Khác Sales::getSalesHistory()
+     * (chỉ tính CHO 1 sản phẩm) - đây là tổng hợp toàn store cho dashboard.
+     * Cùng cách tính "SỐ LƯỢNG thay vì DOANH THU" như ManagerService (schema
+     * chưa có cột giá bán lẻ, xem ghi chú tương tự ở AdminService/ManagerService).
+     *
+     * @return array{
+     *   daily_transaction_count: array (7 phần tử ['date','label','count']),
+     *   top_products: array (tối đa 5 phần tử ['product_id','sku_code','product_name','total_quantity_sold'])
+     * }
+     */
+    public function getSalesOverview7d(): array
+    {
+        $pdo = Database::getConnection();
+        $fromDate = date('Y-m-d 00:00:00', strtotime('-6 days'));
+        $toDate   = date('Y-m-d 23:59:59');
+
+        // Số giao dịch mỗi ngày (không phải số lượng sản phẩm) - khớp đúng cách
+        // ManagerService::getDashboardOverview() đếm sales_trend_7d, để 2 dashboard
+        // (Manager/Staff) đọc cùng 1 khái niệm "hoạt động bán hàng" nhất quán.
+        $txStmt = $pdo->prepare(
+            "SELECT DATE(transaction_time) AS sale_date, COUNT(*) AS tx_count
+             FROM sales_transactions
+             WHERE transaction_time BETWEEN :from_date AND :to_date
+             GROUP BY DATE(transaction_time)"
+        );
+        $txStmt->execute([':from_date' => $fromDate, ':to_date' => $toDate]);
+        $txByDate = [];
+        foreach ($txStmt->fetchAll() as $row) {
+            $txByDate[$row['sale_date']] = (int) $row['tx_count'];
+        }
+
+        $dailyTransactionCount = [];
+        for ($i = 6; $i >= 0; $i--) {
+            $day = date('Y-m-d', strtotime("-{$i} days"));
+            $dailyTransactionCount[] = [
+                'date'  => $day,
+                'label' => date('D', strtotime($day)),
+                'count' => $txByDate[$day] ?? 0,
+            ];
+        }
+
+        // Top 5 sản phẩm bán chạy nhất (theo SỐ LƯỢNG bán) trong cùng 7 ngày.
+        $topStmt = $pdo->prepare(
+            "SELECT p.product_id, p.sku_code, p.product_name, SUM(std.quantity_sold) AS total_quantity_sold
+             FROM sales_transaction_details std
+             JOIN sales_transactions st ON st.transaction_id = std.transaction_id
+             JOIN products p ON p.product_id = std.product_id
+             WHERE st.transaction_time BETWEEN :from_date AND :to_date
+             GROUP BY p.product_id, p.sku_code, p.product_name
+             ORDER BY total_quantity_sold DESC
+             LIMIT 5"
+        );
+        $topStmt->execute([':from_date' => $fromDate, ':to_date' => $toDate]);
+        $topProducts = $topStmt->fetchAll();
+        foreach ($topProducts as &$row) {
+            $row['total_quantity_sold'] = (int) $row['total_quantity_sold'];
+        }
+        unset($row);
+
+        return [
+            'daily_transaction_count' => $dailyTransactionCount,
+            'top_products'            => $topProducts,
+        ];
+    }
+
+    /**
+     * Thời điểm đăng nhập (LOGIN) gần nhất của 1 account - dùng làm "giờ bắt
+     * đầu ca" trên dashboard, vì hệ thống KHÔNG có bảng ca làm việc (shifts)
+     * thật. Đây là proxy hợp lý (session đăng nhập ~ đang trong ca làm), khác
+     * hẳn việc bịa giờ ca cố định không có nguồn dữ liệu.
+     */
+    public function getLastLoginTime(int $accountId): ?string
+    {
+        $pdo = Database::getConnection();
+        $stmt = $pdo->prepare(
+            "SELECT timestamp FROM audit_logs
+             WHERE account_id = :account_id AND action_type = 'LOGIN'
+             ORDER BY timestamp DESC
+             LIMIT 1"
+        );
+        $stmt->execute([':account_id' => $accountId]);
+        $row = $stmt->fetch();
+
+        return $row !== false ? $row['timestamp'] : null;
+    }
 }
