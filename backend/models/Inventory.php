@@ -203,6 +203,41 @@ class Inventory
         return $stmt->fetchAll();
     }
 
+    /**
+     * Giống getAdjustmentHistory() nhưng KHÔNG lọc theo 1 sản phẩm - dùng cho
+     * bảng "Inventory Adjustment History" trên trang Staff (liệt kê điều
+     * chỉnh của MỌI sản phẩm, có thể lọc theo SKU/lý do/ngày qua tham số).
+     */
+    public function getAllAdjustments(?int $productId = null, ?string $reason = null, ?string $date = null, int $limit = 50): array
+    {
+        $sql = "SELECT m.movement_id, m.product_id, p.product_name, p.sku_code,
+                       m.quantity_change, m.reason, m.created_at, a.full_name AS performed_by_name
+                FROM stock_movements m
+                JOIN products p ON p.product_id = m.product_id
+                JOIN accounts a ON a.account_id = m.performed_by
+                WHERE m.movement_type = 'adjustment'";
+        $params = [];
+
+        if ($productId !== null) {
+            $sql .= " AND m.product_id = :product_id";
+            $params[':product_id'] = $productId;
+        }
+        if ($reason !== null && $reason !== '') {
+            $sql .= " AND m.reason = :reason";
+            $params[':reason'] = $reason;
+        }
+        if ($date !== null && $date !== '') {
+            $sql .= " AND DATE(m.created_at) = :date";
+            $params[':date'] = $date;
+        }
+
+        $sql .= " ORDER BY m.created_at DESC LIMIT " . (int) $limit;
+
+        $stmt = $this->conn->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll();
+    }
+
     // STOCK BATCHES + FEFO (FR-STF-14)
 
     /* danh sách lô hàng còn tồn của 1 sản phẩm, SẮP XẾP THEO FEFO - lô có expiry_date gần nhất lên đầu. Lô không có expiry_date (NULL) xếp SAU CÙNG (sản phẩm không cần FEFO đáng lẽ không nên có batch, nhưng xử lý an toàn nếu dữ liệu thiếu sót). */

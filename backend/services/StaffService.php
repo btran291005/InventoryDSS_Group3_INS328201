@@ -236,6 +236,12 @@ class StaffService
         return $this->inventoryModel->getAdjustmentHistory($productId);
     }
 
+    /** Giống getAdjustmentHistory() nhưng cho TOÀN BỘ sản phẩm (bảng lịch sử trên trang Adjustments). */
+    public function getAllAdjustmentHistory(?int $productId = null, ?string $reason = null, ?string $date = null): array
+    {
+        return $this->inventoryModel->getAllAdjustments($productId, $reason, $date);
+    }
+
     // =====================================================================
     // 5. KIỂM KÊ ĐỊNH KỲ (FR-STF-04, FR-STF-09, BR-14)
     // =====================================================================
