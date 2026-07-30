@@ -249,25 +249,26 @@ CREATE TABLE audit_logs (
     FOREIGN KEY (account_id) REFERENCES accounts(account_id)
 );
 
--- FR-ADM-10: lịch sử backup/restore CSDL thật - mỗi dòng là 1 lần backup
--- hoặc 1 lần restore (backup_type = 'restore') đã được thực thi qua
--- AdminService::backupDatabase()/restoreDatabase(). status = 'running' khi
--- lệnh mysqldump/mysql đang chạy (tiến trình đồng bộ trong PHP nên thực tế
--- sẽ chuyển thẳng sang 'success'/'failed' ngay sau khi request kết thúc -
--- giữ trạng thái 'running' để tương thích UI polling nếu sau này chuyển
--- sang xử lý bất đồng bộ/queue).
+-- FR-ADM-10: real backup/restore history of the database - each row is one
+-- backup run or one restore run (backup_type = 'restore') executed via
+-- AdminService::backupDatabase()/restoreDatabase(). status = 'running' while
+-- the mysqldump/mysql command is executing (PHP runs this synchronously, so
+-- in practice it moves straight to 'success'/'failed' right after the
+-- request finishes - the 'running' state is kept for UI polling
+-- compatibility in case this becomes asynchronous/queued later).
 CREATE TABLE backup_history (
     backup_id INT AUTO_INCREMENT PRIMARY KEY,
     backup_type ENUM('full', 'restore') NOT NULL DEFAULT 'full',
-    file_path VARCHAR(255) NULL,       -- NULL khi 'failed' trước khi xác định được đường dẫn file (VD lỗi kết nối DB ngay từ đầu)
-    file_size_bytes BIGINT NULL,       -- NULL khi đang 'running' hoặc khi 'failed' trước khi ghi được file
+    file_path VARCHAR(255) NULL,       -- NULL when 'failed' before a file path could be determined (e.g. DB connection error right at the start)
+    file_size_bytes BIGINT NULL,       -- NULL while 'running', or when 'failed' before any file was written
     status ENUM('running', 'success', 'failed') NOT NULL DEFAULT 'running',
-    error_message TEXT NULL,           -- stderr thật từ mysqldump/mysql khi status = 'failed'
+    error_message TEXT NULL,           -- real stderr output from mysqldump/mysql when status = 'failed'
     started_by INT NOT NULL,
     started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     finished_at DATETIME NULL,
     FOREIGN KEY (started_by) REFERENCES accounts(account_id)
 );
+
 
 CREATE TABLE notifications (
     notification_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -408,18 +409,18 @@ INSERT INTO products (product_id, sku_code, product_name, category_id, supplier_
 (1, 'RTE-GB-001', 'GS25 Bulgogi Beef Gimbap', 2, 2, 'Roll', 2, 18000, 28000), (2, 'RTE-GB-002', 'GS25 Sausage and Cheese Gimbap', 2, 2, 'Roll', 2, 16000, 25000),
 (3, 'RTE-TB-001', 'Traditional Sweet & Spicy Tteokbokki', 2, 2, 'Box', 3, 22000, 35000), (4, 'RTE-ON-001', 'Tuna Mayonnaise Rice Ball', 2, 2, 'Piece', 2, 12000, 18000),
 (5, 'RTE-SW-001', 'Teriyaki Chicken Sandwich', 2, 2, 'Pack', 3, 15000, 25000), (6, 'RTE-BM-001', 'Minced Pork Baguette Stick', 2, 2, 'Piece', 3, 8000, 13000),
-(7, 'RTE-BB-001', 'Char Siu & Salted Egg Bun', 2, 2, 'Piece', 2, 10000, 15000), (8, 'KOR-YU-001', 'YouUs Watermelon Juice 270ml', 3, 1, 'Chai', 180, 9000, 14000),
+(7, 'RTE-BB-001', 'Char Siu & Salted Egg Bun', 2, 2, 'Piece', 2, 10000, 15000), (8, 'KOR-YU-001', 'YouUs Watermelon Juice 270ml', 3, 1, 'Bottle', 180, 9000, 14000),
 (9, 'KOR-YU-002', 'Snack Tteokbokki YouUs', 3, 1, 'Pack', 180, 11000, 18000), (10, 'KOR-SY-001', 'Samyang Carbonara Hot Chicken Ramen 130g', 3, 7, 'Pack', 360, 13000, 22000),
 (11, 'KOR-SY-002', 'Samyang Cheese Hot Chicken Ramen 130g', 3, 7, 'Pack', 360, 13000, 22000), (12, 'KOR-BG-001', 'Binggrae Banana Milk 200ml', 3, 10, 'Box', 180, 9500, 15000),
 (13, 'KOR-BG-002', 'Binggrae Strawberry Milk 200ml', 3, 10, 'Box', 180, 9500, 15000), (14, 'KOR-PD-001', 'Paldo Jjajang Black Bean Noodles', 3, 9, 'Pack', 360, 14000, 22000),
-(15, 'KOR-LT-001', 'Lotte Aloe Vera Juice 500ml', 3, 11, 'Chai', 360, 16000, 25000), (16, 'DAI-VN-001', 'Vinamilk Unsweetened Fresh Milk 180ml', 5, 12, 'Box', 180, 6500, 10000),
-(17, 'DAI-TH-001', 'TH True Strawberry Yogurt Drink', 5, 13, 'Chai', 45, 8500, 12000), (18, 'BEV-SP-001', 'Pepsi Zero Sugar 320ml', 4, 4, 'Lon', 360, 6000, 10000),
-(19, 'BEV-SP-002', 'Tea+ Oolong Tea 455ml', 4, 4, 'Chai', 360, 7500, 12000), (20, 'BEV-SP-003', 'Strawberry Sting Energy Drink 330ml', 4, 4, 'Chai', 360, 6500, 11000),
-(21, 'BEV-CC-001', 'Coca-Cola Plus 320ml', 4, 5, 'Lon', 360, 6000, 10000), (22, 'BEV-CC-002', 'Dasani Mineral Water 500ml', 4, 5, 'Chai', 360, 4000, 7000),
-(23, 'BEV-NS-001', 'Nescafe Roasted Coffee Can', 4, 14, 'Lon', 360, 9000, 15000), (24, 'BEV-HK-001', 'Bia Heineken Silver 330ml', 4, 20, 'Lon', 360, 14000, 22000),
-(25, 'FMC-MS-001', 'Omachi Spaghetti Sauce Noodles', 1, 3, 'Pack', 150, 7000, 10000), (26, 'FMC-MS-002', 'Kokomi Spicy Sour Shrimp Cup Noodles', 1, 3, 'Ly', 150, 8000, 11000),
+(15, 'KOR-LT-001', 'Lotte Aloe Vera Juice 500ml', 3, 11, 'Bottle', 360, 16000, 25000), (16, 'DAI-VN-001', 'Vinamilk Unsweetened Fresh Milk 180ml', 5, 12, 'Box', 180, 6500, 10000),
+(17, 'DAI-TH-001', 'TH True Strawberry Yogurt Drink', 5, 13, 'Bottle', 45, 8500, 12000), (18, 'BEV-SP-001', 'Pepsi Zero Sugar 320ml', 4, 4, 'Can', 360, 6000, 10000),
+(19, 'BEV-SP-002', 'Tea+ Oolong Tea 455ml', 4, 4, 'Bottle', 360, 7500, 12000), (20, 'BEV-SP-003', 'Strawberry Sting Energy Drink 330ml', 4, 4, 'Bottle', 360, 6500, 11000),
+(21, 'BEV-CC-001', 'Coca-Cola Plus 320ml', 4, 5, 'Can', 360, 6000, 10000), (22, 'BEV-CC-002', 'Dasani Mineral Water 500ml', 4, 5, 'Bottle', 360, 4000, 7000),
+(23, 'BEV-NS-001', 'Nescafe Roasted Coffee Can', 4, 14, 'Can', 360, 9000, 15000), (24, 'BEV-HK-001', 'Heineken Silver Beer 330ml', 4, 20, 'Can', 360, 14000, 22000),
+(25, 'FMC-MS-001', 'Omachi Spaghetti Sauce Noodles', 1, 3, 'Pack', 150, 7000, 10000), (26, 'FMC-MS-002', 'Kokomi Spicy Sour Shrimp Cup Noodles', 1, 3, 'Cup', 150, 8000, 11000),
 (27, 'FMC-AC-001', 'Hao Hao Spicy Sour Noodles', 1, 8, 'Pack', 180, 3500, 5000), (28, 'FMC-OR-001', 'Ostar Seaweed Potato Chips', 6, 6, 'Pack', 180, 6000, 9000),
-(29, 'FMC-OR-002', 'ChocoPie Box 12 Pieces', 6, 6, 'Box', 360, 32000, 45000), (30, 'FMC-MD-001', 'Oreo Vanilla Cookies', 6, 15, 'Thanh', 360, 5500, 8000),
+(29, 'FMC-OR-002', 'ChocoPie Box 12 Pieces', 6, 6, 'Box', 360, 32000, 45000), (30, 'FMC-MD-001', 'Oreo Vanilla Cookies', 6, 15, 'Bar', 360, 5500, 8000),
 (31, 'PER-UL-001', 'P/S Green Tea Toothpaste 100g', 7, 16, 'Tube', 1080, 15000, 22000), (32, 'PER-RH-001', 'Acnes Facial Cleanser 100g', 7, 17, 'Tube', 1080, 38000, 55000),
 (33, 'PER-KA-001', 'Laurier Thick Sanitary Pads', 7, 18, 'Pack', 1080, 28000, 40000);
 
@@ -491,7 +492,7 @@ INSERT INTO stock (product_id, warehouse_id, quantity_on_hand, last_updated) VAL
 (33, 1, 3, NOW()),
 (33, 4, 7, NOW());
 
--- Batch RTE con han gan ngay hien tai (FEFO demo)
+-- RTE batches nearing expiry relative to current date (FEFO demo)
 INSERT INTO stock_batches (product_id, received_date, expiry_date, quantity_remaining) VALUES
 (2, '2026-07-29', '2026-07-31', 9),
 (3, '2026-07-29', '2026-08-01', 1),
@@ -500,7 +501,7 @@ INSERT INTO stock_batches (product_id, received_date, expiry_date, quantity_rema
 (7, '2026-07-29', '2026-07-31', 1);
 
 -- ==============================================================================
--- 3.4. Purchase Orders - gop theo supplier, sinh tu dong khi cham reorder point
+-- 3.4. Purchase Orders - grouped by supplier, auto-generated when reorder point is reached
 -- ==============================================================================
 INSERT INTO purchase_orders (po_id, supplier_id, created_by, status, approved_by, created_at, approved_at) VALUES
 (1, 2, 3, 'Delivered', 1, '2026-02-01 09:58:00', '2026-02-02 03:58:00'),
@@ -60961,39 +60962,39 @@ INSERT INTO stock_count_details (count_id, product_id, system_qty, actual_qty) V
 (25, 27, 158, 156);
 
 INSERT INTO customer_feedback (product_id, logged_by, feedback_text, created_at) VALUES
-(1, 7, 'Khach phan nan Gimbap Bo Bulgogi GS25 hay het som, de nghi nhap them buoi chieu.', '2026-02-03 20:42:00'),
-(3, 4, 'Khach quay lai lan 2 trong ngay tim Tteokbokki Cay Ngot, van chua co hang.', '2026-02-04 19:19:00'),
-(2, 4, 'Khach quay lai lan 2 trong ngay tim Gimbap Xuc Xich Pho Mai GS25, van chua co hang.', '2026-02-12 19:08:00'),
-(4, 4, 'Khach hoi gio nhap hang tiep theo cua Com Nam Ca Ngu Mayonnaise.', '2026-02-20 19:51:00'),
-(2, 5, 'Khach quay lai lan 2 trong ngay tim Gimbap Xuc Xich Pho Mai GS25, van chua co hang.', '2026-02-22 18:17:00'),
-(3, 4, 'Khach quay lai lan 2 trong ngay tim Tteokbokki Cay Ngot, van chua co hang.', '2026-02-22 18:32:00'),
-(11, 7, 'Khach phan nan Mi Samyang Pho Mai hay het som, de nghi nhap them buoi chieu.', '2026-04-06 18:13:00'),
-(2, 7, 'Khach phan nan Gimbap Xuc Xich Pho Mai GS25 hay het som, de nghi nhap them buoi chieu.', '2026-04-18 18:45:00'),
-(2, 5, 'Khach quay lai lan 2 trong ngay tim Gimbap Xuc Xich Pho Mai GS25, van chua co hang.', '2026-05-16 20:40:00'),
-(4, 7, 'Khach hoi gio nhap hang tiep theo cua Com Nam Ca Ngu Mayonnaise.', '2026-05-20 19:10:00'),
-(2, 5, 'Khach phan nan Gimbap Xuc Xich Pho Mai GS25 hay het som, de nghi nhap them buoi chieu.', '2026-05-31 18:36:00'),
-(4, 4, 'Khach quay lai lan 2 trong ngay tim Com Nam Ca Ngu Mayonnaise, van chua co hang.', '2026-05-31 19:04:00'),
-(11, 6, 'Khach hoi mua Mi Samyang Pho Mai luc toi nhung da het hang.', '2026-05-31 18:28:00'),
-(1, 4, 'Khach quay lai lan 2 trong ngay tim Gimbap Bo Bulgogi GS25, van chua co hang.', '2026-05-31 20:22:00'),
-(3, 5, 'Khach hoi gio nhap hang tiep theo cua Tteokbokki Cay Ngot.', '2026-06-06 20:19:00'),
-(6, 4, 'Khach hoi gio nhap hang tiep theo cua Banh Mi Que Thit Bam.', '2026-06-06 21:50:00'),
-(1, 4, 'Khach hoi gio nhap hang tiep theo cua Gimbap Bo Bulgogi GS25.', '2026-07-04 21:24:00'),
-(5, 4, 'Khach quay lai lan 2 trong ngay tim Sandwich Ga Teriyaki, van chua co hang.', '2026-07-10 18:01:00'),
-(3, 4, 'Khach phan nan Tteokbokki Cay Ngot hay het som, de nghi nhap them buoi chieu.', '2026-07-12 19:06:00'),
-(11, 6, 'Khach hoi gio nhap hang tiep theo cua Mi Samyang Pho Mai.', '2026-07-20 19:26:00');
+(1, 7, 'Customer complained that GS25 Bulgogi Beef Gimbap often runs out early, requested afternoon restock.', '2026-02-03 20:42:00'),
+(3, 4, 'Customer returned a 2nd time same day looking for Traditional Sweet & Spicy Tteokbokki, still out of stock.', '2026-02-04 19:19:00'),
+(2, 4, 'Customer returned a 2nd time same day looking for GS25 Sausage and Cheese Gimbap, still out of stock.', '2026-02-12 19:08:00'),
+(4, 4, 'Customer asked about the next restock time for Tuna Mayonnaise Rice Ball.', '2026-02-20 19:51:00'),
+(2, 5, 'Customer returned a 2nd time same day looking for GS25 Sausage and Cheese Gimbap, still out of stock.', '2026-02-22 18:17:00'),
+(3, 4, 'Customer returned a 2nd time same day looking for Traditional Sweet & Spicy Tteokbokki, still out of stock.', '2026-02-22 18:32:00'),
+(11, 7, 'Customer complained that Samyang Cheese Hot Chicken Ramen 130g often runs out early, requested afternoon restock.', '2026-04-06 18:13:00'),
+(2, 7, 'Customer complained that GS25 Sausage and Cheese Gimbap often runs out early, requested afternoon restock.', '2026-04-18 18:45:00'),
+(2, 5, 'Customer returned a 2nd time same day looking for GS25 Sausage and Cheese Gimbap, still out of stock.', '2026-05-16 20:40:00'),
+(4, 7, 'Customer asked about the next restock time for Tuna Mayonnaise Rice Ball.', '2026-05-20 19:10:00'),
+(2, 5, 'Customer complained that GS25 Sausage and Cheese Gimbap often runs out early, requested afternoon restock.', '2026-05-31 18:36:00'),
+(4, 4, 'Customer returned a 2nd time same day looking for Tuna Mayonnaise Rice Ball, still out of stock.', '2026-05-31 19:04:00'),
+(11, 6, 'Customer tried to buy Samyang Cheese Hot Chicken Ramen 130g in the evening but it was already out of stock.', '2026-05-31 18:28:00'),
+(1, 4, 'Customer returned a 2nd time same day looking for GS25 Bulgogi Beef Gimbap, still out of stock.', '2026-05-31 20:22:00'),
+(3, 5, 'Customer asked about the next restock time for Traditional Sweet & Spicy Tteokbokki.', '2026-06-06 20:19:00'),
+(6, 4, 'Customer asked about the next restock time for Minced Pork Baguette Stick.', '2026-06-06 21:50:00'),
+(1, 4, 'Customer asked about the next restock time for GS25 Bulgogi Beef Gimbap.', '2026-07-04 21:24:00'),
+(5, 4, 'Customer returned a 2nd time same day looking for Teriyaki Chicken Sandwich, still out of stock.', '2026-07-10 18:01:00'),
+(3, 4, 'Customer complained that Traditional Sweet & Spicy Tteokbokki often runs out early, requested afternoon restock.', '2026-07-12 19:06:00'),
+(11, 6, 'Customer asked about the next restock time for Samyang Cheese Hot Chicken Ramen 130g.', '2026-07-20 19:26:00');
 
 INSERT INTO shortage_incidents (product_id, handled_by, resolution_action, status, created_at) VALUES
-(1, 4, 'Lien he NCC bao het hang tam thoi, cho 2-3 ngay.', 'Open', '2026-02-22 20:38:00'),
-(3, 3, 'Lien he NCC bao het hang tam thoi, cho 2-3 ngay.', 'Open', '2026-03-23 21:46:00'),
-(1, 2, 'Da goi giuc NCC giao gap trong ngay.', 'Resolved', '2026-03-28 21:50:00'),
-(2, 3, 'Da goi giuc NCC giao gap trong ngay.', 'Resolved', '2026-05-21 22:30:00'),
-(1, 3, 'Da goi giuc NCC giao gap trong ngay.', 'Resolved', '2026-05-22 22:42:00'),
-(2, 2, 'Dieu chinh tang so luong dat hang tuan sau.', 'Resolved', '2026-05-23 20:07:00'),
-(2, 2, 'Tao PO khan, cho NCC xac nhan lo hang ke tiep.', 'Open', '2026-05-31 21:27:00'),
-(1, 2, 'Da goi giuc NCC giao gap trong ngay.', 'Resolved', '2026-06-03 21:16:00'),
-(1, 2, 'Tao PO khan, cho NCC xac nhan lo hang ke tiep.', 'Open', '2026-06-05 20:34:00'),
-(3, 2, 'Lien he NCC bao het hang tam thoi, cho 2-3 ngay.', 'Open', '2026-06-06 21:47:00'),
-(1, 4, 'Lien he NCC bao het hang tam thoi, cho 2-3 ngay.', 'Open', '2026-07-16 21:23:00');
+(1, 4, 'Contacted supplier - temporarily out of stock, wait 2-3 days.', 'Open', '2026-02-22 20:38:00'),
+(3, 3, 'Contacted supplier - temporarily out of stock, wait 2-3 days.', 'Open', '2026-03-23 21:46:00'),
+(1, 2, 'Called supplier to expedite delivery today.', 'Resolved', '2026-03-28 21:50:00'),
+(2, 3, 'Called supplier to expedite delivery today.', 'Resolved', '2026-05-21 22:30:00'),
+(1, 3, 'Called supplier to expedite delivery today.', 'Resolved', '2026-05-22 22:42:00'),
+(2, 2, 'Increased order quantity for next week.', 'Resolved', '2026-05-23 20:07:00'),
+(2, 2, 'Created urgent PO, awaiting supplier confirmation for next batch.', 'Open', '2026-05-31 21:27:00'),
+(1, 2, 'Called supplier to expedite delivery today.', 'Resolved', '2026-06-03 21:16:00'),
+(1, 2, 'Created urgent PO, awaiting supplier confirmation for next batch.', 'Open', '2026-06-05 20:34:00'),
+(3, 2, 'Contacted supplier - temporarily out of stock, wait 2-3 days.', 'Open', '2026-06-06 21:47:00'),
+(1, 4, 'Contacted supplier - temporarily out of stock, wait 2-3 days.', 'Open', '2026-07-16 21:23:00');
 
 INSERT INTO demand_forecasts (product_id, suggested_qty, api_status, requested_at) VALUES
 (27, 46, 'success', '2026-02-04 08:24:00'),
@@ -61198,12 +61199,12 @@ INSERT INTO backup_history (backup_type, file_path, file_size_bytes, status, err
 ('full', NULL, NULL, 'failed', 'mysqldump: Got error: 2002 - No such file or directory', 1, '2026-07-26 02:00:00', '2026-07-26 02:00:49');
 
 INSERT INTO notifications (account_id, title, message, is_read, email_status, zalo_status, created_at) VALUES
-(2, 'Canh bao Ton kho thap', 'San pham Gimbap Xuc Xich Pho Mai GS25 cham Reorder Point.', FALSE, 'not_required', 'sent', '2026-07-19 23:22:00'),
-(2, 'Canh bao Ton kho thap', 'San pham Gimbap Xuc Xich Pho Mai GS25 cham Reorder Point.', TRUE, 'not_required', 'sent', '2026-07-20 22:46:00'),
-(2, 'Canh bao Ton kho thap', 'San pham Mi Samyang Pho Mai cham Reorder Point.', FALSE, 'not_required', 'sent', '2026-07-20 23:52:00'),
-(2, 'Canh bao Ton kho thap', 'San pham Gimbap Xuc Xich Pho Mai GS25 cham Reorder Point.', TRUE, 'not_required', 'sent', '2026-07-25 23:32:00'),
-(2, 'Canh bao Ton kho thap', 'San pham Banh Mi Que Thit Bam cham Reorder Point.', TRUE, 'not_required', 'sent', '2026-07-25 19:08:00'),
-(2, 'Canh bao Ton kho thap', 'San pham Com Nam Ca Ngu Mayonnaise cham Reorder Point.', FALSE, 'not_required', 'sent', '2026-07-27 19:17:00'),
-(1, 'PO Doi Duyet', 'Co don hang dang cho Admin duyet.', FALSE, 'sent', 'not_required', '2026-07-29 09:15:00');
+(2, 'Low Stock Alert', 'GS25 Sausage and Cheese Gimbap has reached its Reorder Point.', FALSE, 'not_required', 'sent', '2026-07-19 23:22:00'),
+(2, 'Low Stock Alert', 'GS25 Sausage and Cheese Gimbap has reached its Reorder Point.', TRUE, 'not_required', 'sent', '2026-07-20 22:46:00'),
+(2, 'Low Stock Alert', 'Samyang Cheese Hot Chicken Ramen 130g has reached its Reorder Point.', FALSE, 'not_required', 'sent', '2026-07-20 23:52:00'),
+(2, 'Low Stock Alert', 'GS25 Sausage and Cheese Gimbap has reached its Reorder Point.', TRUE, 'not_required', 'sent', '2026-07-25 23:32:00'),
+(2, 'Low Stock Alert', 'Minced Pork Baguette Stick has reached its Reorder Point.', TRUE, 'not_required', 'sent', '2026-07-25 19:08:00'),
+(2, 'Low Stock Alert', 'Tuna Mayonnaise Rice Ball has reached its Reorder Point.', FALSE, 'not_required', 'sent', '2026-07-27 19:17:00'),
+(1, 'PO Pending Approval', 'There is a purchase order awaiting Admin approval.', FALSE, 'sent', 'not_required', '2026-07-29 09:15:00');
 
 SET FOREIGN_KEY_CHECKS = 1;
