@@ -104,9 +104,9 @@ $activeMenu  = 'dashboard';
                         <span class="text-muted small text-uppercase fw-semibold" style="letter-spacing: .5px;">Store Operational View</span>
                         <h2 class="page-heading mb-1">Staff Task Center</h2>
                         <p class="page-subheading mb-0">
-                            Xin chào, <?= htmlspecialchars((string) Auth::fullName(), ENT_QUOTES, 'UTF-8') ?>.
+                            Welcome, <?= htmlspecialchars((string) Auth::fullName(), ENT_QUOTES, 'UTF-8') ?>.
                             <?php if ($lastLoginTime !== null): ?>
-                                Bắt đầu ca lúc <?= htmlspecialchars(date('H:i', strtotime($lastLoginTime)), ENT_QUOTES, 'UTF-8') ?>.
+                                Shift started at <?= htmlspecialchars(date('H:i', strtotime($lastLoginTime)), ENT_QUOTES, 'UTF-8') ?>.
                             <?php endif; ?>
                         </p>
                     </div>
@@ -116,25 +116,25 @@ $activeMenu  = 'dashboard';
                 <div class="row g-3 mb-4">
                     <div class="col-6 col-xl-3">
                         <div class="kpi-card <?= $urgentCount > 0 ? 'kpi-card-warn' : '' ?>">
-                            <span class="kpi-label">Cần bổ sung gấp</span>
+                            <span class="kpi-label">Urgent Restock</span>
                             <span class="kpi-value"><?= number_format($urgentCount) ?></span>
                         </div>
                     </div>
                     <div class="col-6 col-xl-3">
                         <div class="kpi-card <?= $expiringCount > 0 ? 'kpi-card-warn' : '' ?>">
-                            <span class="kpi-label">Lô sắp hết hạn (<?= EXPIRY_ALERT_WINDOW_HOURS ?>h)</span>
+                            <span class="kpi-label">Expiring Batches (<?= EXPIRY_ALERT_WINDOW_HOURS ?>h)</span>
                             <span class="kpi-value"><?= number_format($expiringCount) ?></span>
                         </div>
                     </div>
                     <div class="col-6 col-xl-3">
                         <div class="kpi-card">
-                            <span class="kpi-label">PO đang chờ nhận hàng</span>
+                            <span class="kpi-label">PO Awaiting Receipt</span>
                             <span class="kpi-value"><?= number_format($awaitingCount) ?></span>
                         </div>
                     </div>
                     <div class="col-6 col-xl-3">
                         <div class="kpi-card">
-                            <span class="kpi-label">Giao dịch hôm nay</span>
+                            <span class="kpi-label">Today's Transactions</span>
                             <span class="kpi-value"><?= number_format(end($dailyTxCounts) ?: 0) ?></span>
                         </div>
                     </div>
@@ -147,22 +147,22 @@ $activeMenu  = 'dashboard';
                     <a href="inventory/goods_receipt.php" class="staff-shortcut staff-shortcut-primary">
                         <span class="staff-shortcut-icon">📦</span>
                         <span class="staff-shortcut-text">
-                            <span class="staff-shortcut-title">Nhận hàng</span>
-                            <span class="staff-shortcut-desc">Xử lý đơn hàng vừa về (<?= $awaitingCount ?> đơn đang chờ)</span>
+                            <span class="staff-shortcut-title">Receive Goods</span>
+                            <span class="staff-shortcut-desc">Process incoming orders (<?= $awaitingCount ?> pending)</span>
                         </span>
                     </a>
                     <a href="inventory/stock_count.php" class="staff-shortcut">
                         <span class="staff-shortcut-icon">🔢</span>
                         <span class="staff-shortcut-text">
-                            <span class="staff-shortcut-title">Kiểm kê</span>
-                            <span class="staff-shortcut-desc">Bắt đầu phiên đếm hàng mới</span>
+                            <span class="staff-shortcut-title">Stock Count</span>
+                            <span class="staff-shortcut-desc">Start a new counting session</span>
                         </span>
                     </a>
                     <a href="customer_feedback.php" class="staff-shortcut">
                         <span class="staff-shortcut-icon">⚠️</span>
                         <span class="staff-shortcut-text">
-                            <span class="staff-shortcut-title">Ghi nhận sự cố</span>
-                            <span class="staff-shortcut-desc">Phản hồi khách hàng / thiếu hàng</span>
+                            <span class="staff-shortcut-title">Log Incident</span>
+                            <span class="staff-shortcut-desc">Customer feedback / out-of-stock</span>
                         </span>
                     </a>
                 </div>
@@ -176,20 +176,20 @@ $activeMenu  = 'dashboard';
                                     Restock Queue
                                     <span class="badge-count badge-count-warn"><?= $urgentCount ?></span>
                                 </h3>
-                                <span class="panel-card-note">Sắp theo mức độ nguy cấp (tồn kho ÷ reorder point)</span>
+                                <span class="panel-card-note">Sorted by urgency (stock ÷ reorder point)</span>
                             </div>
 
                             <?php if (empty($urgentRestock)): ?>
-                                <div class="empty-state">Không có sản phẩm nào cần bổ sung gấp. 🎉</div>
+                                <div class="empty-state">No products need urgent restocking. 🎉</div>
                             <?php else: ?>
                                 <div class="table-responsive">
                                     <table class="table data-table align-middle mb-0">
                                         <thead>
                                             <tr>
-                                                <th>Sản phẩm</th>
-                                                <th class="text-end">Tồn kho</th>
-                                                <th class="text-end">Ngưỡng</th>
-                                                <th>Mức độ</th>
+                                                <th>Product</th>
+                                                <th class="text-end">Current Stock</th>
+                                                <th class="text-end">Reorder Point</th>
+                                                <th>Priority</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -210,7 +210,7 @@ $activeMenu  = 'dashboard';
                                 </div>
                                 <?php if ($urgentCount > 8): ?>
                                     <div class="text-end mt-2">
-                                        <a href="stock/low_stock_alerts.php" class="panel-card-link">Xem toàn bộ <?= $urgentCount ?> sản phẩm →</a>
+                                        <a href="stock/low_stock_alerts.php" class="panel-card-link">View all <?= $urgentCount ?> products →</a>
                                     </div>
                                 <?php endif; ?>
                             <?php endif; ?>
@@ -219,12 +219,12 @@ $activeMenu  = 'dashboard';
                         <!-- Sales trend 7 ngày toàn store -->
                         <div class="panel-card">
                             <div class="panel-card-header">
-                                <h3 class="panel-card-title">Xu hướng bán hàng</h3>
-                                <span class="panel-card-note">Số giao dịch/ngày, 7 ngày gần nhất</span>
+                                <h3 class="panel-card-title">Sales Trend</h3>
+                                <span class="panel-card-note">Transactions/day, last 7 days</span>
                             </div>
 
                             <?php if (array_sum($dailyTxCounts) === 0): ?>
-                                <div class="empty-state">Chưa có giao dịch bán hàng nào trong 7 ngày qua.</div>
+                                <div class="empty-state">No sales transactions in the last 7 days.</div>
                             <?php else: ?>
                                 <?php
                                     $chartW = 700; $chartH = 200;
@@ -292,7 +292,7 @@ $activeMenu  = 'dashboard';
 
                             <?php if (!empty($topProducts)): ?>
                                 <hr class="my-3">
-                                <div class="text-muted small text-uppercase fw-semibold mb-2" style="letter-spacing: .5px;">Bán chạy nhất (7 ngày)</div>
+                                <div class="text-muted small text-uppercase fw-semibold mb-2" style="letter-spacing: .5px;">Best Sellers (7 days)</div>
                                 <?php $maxSold = max(array_column($topProducts, 'total_quantity_sold')); ?>
                                 <?php foreach ($topProducts as $p): ?>
                                     <?php $pct = $maxSold > 0 ? round(((int) $p['total_quantity_sold'] / $maxSold) * 100) : 0; ?>
@@ -313,16 +313,16 @@ $activeMenu  = 'dashboard';
                         <div class="panel-card">
                             <div class="panel-card-header">
                                 <h3 class="panel-card-title">
-                                    Sắp hết hạn
+                                    Expiring Soon
                                     <?php if ($expiringCount > 0): ?>
                                         <span class="badge-count badge-count-warn"><?= $expiringCount ?></span>
                                     <?php endif; ?>
                                 </h3>
-                                <span class="panel-card-note">Trong <?= EXPIRY_ALERT_WINDOW_HOURS ?> giờ tới (FR-STF-12)</span>
+                                <span class="panel-card-note">Within <?= EXPIRY_ALERT_WINDOW_HOURS ?> hours (FR-STF-12)</span>
                             </div>
 
                             <?php if (empty($expiringBatches)): ?>
-                                <div class="empty-state">Không có lô hàng nào sắp hết hạn.</div>
+                                <div class="empty-state">No batches expiring soon.</div>
                             <?php else: ?>
                                 <div class="record-list">
                                     <?php foreach (array_slice($expiringBatches, 0, 8) as $batch): ?>
@@ -330,11 +330,11 @@ $activeMenu  = 'dashboard';
                                             <div class="record-card-header">
                                                 <p class="record-card-title"><?= htmlspecialchars($batch['product_name'], ENT_QUOTES, 'UTF-8') ?></p>
                                                 <span class="status-badge status-badge-warning">
-                                                    Còn <?= (int) $batch['quantity_remaining'] ?>
+                                                    <?= (int) $batch['quantity_remaining'] ?> left
                                                 </span>
                                             </div>
                                             <span class="record-card-meta">
-                                                Hết hạn <?= htmlspecialchars(date('H:i d/m', strtotime((string) $batch['expiry_date'])), ENT_QUOTES, 'UTF-8') ?>
+                                                Expires <?= htmlspecialchars(date('H:i d/m', strtotime((string) $batch['expiry_date'])), ENT_QUOTES, 'UTF-8') ?>
                                             </span>
                                         </div>
                                     <?php endforeach; ?>

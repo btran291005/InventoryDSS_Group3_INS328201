@@ -106,7 +106,7 @@ $breadcrumbs = ['Staff', 'Stock', 'Stock View'];
                     <div>
                         <span class="text-muted small text-uppercase fw-semibold" style="letter-spacing: .5px;">Inventory</span>
                         <h2 class="page-heading mb-1">Stock View</h2>
-                        <p class="page-subheading mb-0">Xem tồn kho hiện tại theo SKU và trạng thái low stock cho Store Staff.</p>
+                        <p class="page-subheading mb-0">View current stock by SKU and low stock status for Store Staff.</p>
                     </div>
                     <a href="low_stock_alerts.php" class="btn btn-outline-secondary btn-sm">Low Stock Alerts</a>
                 </div>
@@ -139,19 +139,19 @@ $breadcrumbs = ['Staff', 'Stock', 'Stock View'];
                     <div class="panel-card-body">
                         <form method="get" class="row g-3 align-items-end">
                             <div class="col-12 col-md-6 col-lg-4">
-                                <label class="form-label small">Tìm kiếm</label>
-                                <input type="search" name="q" value="<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8') ?>" class="form-control form-control-sm" placeholder="SKU hoặc tên sản phẩm">
+                                <label class="form-label small">Search</label>
+                                <input type="search" name="q" value="<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8') ?>" class="form-control form-control-sm" placeholder="SKU or product name">
                             </div>
                             <div class="col-12 col-md-4 col-lg-3">
-                                <label class="form-label small">Bộ lọc</label>
+                                <label class="form-label small">Filter</label>
                                 <select name="filter" class="form-select form-select-sm">
-                                    <option value="all" <?= $filter === 'all' ? 'selected' : '' ?>>Tất cả</option>
+                                    <option value="all" <?= $filter === 'all' ? 'selected' : '' ?>>All</option>
                                     <option value="low" <?= $filter === 'low' ? 'selected' : '' ?>>Low stock</option>
                                     <option value="critical" <?= $filter === 'critical' ? 'selected' : '' ?>>Critical</option>
                                 </select>
                             </div>
                             <div class="col-12 col-md-2">
-                                <button type="submit" class="btn btn-brand btn-sm w-100">Áp dụng</button>
+                                <button type="submit" class="btn btn-brand btn-sm w-100">Apply</button>
                             </div>
                         </form>
                     </div>
@@ -160,10 +160,10 @@ $breadcrumbs = ['Staff', 'Stock', 'Stock View'];
                 <div class="panel-card">
                     <div class="panel-card-header">
                         <h3 class="panel-card-title">Stock Overview</h3>
-                        <span class="panel-card-note"><?= number_format(count($filteredRows)) ?> / <?= number_format(count($rows)) ?> sản phẩm hiển thị</span>
+                        <span class="panel-card-note"><?= number_format(count($filteredRows)) ?> / <?= number_format(count($rows)) ?> products displayed</span>
                     </div>
                     <?php if (empty($filteredRows)): ?>
-                        <div class="empty-state">Không có sản phẩm phù hợp với bộ lọc hiện tại.</div>
+                        <div class="empty-state">No products match the current filters.</div>
                     <?php else: ?>
                         <div class="table-responsive">
                             <table class="table data-table align-middle mb-0">

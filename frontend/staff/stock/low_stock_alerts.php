@@ -65,7 +65,7 @@ $breadcrumbs = ['Staff', 'Stock', 'Low Stock Alerts'];
                     <div>
                         <span class="text-muted small text-uppercase fw-semibold" style="letter-spacing: .5px;">Stock Monitoring</span>
                         <h2 class="page-heading mb-1">Low Stock Alerts</h2>
-                        <p class="page-subheading mb-0">Danh sách sản phẩm cần chú ý theo mức độ ưu tiên, dựa trên ngưỡng reorder point và tiêu thụ gần nhất.</p>
+                        <p class="page-subheading mb-0">List of products requiring attention by priority level, based on reorder point and recent consumption.</p>
                     </div>
                 </div>
 
@@ -85,7 +85,7 @@ $breadcrumbs = ['Staff', 'Stock', 'Low Stock Alerts'];
                     <div class="col-12 col-md-4 col-xl-6">
                         <div class="kpi-card">
                             <span class="kpi-label">Page purpose</span>
-                            <span class="kpi-value">Ưu tiên kiểm tra/đặt hàng/nhập kho</span>
+                            <span class="kpi-value">Priority check/reorder/receiving</span>
                         </div>
                     </div>
                 </div>
@@ -93,11 +93,11 @@ $breadcrumbs = ['Staff', 'Stock', 'Low Stock Alerts'];
                 <div class="panel-card mb-3">
                     <div class="panel-card-header">
                         <h3 class="panel-card-title">Priority low stock items</h3>
-                        <span class="panel-card-note">Sắp theo mức độ nguy cấp (tồn kho / reorder point).</span>
+                        <span class="panel-card-note">Sorted by urgency (stock / reorder point).</span>
                     </div>
 
                     <?php if (empty($alerts)): ?>
-                        <div class="empty-state">Không có sản phẩm nào cần bổ sung gấp vào lúc này.</div>
+                        <div class="empty-state">No products require urgent restocking at this time.</div>
                     <?php else: ?>
                         <div class="table-responsive">
                             <table class="table data-table align-middle mb-0">
@@ -135,10 +135,10 @@ $breadcrumbs = ['Staff', 'Stock', 'Low Stock Alerts'];
                 <div class="panel-card">
                     <div class="panel-card-header">
                         <h3 class="panel-card-title">Stock view</h3>
-                        <a href="stock_view.php" class="panel-card-link">Xem toàn bộ kho</a>
+                        <a href="stock_view.php" class="panel-card-link">View all inventory</a>
                     </div>
                     <div class="panel-card-body">
-                        <p class="mb-0 text-muted">Trang Stock View hiển thị toàn bộ tồn kho, trạng thái theo quy tắc reorder và safety stock.</p>
+                        <p class="mb-0 text-muted">The Stock View page shows all inventory, with status based on reorder and safety stock rules.</p>
                     </div>
                 </div>
             </main>
