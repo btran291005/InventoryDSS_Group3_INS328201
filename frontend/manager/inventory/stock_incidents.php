@@ -51,7 +51,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_POST['resolution_action'] ?? ''
         );
     } else {
-        $result = ['success' => false, 'message' => 'Hành động không hợp lệ.'];
+        $result = ['success' => false, 'message' => 'Invalid action.'];
     }
 
     $flashMessage = $result['message'];
@@ -67,7 +67,7 @@ $breadcrumbs = ['Manager', 'Shortage Incidents'];
 $activeMenu  = 'shortage';
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -88,10 +88,10 @@ $activeMenu  = 'shortage';
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
                     <div>
                         <h2 class="page-heading mb-1">Shortage Incidents</h2>
-                        <p class="page-subheading mb-0">Ghi nhận và xử lý các sự cố thiếu hàng ngoài dự kiến (FR-MGR-07).</p>
+                        <p class="page-subheading mb-0">Log and resolve unexpected shortage incidents (FR-MGR-07).</p>
                     </div>
                     <button type="button" class="btn btn-brand btn-sm" data-bs-toggle="modal" data-bs-target="#logIncidentModal">
-                        + Ghi nhận sự cố
+                        + Log Incident
                     </button>
                 </div>
 
@@ -102,19 +102,19 @@ $activeMenu  = 'shortage';
                     </div>
                 <?php endif; ?>
 
-                <!-- Filter theo trạng thái -->
+                <!-- Status filter -->
                 <div class="panel-card mb-3">
                     <form method="get" class="filter-bar p-1">
                         <div>
-                            <label class="form-label">Trạng thái</label>
+                            <label class="form-label">Status</label>
                             <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
-                                <option value="">Tất cả trạng thái</option>
+                                <option value="">All statuses</option>
                                 <option value="Open" <?= $filterStatus === 'Open' ? 'selected' : '' ?>>Open</option>
                                 <option value="Resolved" <?= $filterStatus === 'Resolved' ? 'selected' : '' ?>>Resolved</option>
                             </select>
                         </div>
                         <?php if ($filterStatus): ?>
-                            <a href="stock_incidents.php" class="btn btn-outline-secondary btn-sm">Xóa lọc</a>
+                            <a href="stock_incidents.php" class="btn btn-outline-secondary btn-sm">Clear filter</a>
                         <?php endif; ?>
                     </form>
                 </div>
@@ -122,24 +122,24 @@ $activeMenu  = 'shortage';
                 <div class="panel-card">
                     <div class="panel-card-header">
                         <h3 class="panel-card-title">
-                            Danh sách sự cố
+                            Incident List
                             <span class="badge-count"><?= count($incidents) ?></span>
                         </h3>
                     </div>
 
                     <?php if (empty($incidents)): ?>
-                        <div class="empty-state">Không có sự cố thiếu hàng nào.</div>
+                        <div class="empty-state">No shortage incidents.</div>
                     <?php else: ?>
                         <div class="table-responsive">
                             <table class="table data-table align-middle mb-0">
                                 <thead>
                                     <tr>
                                         <th>SKU</th>
-                                        <th>Sản phẩm</th>
-                                        <th>Người ghi nhận</th>
-                                        <th>Trạng thái</th>
-                                        <th>Hướng xử lý</th>
-                                        <th>Ngày tạo</th>
+                                        <th>Product</th>
+                                        <th>Logged By</th>
+                                        <th>Status</th>
+                                        <th>Resolution</th>
+                                        <th>Created Date</th>
                                         <th class="text-end"></th>
                                     </tr>
                                 </thead>
@@ -162,7 +162,7 @@ $activeMenu  = 'shortage';
                                                 <?php if ($incident['status'] === 'Open'): ?>
                                                     <button type="button" class="btn btn-sm btn-outline-success"
                                                             data-bs-toggle="modal" data-bs-target="#resolveModal-<?= (int) $incident['incident_id'] ?>">
-                                                        Xử lý
+                                                        Resolve
                                                     </button>
                                                 <?php endif; ?>
                                             </td>
@@ -184,14 +184,14 @@ $activeMenu  = 'shortage';
             <form method="post" class="modal-content">
                 <input type="hidden" name="action" value="create">
                 <div class="modal-header">
-                    <h5 class="modal-title">Ghi nhận sự cố thiếu hàng</h5>
+                    <h5 class="modal-title">Log Shortage Incident</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="form-label">Sản phẩm</label>
+                        <label class="form-label">Product</label>
                         <select name="product_id" class="form-select" required>
-                            <option value="">-- Chọn sản phẩm --</option>
+                            <option value="">-- Select product --</option>
                             <?php foreach ($products as $product): ?>
                                 <option value="<?= (int) $product['product_id'] ?>">
                                     <?= htmlspecialchars($product['sku_code'] . ' - ' . $product['product_name'], ENT_QUOTES, 'UTF-8') ?>
@@ -200,14 +200,14 @@ $activeMenu  = 'shortage';
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Ghi chú ban đầu (tùy chọn)</label>
+                        <label class="form-label">Initial note (optional)</label>
                         <textarea name="resolution_action" class="form-control" rows="2"
-                                  placeholder="VD: Nhận phản ánh từ khách hàng, đang kiểm tra với nhân viên cửa hàng..."></textarea>
+                                  placeholder="e.g. Received customer complaint, checking with store staff..."></textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-brand">Ghi nhận</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-brand">Log Incident</button>
                 </div>
             </form>
         </div>
@@ -222,16 +222,16 @@ $activeMenu  = 'shortage';
                         <input type="hidden" name="action" value="resolve">
                         <input type="hidden" name="incident_id" value="<?= (int) $incident['incident_id'] ?>">
                         <div class="modal-header">
-                            <h5 class="modal-title">Xử lý sự cố: <?= htmlspecialchars($incident['product_name'], ENT_QUOTES, 'UTF-8') ?></h5>
+                            <h5 class="modal-title">Resolve Incident: <?= htmlspecialchars($incident['product_name'], ENT_QUOTES, 'UTF-8') ?></h5>
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body">
-                            <label class="form-label">Hướng xử lý</label>
+                            <label class="form-label">Resolution</label>
                             <textarea name="resolution_action" class="form-control" rows="3" required></textarea>
                         </div>
                         <div class="modal-footer">
-                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
-                            <button type="submit" class="btn btn-success">Đánh dấu đã xử lý</button>
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-success">Mark as Resolved</button>
                         </div>
                     </form>
                 </div>

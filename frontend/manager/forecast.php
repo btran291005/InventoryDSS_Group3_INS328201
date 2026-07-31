@@ -87,7 +87,7 @@ $breadcrumbs = ['Manager', 'Demand Trend & Forecast'];
 $forecastEndpoint = str_replace('/frontend', '', BASE_URL) . '/backend/api/forecast_request.php';
 ?>
 <!doctype html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -169,17 +169,17 @@ $forecastEndpoint = str_replace('/frontend', '', BASE_URL) . '/backend/api/forec
 
             <div class="mb-4">
                 <h2 class="page-heading mb-1">Demand Trend &amp; Forecast</h2>
-                <p class="page-subheading mb-0">Xem xu hướng bán thực tế 7/30 ngày qua và tạo dự báo AI cho 7 ngày tới, cùng trên 1 sản phẩm đang chọn.</p>
+                <p class="page-subheading mb-0">View the actual 7/30-day sales trend and generate a 7-day AI forecast, both for the same selected product.</p>
             </div>
 
             <!-- ================= CHỌN SẢN PHẨM + KHOẢNG NGÀY (Demand Trend) ================= -->
             <div class="panel-card mb-3">
                 <form method="get" class="filter-bar p-1">
                     <div style="min-width: 260px;">
-                        <label class="form-label">Sản phẩm</label>
+                        <label class="form-label">Product</label>
                         <select name="product_id" id="forecastProduct" class="form-select form-select-sm" onchange="this.form.submit()">
                             <?php if (empty($products)): ?>
-                                <option value="">Không có sản phẩm nào</option>
+                                <option value="">No products available</option>
                             <?php endif; ?>
                             <?php foreach ($products as $p): ?>
                                 <option value="<?= (int) $p['product_id'] ?>"
@@ -191,12 +191,12 @@ $forecastEndpoint = str_replace('/frontend', '', BASE_URL) . '/backend/api/forec
                         </select>
                     </div>
                     <div>
-                        <label class="form-label">Khoảng thời gian (xu hướng)</label>
+                        <label class="form-label">Time Range (trend)</label>
                         <div class="btn-group" role="group">
                             <a href="?product_id=<?= $selectedProductId ?>&days=7"
-                               class="btn btn-sm <?= $selectedDays === 7 ? 'btn-brand' : 'btn-outline-secondary' ?>">7 ngày</a>
+                               class="btn btn-sm <?= $selectedDays === 7 ? 'btn-brand' : 'btn-outline-secondary' ?>">7 days</a>
                             <a href="?product_id=<?= $selectedProductId ?>&days=30"
-                               class="btn btn-sm <?= $selectedDays === 30 ? 'btn-brand' : 'btn-outline-secondary' ?>">30 ngày</a>
+                               class="btn btn-sm <?= $selectedDays === 30 ? 'btn-brand' : 'btn-outline-secondary' ?>">30 days</a>
                         </div>
                     </div>
                 </form>
@@ -204,30 +204,30 @@ $forecastEndpoint = str_replace('/frontend', '', BASE_URL) . '/backend/api/forec
 
             <?php if ($selectedProduct === null): ?>
                 <div class="panel-card">
-                    <div class="empty-state">Chưa có sản phẩm nào để xem xu hướng nhu cầu.</div>
+                    <div class="empty-state">No products available to view demand trend.</div>
                 </div>
             <?php else: ?>
 
                 <!-- ================= PHẦN 1: DEMAND TREND (lịch sử thực tế) ================= -->
-                <h3 class="section-heading">📊 Xu hướng bán thực tế</h3>
-                <p class="section-subheading">Dữ liệu bán hàng ghi nhận thật từ hệ thống POS (FR-MGR-08).</p>
+                <h3 class="section-heading">📊 Actual Sales Trend</h3>
+                <p class="section-subheading">Actual sales data recorded from the POS system (FR-MGR-08).</p>
 
                 <div class="row g-3 mb-4">
                     <div class="col-6 col-xl-4">
                         <div class="kpi-card">
-                            <span class="kpi-label">Tổng bán (<?= $selectedDays ?> ngày)</span>
+                            <span class="kpi-label">Total Sold (<?= $selectedDays ?> days)</span>
                             <span class="kpi-value"><?= number_format($totalSold) ?></span>
                         </div>
                     </div>
                     <div class="col-6 col-xl-4">
                         <div class="kpi-card">
-                            <span class="kpi-label">Trung bình / ngày</span>
+                            <span class="kpi-label">Average / Day</span>
                             <span class="kpi-value"><?= number_format($avgPerDay, 1) ?></span>
                         </div>
                     </div>
                     <div class="col-6 col-xl-4">
                         <div class="kpi-card">
-                            <span class="kpi-label">Ngày bán nhiều nhất</span>
+                            <span class="kpi-label">Peak Sales Day</span>
                             <span class="kpi-value"><?= $peakDay ? number_format($peakDay['count']) : '—' ?></span>
                         </div>
                     </div>
@@ -236,11 +236,11 @@ $forecastEndpoint = str_replace('/frontend', '', BASE_URL) . '/backend/api/forec
                 <div class="panel-card mb-4">
                     <div class="panel-card-header">
                         <h3 class="panel-card-title"><?= htmlspecialchars($selectedProduct['product_name'], ENT_QUOTES, 'UTF-8') ?></h3>
-                        <span class="panel-card-note"><?= htmlspecialchars($selectedProduct['sku_code'], ENT_QUOTES, 'UTF-8') ?> &middot; <?= $selectedDays ?> ngày gần nhất</span>
+                        <span class="panel-card-note"><?= htmlspecialchars($selectedProduct['sku_code'], ENT_QUOTES, 'UTF-8') ?> &middot; last <?= $selectedDays ?> days</span>
                     </div>
 
                     <?php if ($totalSold === 0): ?>
-                        <div class="empty-state">Không có giao dịch bán nào trong khoảng thời gian này.</div>
+                        <div class="empty-state">No sales transactions in this time range.</div>
                     <?php else: ?>
                         <?php
                             $chartW = 900; $chartH = 240;
@@ -296,60 +296,60 @@ $forecastEndpoint = str_replace('/frontend', '', BASE_URL) . '/backend/api/forec
                 <hr class="section-divider">
 
                 <!-- ================= PHẦN 2: AI FORECAST (dự báo 7 ngày tới) ================= -->
-                <h3 class="section-heading">🔮 Dự báo AI cho 7 ngày tới</h3>
-                <p class="section-subheading">Gọi AI Forecast API cho sản phẩm đang chọn ở trên. Nếu API không khả dụng, hệ thống tự động dùng quy tắc Reorder Point dự phòng.</p>
+                <h3 class="section-heading">🔮 AI Forecast for the Next 7 Days</h3>
+                <p class="section-subheading">Calls the AI Forecast API for the product selected above. If the API is unavailable, the system automatically falls back to Reorder Point rules.</p>
 
                 <div class="forecast-panel">
                     <div class="forecast-field">
-                        <label>Sản phẩm đang chọn</label>
+                        <label>Selected Product</label>
                         <div style="padding: 11px 12px; border: 1px solid #dfe1e6; border-radius: 8px; background: #f7f8fa; font-size: 14px; color: #172b4d;">
                             <?= htmlspecialchars($selectedProduct['sku_code'] . ' — ' . $selectedProduct['product_name'], ENT_QUOTES, 'UTF-8') ?>
                         </div>
                     </div>
-                    <button type="button" class="forecast-button" id="runForecast">Tạo dự báo 7 ngày</button>
+                    <button type="button" class="forecast-button" id="runForecast">Generate 7-Day Forecast</button>
                 </div>
 
                 <div id="forecastStatus" class="forecast-status" role="status"></div>
 
                 <div id="emptyForecast" class="empty-state">
-                    Bấm <strong>"Tạo dự báo 7 ngày"</strong> để xem kết quả dự báo nhu cầu cho sản phẩm đang chọn.
+                    Click <strong>"Generate 7-Day Forecast"</strong> to see the demand forecast for the selected product.
                 </div>
 
                 <div id="forecastResult" hidden>
                     <div class="forecast-grid">
                         <article class="forecast-card api">
-                            <h3>📊 Gợi ý từ AI Forecast</h3>
+                            <h3>📊 AI Forecast Suggestion</h3>
                             <div class="forecast-number" id="apiSuggestion">—</div>
-                            <div class="forecast-meta" id="apiMeta">Đang chờ dự báo</div>
+                            <div class="forecast-meta" id="apiMeta">Awaiting forecast</div>
                         </article>
 
                         <article class="forecast-card rule">
-                            <h3>📋 Gợi ý Reorder Point</h3>
+                            <h3>📋 Reorder Point Suggestion</h3>
                             <div class="forecast-number" id="ruleSuggestion">—</div>
-                            <div class="forecast-meta" id="ruleMeta">Dữ liệu sẵn sàng</div>
+                            <div class="forecast-meta" id="ruleMeta">Data ready</div>
                         </article>
 
                         <article class="forecast-card stock">
-                            <h3>📦 Tồn kho hiện tại</h3>
+                            <h3>📦 Current Stock</h3>
                             <div class="forecast-number" id="stockValue">—</div>
-                            <div class="forecast-meta" id="stockMeta">Tồn kho hôm nay</div>
+                            <div class="forecast-meta" id="stockMeta">Stock as of today</div>
                         </article>
                     </div>
 
                     <article class="forecast-card forecast-chart-card" id="forecastChartCard">
-                        <h3>📈 Dự báo nhu cầu theo ngày (7 ngày tới)</h3>
-                        <p id="chartSubtitle">Khoảng trên/dưới thể hiện vùng biến động dự kiến dựa trên dữ liệu lịch sử</p>
-                        <svg id="forecastChart" viewBox="0 0 760 280" aria-label="Biểu đồ dự báo nhu cầu 7 ngày"></svg>
+                        <h3>📈 Daily Demand Forecast (Next 7 Days)</h3>
+                        <p id="chartSubtitle">The upper/lower band shows the expected variation range based on historical data</p>
+                        <svg id="forecastChart" viewBox="0 0 760 280" aria-label="7-day demand forecast chart"></svg>
                     </article>
 
                     <div class="forecast-table-wrap">
                         <table class="forecast-table">
                             <thead>
                                 <tr>
-                                    <th>Ngày</th>
-                                    <th>Nhu cầu dự báo</th>
-                                    <th>Cận dưới</th>
-                                    <th>Cận trên</th>
+                                    <th>Date</th>
+                                    <th>Forecasted Demand</th>
+                                    <th>Lower Bound</th>
+                                    <th>Upper Bound</th>
                                 </tr>
                             </thead>
                             <tbody id="forecastTable"></tbody>
@@ -435,17 +435,17 @@ function renderResults(data) {
     const isApi = data.source === 'ai_forecast';
     const points = data.forecast || [];
 
-    setText('apiSuggestion', isApi ? format(data.suggested_qty) + ' đơn vị' : 'Không khả dụng');
+    setText('apiSuggestion', isApi ? format(data.suggested_qty) + ' units' : 'Unavailable');
     setText('apiMeta', isApi
-        ? `Nhu cầu dự báo: ${format(data.forecasted_demand || 0)} · ${data.model_used || 'forecast_api'}`
-        : 'Đã tự động chuyển sang quy tắc dự phòng'
+        ? `Forecasted demand: ${format(data.forecasted_demand || 0)} · ${data.model_used || 'forecast_api'}`
+        : 'Automatically switched to fallback rule'
     );
 
-    setText('ruleSuggestion', format(rule.suggested_qty || data.suggested_qty || 0) + ' đơn vị');
-    setText('ruleMeta', `Bán TB 7 ngày: ${format(rule.avg_daily_sales_7d || 0)} · Safety stock: ${format(rule.safety_stock || 0)}`);
+    setText('ruleSuggestion', format(rule.suggested_qty || data.suggested_qty || 0) + ' units');
+    setText('ruleMeta', `Avg sales 7 days: ${format(rule.avg_daily_sales_7d || 0)} · Safety stock: ${format(rule.safety_stock || 0)}`);
 
     const currentStock = rule.current_stock ?? (product.selectedOptions[0]?.dataset.stock ?? 0);
-    setText('stockValue', format(currentStock) + ' đơn vị');
+    setText('stockValue', format(currentStock) + ' units');
     setText('stockMeta', `Reorder point: ${format(rule.reorder_point || 0)} · Max stock: ${format(rule.max_stock || 0)}`);
 
     const tbody = document.getElementById('forecastTable');
@@ -466,19 +466,19 @@ function renderResults(data) {
     resultBox.hidden = false;
 
     const statusType = isApi ? 'ok' : 'fallback';
-    const statusMsg = data.message || (isApi ? 'Đã tạo dự báo.' : 'Đã dùng quy tắc dự phòng.');
+    const statusMsg = data.message || (isApi ? 'Forecast generated.' : 'Used fallback rule.');
     setStatus(statusMsg, statusType);
 }
 
 button?.addEventListener('click', async () => {
     if (!product.value) {
-        setStatus('Vui lòng chọn sản phẩm trước.', 'error');
+        setStatus('Please select a product first.', 'error');
         return;
     }
 
     button.disabled = true;
-    button.textContent = 'Đang tạo dự báo…';
-    setStatus('Đang lấy dữ liệu và tính dự báo…', 'ok');
+    button.textContent = 'Generating forecast…';
+    setStatus('Fetching data and computing forecast…', 'ok');
 
     try {
         const payload = {
@@ -502,27 +502,27 @@ button?.addEventListener('click', async () => {
         } catch (parseError) {
             console.error('[Forecast Error] Non-JSON response:', rawText.slice(0, 500));
             throw new Error(
-                `Server trả về dữ liệu không hợp lệ (HTTP ${response.status}). `
-                + 'Có thể do lỗi phía backend (PHP warning/exception) hoặc sai đường dẫn API. '
-                + 'Vui lòng kiểm tra log server hoặc liên hệ quản trị viên.'
+                `Server returned invalid data (HTTP ${response.status}). `
+                + 'This may be due to a backend error (PHP warning/exception) or an incorrect API path. '
+                + 'Please check the server log or contact the administrator.'
             );
         }
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${data.message || 'Lỗi kết nối'}`);
+            throw new Error(`HTTP ${response.status}: ${data.message || 'Connection error'}`);
         }
 
         if (!data.success) {
-            throw new Error(data.message || 'Dự báo không thành công.');
+            throw new Error(data.message || 'Forecast failed.');
         }
 
         renderResults(data);
     } catch (error) {
         console.error('[Forecast Error]', error);
-        setStatus(error.message || 'Không thể tạo dự báo. Vui lòng thử lại.', 'error');
+        setStatus(error.message || 'Could not generate forecast. Please try again.', 'error');
     } finally {
         button.disabled = false;
-        button.textContent = 'Tạo dự báo 7 ngày';
+        button.textContent = 'Generate 7-Day Forecast';
     }
 });
 </script>

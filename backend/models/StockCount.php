@@ -55,7 +55,7 @@ class StockCount
             'system_qty'  => $systemQty,
             'actual_qty'  => $actualQty,
             'discrepancy' => $actualQty - $systemQty, // giống hệt cách DB tự tính (GENERATED)
-            'message'     => 'Đã ghi nhận kết quả đếm.',
+            'message'     => 'Count result recorded.',
         ];
     }
 
@@ -76,7 +76,7 @@ class StockCount
                     (product_id, movement_type, quantity_change, reason, reference_id, performed_by, created_at)
                  VALUES
                     (:product_id, 'count_correction', :quantity_change,
-                     'Chênh lệch kiểm kê - cần đối chiếu thủ công theo từng kho', :reference_id, :performed_by, NOW())"
+                     'Stock count discrepancy - manual reconciliation required per warehouse', :reference_id, :performed_by, NOW())"
             );
 
             $discrepancyCount = 0;
@@ -99,14 +99,14 @@ class StockCount
                 'success'            => true,
                 'total_items'        => count($items),
                 'discrepancy_items'  => $discrepancyCount,
-                'message'            => 'Đã hoàn tất phiên kiểm kê.',
+                'message'            => 'Stock count session completed.',
             ];
         } catch (PDOException $e) {
             if ($this->conn->inTransaction()) {
                 $this->conn->rollBack();
             }
             error_log('[StockCount::finalizeSession] ' . $e->getMessage());
-            return ['success' => false, 'message' => 'Có lỗi xảy ra khi hoàn tất kiểm kê.'];
+            return ['success' => false, 'message' => 'An error occurred while finalizing the stock count.'];
         }
     }
 

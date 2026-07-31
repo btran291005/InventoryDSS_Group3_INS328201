@@ -79,8 +79,8 @@ class ManagerService
                 date('Y-m-d 23:59:59')
             ),
             'pending_po_count'       => count($this->orderModel->getPendingApproval()),
-            'note_revenue'           => 'products.unit_cost là giá nhập (dùng cho giá trị PO), '
-                                      . 'chưa có giá bán lẻ nên dashboard hiển thị theo số lượng, chưa có doanh thu.',
+            'note_revenue'           => 'products.unit_cost is the purchase cost (used for PO value), '
+                                      . 'there is no retail selling price yet so the dashboard shows quantities, not revenue.',
         ];
     }
 
@@ -237,7 +237,7 @@ class ManagerService
         if (!file_exists($reorderServicePath) || filesize($reorderServicePath) === 0) {
             return [
                 'success' => false,
-                'message' => 'Chức năng gợi ý đặt hàng (BR-05) chưa sẵn sàng - ReorderService.php chưa được code (Phase sau).',
+                'message' => 'Order suggestion feature (BR-05) is not ready yet - ReorderService.php has not been coded (later phase).',
             ];
         }
 
@@ -252,7 +252,7 @@ class ManagerService
         return [
             'success'     => true,
             'suggestions' => $reorderService->suggestQuantity(),
-            'message'     => 'Đã tính gợi ý đặt hàng.',
+            'message'     => 'Order suggestion calculated.',
         ];
     }
 
@@ -350,12 +350,12 @@ class ManagerService
     public function createPurchaseOrderDraft(int $supplierId, int $createdBy, array $lines): array
     {
         if (empty($lines)) {
-            return ['success' => false, 'message' => 'Đơn đặt hàng phải có ít nhất 1 dòng sản phẩm.'];
+            return ['success' => false, 'message' => 'Purchase order must have at least 1 product line.'];
         }
 
         foreach ($lines as $line) {
             if (empty($line['product_id']) || !isset($line['suggested_qty']) || (int) $line['suggested_qty'] <= 0) {
-                return ['success' => false, 'message' => 'Mỗi dòng sản phẩm phải có product_id và số lượng > 0.'];
+                return ['success' => false, 'message' => 'Each product line must have a product_id and quantity > 0.'];
             }
         }
 
@@ -370,7 +370,7 @@ class ManagerService
     public function overridePoLineQuantity(int $poId, int $poDetailId, int $newQty, int $managerId): array
     {
         if ($newQty <= 0) {
-            return ['success' => false, 'message' => 'Số lượng phải lớn hơn 0.'];
+            return ['success' => false, 'message' => 'Quantity must be greater than 0.'];
         }
 
         return $this->orderModel->updateLineQuantity($poId, $poDetailId, $newQty, $managerId);
@@ -416,19 +416,19 @@ class ManagerService
     {
         $incidentId = $this->stockCountModel->createShortageIncident($productId, $managerId, $resolutionAction);
 
-        return ['success' => true, 'incident_id' => $incidentId, 'message' => 'Đã ghi nhận sự cố thiếu hàng.'];
+        return ['success' => true, 'incident_id' => $incidentId, 'message' => 'Stock shortage incident recorded.'];
     }
 
     /** FR-MGR-07: cập nhật hướng xử lý và đóng 1 sự cố thiếu hàng - Open -> Resolved. */
     public function resolveShortageIncident(int $incidentId, string $resolutionAction): array
     {
         if (trim($resolutionAction) === '') {
-            return ['success' => false, 'message' => 'Vui lòng nhập hướng xử lý trước khi đóng sự cố.'];
+            return ['success' => false, 'message' => 'Please enter a resolution action before closing the incident.'];
         }
 
         $ok = $this->stockCountModel->resolveShortageIncident($incidentId, $resolutionAction);
 
-        return ['success' => $ok, 'message' => $ok ? 'Đã đóng sự cố thiếu hàng.' : 'Có lỗi xảy ra.'];
+        return ['success' => $ok, 'message' => $ok ? 'Stock shortage incident closed.' : 'An error occurred.'];
     }
 
     public function listShortageIncidents(?string $status = null): array
@@ -509,9 +509,9 @@ class ManagerService
             'from_date' => $fromDate,
             'to_date'   => $toDate,
             'products'  => $rows,
-            'note'      => 'unit_cost là giá NHẬP (giá vốn), chưa có giá bán lẻ nên vẫn KHÔNG tính '
-                          . 'được doanh thu bán hàng. turnover_ratio_approx = số lượng bán ÷ tồn kho hiện tại; '
-                          . 'turnover_value_ratio = COGS (SL bán × unit_cost) ÷ giá trị tồn kho hiện tại.',
+            'note'      => 'unit_cost is the PURCHASE cost (cost basis); there is no retail selling price yet, so sales '
+                          . 'revenue still CANNOT be calculated. turnover_ratio_approx = quantity sold ÷ current stock; '
+                          . 'turnover_value_ratio = COGS (quantity sold × unit_cost) ÷ current stock value.',
         ];
     }
 
@@ -824,9 +824,9 @@ class ManagerService
             'category_strength'   => $categoryRows,
             'top_suppliers'       => $topSuppliers,
             'top_overstock_risks' => $topOverstockRisks,
-            'note' => 'Doanh thu và giá trị hao hụt (waste) tính bằng selling_price/unit_cost thật từ DB. '
-                     . 'Không hiển thị "AI Demand Accuracy %", "Sales vs Target", "Forecast Variance" vì '
-                     . 'hệ thống chưa lưu actual-vs-predicted theo ngày hay chỉ tiêu (target) doanh số.',
+            'note' => 'Revenue and waste value are calculated using the actual selling_price/unit_cost from the DB. '
+                     . '"AI Demand Accuracy %", "Sales vs Target", "Forecast Variance" are not shown because '
+                     . 'the system does not yet store daily actual-vs-predicted data or sales targets.',
         ];
     }
 }

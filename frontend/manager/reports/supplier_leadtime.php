@@ -51,7 +51,7 @@ $breadcrumbs = ['Manager', 'Supplier Lead-time'];
 $activeMenu  = 'lead_time';
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -73,7 +73,7 @@ $activeMenu  = 'lead_time';
 
                 <div class="mb-4">
                     <h2 class="page-heading mb-1">Supplier Lead-Time & Delivery Accuracy</h2>
-                    <p class="page-subheading mb-0">Đánh giá độ tin cậy nhà cung cấp dựa trên lịch sử giao hàng thực tế (FR-MGR-11).</p>
+                    <p class="page-subheading mb-0">Assess supplier reliability based on actual delivery history (FR-MGR-11).</p>
                 </div>
 
                 <div class="row g-3">
@@ -81,23 +81,23 @@ $activeMenu  = 'lead_time';
                         <div class="panel-card h-100">
                             <div class="panel-card-header">
                                 <h3 class="panel-card-title">
-                                    Toàn bộ nhà cung cấp
+                                    All Suppliers
                                     <span class="badge-count"><?= count($suppliers) ?></span>
                                 </h3>
                             </div>
 
                             <?php if (empty($suppliers)): ?>
-                                <div class="empty-state">Chưa có nhà cung cấp nào.</div>
+                                <div class="empty-state">No suppliers yet.</div>
                             <?php else: ?>
                                 <div class="table-responsive">
                                     <table class="table table-sm data-table align-middle mb-0">
                                         <thead>
                                             <tr>
-                                                <th>Nhà cung cấp</th>
-                                                <th>Liên hệ</th>
-                                                <th class="text-end">Lead-time TB (ngày)</th>
-                                                <th class="text-end">Đơn đã giao</th>
-                                                <th class="text-end">Tỉ lệ sai lệch</th>
+                                                <th>Supplier</th>
+                                                <th>Contact</th>
+                                                <th class="text-end">Avg Lead-time (days)</th>
+                                                <th class="text-end">Orders Delivered</th>
+                                                <th class="text-end">Discrepancy Rate</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -115,7 +115,7 @@ $activeMenu  = 'lead_time';
                                                                 <?= $rate ?>%
                                                             </span>
                                                         <?php else: ?>
-                                                            <span class="text-muted small">Chưa có đơn đã giao</span>
+                                                            <span class="text-muted small">No delivered orders yet</span>
                                                         <?php endif; ?>
                                                     </td>
                                                 </tr>
@@ -126,8 +126,8 @@ $activeMenu  = 'lead_time';
                             <?php endif; ?>
 
                             <p class="text-muted small mt-3 mb-0">
-                                Lead-time trung bình là giá trị tham khảo do Admin cấu hình; Tỉ lệ sai lệch được tính
-                                từ dữ liệu giao hàng thực tế (BR-08, BR-09, BR-10).
+                                Average lead-time is a reference value configured by Admin; Discrepancy Rate is calculated
+                                from actual delivery data (BR-08, BR-09, BR-10).
                             </p>
                         </div>
                     </div>
@@ -135,11 +135,11 @@ $activeMenu  = 'lead_time';
                     <div class="col-12 col-xl-4">
                         <div class="panel-card h-100">
                             <div class="panel-card-header">
-                                <h3 class="panel-card-title">Đáng tin cậy nhất</h3>
+                                <h3 class="panel-card-title">Most Reliable</h3>
                             </div>
 
                             <?php if (empty($mostReliable)): ?>
-                                <div class="empty-state">Chưa đủ lịch sử giao hàng để đánh giá.</div>
+                                <div class="empty-state">Not enough delivery history to evaluate.</div>
                             <?php else: ?>
                                 <div class="d-flex flex-column gap-2">
                                     <?php foreach ($mostReliable as $i => $supplier): ?>
@@ -155,8 +155,8 @@ $activeMenu  = 'lead_time';
                             <?php endif; ?>
 
                             <p class="text-muted small mt-3 mb-0">
-                                Được gợi ý khi tạo Purchase Order mới, xếp hạng theo tỉ lệ sai lệch thấp nhất,
-                                sau đó lead-time thấp nhất.
+                                Suggested when creating a new Purchase Order, ranked by lowest discrepancy rate,
+                                then lowest lead-time.
                             </p>
                         </div>
                     </div>

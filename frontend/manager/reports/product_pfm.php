@@ -41,7 +41,7 @@ $breadcrumbs = ['Manager', 'Product Performance'];
 $activeMenu  = 'product_pfm';
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -63,29 +63,29 @@ $activeMenu  = 'product_pfm';
 
                 <div class="mb-4">
                     <h2 class="page-heading mb-1">Product Performance Analysis</h2>
-                    <p class="page-subheading mb-0">Xếp hạng sản phẩm theo sản lượng bán và vòng quay tồn kho (FR-MGR-09).</p>
+                    <p class="page-subheading mb-0">Ranks products by sales volume and inventory turnover (FR-MGR-09).</p>
                 </div>
 
                 <div class="alert alert-secondary small">
-                    Hệ thống chưa lưu giá bán lẻ — các chỉ số dưới đây dùng
-                    <strong>số lượng bán</strong> làm proxy cho nhu cầu, và
-                    <strong>COGS ÷ giá trị tồn kho</strong> (theo giá nhập) làm proxy cho vòng quay tồn kho.
-                    Đây không phải số liệu doanh thu/tài chính thật.
+                    The system does not yet store retail selling prices — the metrics below use
+                    <strong>quantity sold</strong> as a proxy for demand, and
+                    <strong>COGS ÷ inventory value</strong> (at cost) as a proxy for inventory turnover.
+                    This is not actual revenue/financial data.
                 </div>
 
-                <!-- Filter khoảng thời gian -->
+                <!-- Date range filter -->
                 <div class="panel-card mb-3">
                     <form method="get" class="filter-bar p-1">
                         <div>
-                            <label class="form-label">Từ ngày</label>
+                            <label class="form-label">From date</label>
                             <input type="date" name="from_date" class="form-control form-control-sm" value="<?= htmlspecialchars($fromDate, ENT_QUOTES, 'UTF-8') ?>">
                         </div>
                         <div>
-                            <label class="form-label">Đến ngày</label>
+                            <label class="form-label">To date</label>
                             <input type="date" name="to_date" class="form-control form-control-sm" value="<?= htmlspecialchars(substr($toDate, 0, 10), ENT_QUOTES, 'UTF-8') ?>">
                         </div>
                         <div>
-                            <button type="submit" class="btn btn-brand btn-sm">Áp dụng</button>
+                            <button type="submit" class="btn btn-brand btn-sm">Apply</button>
                         </div>
                     </form>
                 </div>
@@ -95,21 +95,21 @@ $activeMenu  = 'product_pfm';
                     <div class="col-12 col-xl-6">
                         <div class="panel-card h-100">
                             <div class="panel-card-header">
-                                <h3 class="panel-card-title">Bán chạy nhất</h3>
-                                <span class="panel-card-note">Ưu tiên trưng bày / bổ sung tồn kho</span>
+                                <h3 class="panel-card-title">Best Sellers</h3>
+                                <span class="panel-card-note">Prioritize for display / stock replenishment</span>
                             </div>
 
                             <?php if (empty($topSellers)): ?>
-                                <div class="empty-state">Không có dữ liệu bán hàng trong khoảng thời gian này.</div>
+                                <div class="empty-state">No sales data in this time range.</div>
                             <?php else: ?>
                                 <div class="table-responsive">
                                     <table class="table table-sm data-table mb-0">
                                         <thead>
                                             <tr>
                                                 <th>SKU</th>
-                                                <th>Sản phẩm</th>
-                                                <th class="text-end">SL bán</th>
-                                                <th class="text-end">Turnover (giá trị)</th>
+                                                <th>Product</th>
+                                                <th class="text-end">Qty Sold</th>
+                                                <th class="text-end">Turnover (Value)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -136,21 +136,21 @@ $activeMenu  = 'product_pfm';
                     <div class="col-12 col-xl-6">
                         <div class="panel-card h-100">
                             <div class="panel-card-header">
-                                <h3 class="panel-card-title">Bán chậm nhất</h3>
-                                <span class="panel-card-note">Cân nhắc phase-out hoặc khuyến mãi</span>
+                                <h3 class="panel-card-title">Slowest Moving</h3>
+                                <span class="panel-card-note">Consider phase-out or promotions</span>
                             </div>
 
                             <?php if (empty($slowMoving)): ?>
-                                <div class="empty-state">Không có dữ liệu.</div>
+                                <div class="empty-state">No data.</div>
                             <?php else: ?>
                                 <div class="table-responsive">
                                     <table class="table table-sm data-table mb-0">
                                         <thead>
                                             <tr>
                                                 <th>SKU</th>
-                                                <th>Sản phẩm</th>
-                                                <th class="text-end">SL bán</th>
-                                                <th class="text-end">Tồn kho</th>
+                                                <th>Product</th>
+                                                <th class="text-end">Qty Sold</th>
+                                                <th class="text-end">Stock</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -178,13 +178,13 @@ $activeMenu  = 'product_pfm';
                         <div class="panel-card">
                             <div class="panel-card-header">
                                 <h3 class="panel-card-title">
-                                    Xếp hạng đầy đủ
+                                    Full Ranking
                                     <span class="badge-count"><?= count($report['products']) ?></span>
                                 </h3>
                             </div>
 
                             <?php if (empty($report['products'])): ?>
-                                <div class="empty-state">Không có dữ liệu.</div>
+                                <div class="empty-state">No data.</div>
                             <?php else: ?>
                                 <div class="table-responsive">
                                     <table class="table data-table align-middle mb-0">
@@ -192,11 +192,11 @@ $activeMenu  = 'product_pfm';
                                             <tr>
                                                 <th>#</th>
                                                 <th>SKU</th>
-                                                <th>Sản phẩm</th>
-                                                <th class="text-end">SL bán</th>
-                                                <th class="text-end">Tồn kho</th>
-                                                <th class="text-end">Turnover (SL)</th>
-                                                <th class="text-end">Turnover (giá trị)</th>
+                                                <th>Product</th>
+                                                <th class="text-end">Qty Sold</th>
+                                                <th class="text-end">Stock</th>
+                                                <th class="text-end">Turnover (Qty)</th>
+                                                <th class="text-end">Turnover (Value)</th>
                                             </tr>
                                         </thead>
                                         <tbody>

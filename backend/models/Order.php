@@ -97,7 +97,7 @@ class Order
     public function createDraft(int $supplierId, int $createdBy, array $lines): array
     {
         if (empty($lines)) {
-            return ['success' => false, 'message' => 'Đơn đặt hàng phải có ít nhất 1 dòng sản phẩm.'];
+            return ['success' => false, 'message' => 'Purchase order must have at least 1 product line.'];
         }
 
         try {
@@ -125,13 +125,13 @@ class Order
             }
 
             $this->conn->commit();
-            return ['success' => true, 'po_id' => $poId, 'message' => 'Đã tạo đơn đặt hàng (Draft).'];
+            return ['success' => true, 'po_id' => $poId, 'message' => 'Purchase order created (Draft).'];
         } catch (PDOException $e) {
             if ($this->conn->inTransaction()) {
                 $this->conn->rollBack();
             }
             error_log('[Order::createDraft] ' . $e->getMessage());
-            return ['success' => false, 'message' => 'Có lỗi xảy ra khi tạo đơn đặt hàng.'];
+            return ['success' => false, 'message' => 'An error occurred while creating the purchase order.'];
         }
     }
 
@@ -141,12 +141,12 @@ class Order
     {
         $po = $this->getById($poId);
         if ($po === false) {
-            return ['success' => false, 'message' => 'Không tìm thấy đơn đặt hàng.'];
+            return ['success' => false, 'message' => 'Purchase order not found.'];
         }
         if (!in_array($po['status'], self::EDITABLE_STATUSES, true)) {
             return [
                 'success' => false,
-                'message' => "Không thể sửa đơn hàng ở trạng thái '{$po['status']}' (BR-20: đơn đã submit bị khóa).",
+                'message' => "Cannot edit an order with status '{$po['status']}' (BR-20: submitted orders are locked).",
             ];
         }
 
@@ -160,7 +160,7 @@ class Order
             Logger::log($updatedBy, 'OVERRIDE_PO_QTY', 'purchase_order_details', $poDetailId);
         }
 
-        return ['success' => $ok, 'message' => $ok ? 'Đã cập nhật số lượng.' : 'Có lỗi xảy ra khi cập nhật.'];
+        return ['success' => $ok, 'message' => $ok ? 'Quantity updated.' : 'An error occurred while updating.'];
     }
 
     /* FR-MGR-04: Manager submit PO để Admin duyệt - Draft -> Pending.
@@ -169,10 +169,10 @@ class Order
     {
         $po = $this->getById($poId);
         if ($po === false) {
-            return ['success' => false, 'message' => 'Không tìm thấy đơn đặt hàng.'];
+            return ['success' => false, 'message' => 'Purchase order not found.'];
         }
         if ($po['status'] !== 'Draft') {
-            return ['success' => false, 'message' => "Chỉ có thể submit đơn ở trạng thái 'Draft'."];
+            return ['success' => false, 'message' => "Only orders with status 'Draft' can be submitted."];
         }
 
         $stmt = $this->conn->prepare(
@@ -180,7 +180,7 @@ class Order
         );
         $ok = $stmt->execute([':id' => $poId]);
 
-        return ['success' => $ok, 'message' => $ok ? 'Đã gửi đơn cho Admin duyệt.' : 'Có lỗi xảy ra.'];
+        return ['success' => $ok, 'message' => $ok ? 'Order sent to Admin for approval.' : 'An error occurred.'];
     }
 
     /* FR-ADM-06 / BR-07: Admin duyệt PO - Pending -> Approved.
@@ -189,10 +189,10 @@ class Order
     {
         $po = $this->getById($poId);
         if ($po === false) {
-            return ['success' => false, 'message' => 'Không tìm thấy đơn đặt hàng.'];
+            return ['success' => false, 'message' => 'Purchase order not found.'];
         }
         if ($po['status'] !== 'Pending') {
-            return ['success' => false, 'message' => "Chỉ có thể duyệt đơn ở trạng thái 'Pending'."];
+            return ['success' => false, 'message' => "Only orders with status 'Pending' can be approved."];
         }
 
         $stmt = $this->conn->prepare(
@@ -206,7 +206,7 @@ class Order
             Logger::log($approvedBy, 'APPROVE_PO', 'purchase_orders', $poId);
         }
 
-        return ['success' => $ok, 'message' => $ok ? 'Đã duyệt đơn đặt hàng.' : 'Có lỗi xảy ra khi duyệt.'];
+        return ['success' => $ok, 'message' => $ok ? 'Purchase order approved.' : 'An error occurred while approving.'];
     }
 
     /* FR-ADM-06 / BR-20: Admin từ chối PO - Pending -> Rejected.
@@ -215,10 +215,10 @@ class Order
     {
         $po = $this->getById($poId);
         if ($po === false) {
-            return ['success' => false, 'message' => 'Không tìm thấy đơn đặt hàng.'];
+            return ['success' => false, 'message' => 'Purchase order not found.'];
         }
         if ($po['status'] !== 'Pending') {
-            return ['success' => false, 'message' => "Chỉ có thể từ chối đơn ở trạng thái 'Pending'."];
+            return ['success' => false, 'message' => "Only orders with status 'Pending' can be rejected."];
         }
 
         $stmt = $this->conn->prepare(
@@ -232,7 +232,7 @@ class Order
             Logger::log($rejectedBy, 'REJECT_PO', 'purchase_orders', $poId);
         }
 
-        return ['success' => $ok, 'message' => $ok ? 'Đã từ chối đơn đặt hàng.' : 'Có lỗi xảy ra.'];
+        return ['success' => $ok, 'message' => $ok ? 'Purchase order rejected.' : 'An error occurred.'];
     }
 
     // GOODS RECEIPT - BR-08/BR-09/BR-10 (FR-STF-05/06/07)
@@ -250,13 +250,13 @@ class Order
         $detail = $stmt->fetch();
 
         if ($detail === false) {
-            return ['success' => false, 'message' => 'Không tìm thấy dòng đơn hàng.'];
+            return ['success' => false, 'message' => 'Order line not found.'];
         }
 
         if ($receivedQty !== (int) $detail['approved_qty'] && empty($discrepancyReason)) {
             return [
                 'success' => false,
-                'message' => 'Số lượng nhận khác với đơn đặt hàng - vui lòng ghi rõ lý do sai lệch (BR-10).',
+                'message' => 'Received quantity differs from the purchase order - please provide a discrepancy reason (BR-10).',
             ];
         }
 
@@ -271,7 +271,7 @@ class Order
             ':id'           => $poDetailId,
         ]);
 
-        return ['success' => $ok, 'message' => $ok ? 'Đã ghi nhận số lượng thực nhận.' : 'Có lỗi xảy ra.'];
+        return ['success' => $ok, 'message' => $ok ? 'Received quantity recorded.' : 'An error occurred.'];
     }
 
     /* FR-MGR-06: sau khi toàn bộ dòng của 1 PO đã có received_qty, Service gọi hàm này để đóng đơn - Approved -> Delivered. */
@@ -279,10 +279,10 @@ class Order
     {
         $po = $this->getById($poId);
         if ($po === false) {
-            return ['success' => false, 'message' => 'Không tìm thấy đơn đặt hàng.'];
+            return ['success' => false, 'message' => 'Purchase order not found.'];
         }
         if ($po['status'] !== 'Approved') {
-            return ['success' => false, 'message' => "Chỉ có thể đánh dấu 'Delivered' cho đơn ở trạng thái 'Approved'."];
+            return ['success' => false, 'message' => "Only orders with status 'Approved' can be marked 'Delivered'."];
         }
 
         $stmt = $this->conn->prepare(
@@ -290,6 +290,6 @@ class Order
         );
         $ok = $stmt->execute([':id' => $poId]);
 
-        return ['success' => $ok, 'message' => $ok ? 'Đơn hàng đã hoàn tất giao nhận.' : 'Có lỗi xảy ra.'];
+        return ['success' => $ok, 'message' => $ok ? 'Order delivery completed.' : 'An error occurred.'];
     }
 }

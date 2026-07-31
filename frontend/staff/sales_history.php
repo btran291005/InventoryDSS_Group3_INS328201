@@ -5,7 +5,7 @@
  * biểu đồ + bảng số lượng bán theo từng ngày.
  *
  * Cùng kỹ thuật vẽ SVG line chart (PHP-side, không cần JS/API) đã dùng ở
- * frontend/manager/reorder & forecast/forecast.php (Phần 1: Demand Trend) -
+ * frontend/manager/forecast.php (Phần 1: Demand Trend) -
  * NHƯNG bản Staff KHÔNG có phần AI Forecast (đó là công cụ của Manager,
  * ngoài phạm vi FR-STF-13 - Staff chỉ xem lịch sử, không dự báo/đặt hàng).
  *

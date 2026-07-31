@@ -136,7 +136,7 @@ class ReorderService
         if ($rule === false) {
             return [
                 'success' => false,
-                'message' => 'Sản phẩm chưa được cấu hình reorder rule (Admin cần thiết lập trước - BR-16).',
+                'message' => 'Product has no reorder rule configured yet (Admin needs to set it up first - BR-16).',
             ];
         }
 
@@ -156,7 +156,7 @@ class ReorderService
                 'avg_daily_sales_7d' => $suggestion['avg_daily_sales_7d'],
                 'suggested_qty'      => $suggestion['suggested_qty'],
             ],
-            'message' => 'Đã tính gợi ý đặt hàng.',
+            'message' => 'Order suggestion calculated.',
         ];
     }
 

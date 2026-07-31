@@ -80,7 +80,7 @@ $breadcrumbs = ['Manager', 'Inventory', 'Health'];
 $activeMenu  = 'inventory_health';
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -160,11 +160,11 @@ $activeMenu  = 'inventory_health';
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
                     <div>
                         <h2 class="page-heading mb-1">Inventory Health</h2>
-                        <p class="page-subheading mb-0">Tổng quan sức khỏe tồn kho, gợi ý đặt hàng và sự cố thiếu hàng đang mở.</p>
+                        <p class="page-subheading mb-0">Overview of inventory health, reorder suggestions, and open shortage incidents.</p>
                     </div>
                 </div>
 
-                <!-- Tab điều hướng nội bộ -->
+                <!-- Internal tab navigation -->
                 <nav class="inv-tab-nav">
                     <a href="inventory_health.php" class="inv-tab-link active">Inventory Health</a>
                     <a href="ai_replenishment.php" class="inv-tab-link">AI Replenishment</a>
@@ -205,33 +205,33 @@ $activeMenu  = 'inventory_health';
                         <a href="ai_replenishment.php" class="inv-quick-card">
                             <div class="inv-quick-card-title">AI Replenishment</div>
                             <p class="inv-quick-card-desc mb-0">
-                                Xem gợi ý đặt hàng theo Reorder Point &amp; Safety Stock (BR-05), so sánh với dự báo AI Forecast cho từng sản phẩm.
-                                <?= $lowStockCount > 0 ? "Hiện có <strong>{$lowStockCount}</strong> sản phẩm cần chú ý." : 'Không có sản phẩm nào cần đặt hàng ngay.' ?>
+                                View reorder suggestions based on Reorder Point &amp; Safety Stock (BR-05), compared with the AI Forecast for each product.
+                                <?= $lowStockCount > 0 ? "There are currently <strong>{$lowStockCount}</strong> products that need attention." : 'No products currently need reordering.' ?>
                             </p>
-                            <span class="inv-quick-card-arrow">Xem gợi ý &rarr;</span>
+                            <span class="inv-quick-card-arrow">View suggestions &rarr;</span>
                         </a>
                     </div>
                     <div class="col-12 col-md-6">
                         <a href="stock_incidents.php" class="inv-quick-card">
                             <div class="inv-quick-card-title">Stock Incidents</div>
                             <p class="inv-quick-card-desc mb-0">
-                                Ghi nhận và theo dõi các sự cố thiếu hàng ngoài dự kiến (FR-MGR-07).
-                                <?= count($openIncidents) > 0 ? "Hiện có <strong>" . count($openIncidents) . "</strong> sự cố đang mở." : 'Không có sự cố nào đang mở.' ?>
+                                Log and track unexpected shortage incidents (FR-MGR-07).
+                                <?= count($openIncidents) > 0 ? "There are currently <strong>" . count($openIncidents) . "</strong> open incidents." : 'No incidents currently open.' ?>
                             </p>
-                            <span class="inv-quick-card-arrow">Xem sự cố &rarr;</span>
+                            <span class="inv-quick-card-arrow">View incidents &rarr;</span>
                         </a>
                     </div>
                 </div>
 
-                <!-- Danh sách rút gọn: top items cần chú ý nhất -->
+                <!-- Condensed list: top items needing the most attention -->
                 <div class="panel-card">
                     <div class="panel-card-header">
                         <h3 class="panel-card-title">Top Priority Reorder Items</h3>
-                        <a href="ai_replenishment.php" class="panel-card-link">Xem tất cả</a>
+                        <a href="ai_replenishment.php" class="panel-card-link">View all</a>
                     </div>
 
                     <?php if (empty($reorderSuggestions)): ?>
-                        <div class="empty-state">Không có sản phẩm nào chạm/dưới Reorder Point.</div>
+                        <div class="empty-state">No products are at or below the Reorder Point.</div>
                     <?php else: ?>
                         <div class="table-responsive">
                             <table class="table data-table align-middle mb-0">

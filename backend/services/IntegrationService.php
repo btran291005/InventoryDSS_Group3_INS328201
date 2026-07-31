@@ -89,7 +89,7 @@ class IntegrationService
             return [
                 'success' => false,
                 'source'  => 'none',
-                'message' => 'Không tìm thấy sản phẩm.',
+                'message' => 'Product not found.',
             ];
         }
 
@@ -121,7 +121,7 @@ class IntegrationService
                 'forecast' => $apiResult['forecast'] ?? [],
                 'model_used' => $apiResult['model_used'] ?? 'forecast_api',
                 'rule_based_suggestion' => $rule,
-                'message'       => 'Đã lấy gợi ý từ AI Demand Forecast API.',
+                'message'       => 'Suggestion retrieved from AI Demand Forecast API.',
             ];
         }
 
@@ -138,7 +138,7 @@ class IntegrationService
             return [
                 'success' => false,
                 'source'  => 'none',
-                'message' => 'Forecast API không khả dụng và ' . lcfirst($fallback['message']),
+                'message' => 'Forecast API unavailable and ' . lcfirst($fallback['message']),
             ];
         }
 
@@ -150,7 +150,7 @@ class IntegrationService
             'source'        => 'rule_based_fallback',
             'suggested_qty' => $suggestedQty,
             'rule_based_suggestion' => $fallback['suggestion'],
-            'message'       => 'AI Forecast API không khả dụng - đã dùng công thức Reorder Point dự phòng (BR-18).',
+            'message'       => 'AI Forecast API unavailable - fallback Reorder Point formula used (BR-18).',
         ];
     }
 
@@ -192,8 +192,8 @@ class IntegrationService
             'results'        => $results,
             'ai_count'       => $aiCount,
             'fallback_count' => $fallbackCount,
-            'message'        => "Đã làm mới gợi ý cho " . count($results) . " sản phẩm "
-                               . "({$aiCount} từ AI, {$fallbackCount} dùng fallback rule-based).",
+            'message'        => "Refreshed suggestions for " . count($results) . " products "
+                               . "({$aiCount} from AI, {$fallbackCount} using rule-based fallback).",
         ];
     }
 
@@ -244,7 +244,7 @@ class IntegrationService
                 'sent_count'   => 0,
                 'failed_count' => 0,
                 'details'      => [],
-                'message'      => 'Không có sản phẩm nào cần cảnh báo.',
+                'message'      => 'No products require an alert.',
             ];
         }
 
@@ -276,8 +276,8 @@ class IntegrationService
             'failed_count' => $failedCount,
             'details'      => $details,
             'message'      => $failedCount === 0
-                ? "Đã gửi cảnh báo cho {$sentCount} sản phẩm."
-                : "Đã gửi {$sentCount} cảnh báo, {$failedCount} cảnh báo thất bại (xem 'details').",
+                ? "Sent alerts for {$sentCount} products."
+                : "Sent {$sentCount} alerts, {$failedCount} alerts failed (see 'details').",
         ];
     }
 }

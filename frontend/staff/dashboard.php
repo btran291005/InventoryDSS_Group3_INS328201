@@ -140,35 +140,31 @@ $activeMenu  = 'dashboard';
                     </div>
                 </div>
 
-                <!-- Quick Actions: lối tắt tới các trang thao tác hàng ngày đã có sẵn -->
-                <div class="row g-3 mb-4">
-                    <div class="col-12 col-md-4">
-                        <a href="inventory/goods_receipt.php" class="quick-action-card quick-action-card-brand">
-                            <span class="quick-action-icon">📦</span>
-                            <div>
-                                <div class="quick-action-title">Nhận hàng</div>
-                                <div class="quick-action-desc">Xử lý đơn hàng vừa về (<?= $awaitingCount ?> đơn đang chờ)</div>
-                            </div>
-                        </a>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <a href="inventory/stock_count.php" class="quick-action-card">
-                            <span class="quick-action-icon">🔢</span>
-                            <div>
-                                <div class="quick-action-title">Kiểm kê</div>
-                                <div class="quick-action-desc">Bắt đầu phiên đếm hàng mới</div>
-                            </div>
-                        </a>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <a href="customer_feedback.php" class="quick-action-card">
-                            <span class="quick-action-icon">⚠️</span>
-                            <div>
-                                <div class="quick-action-title">Ghi nhận sự cố</div>
-                                <div class="quick-action-desc">Phản hồi khách hàng / thiếu hàng</div>
-                            </div>
-                        </a>
-                    </div>
+                <!-- Quick Actions: lối tắt tới các trang thao tác hàng ngày đã có sẵn.
+                     Dùng class staff-shortcut-* (tự viết, không phụ thuộc Bootstrap .row/.col-*)
+                     để không bị ảnh hưởng nếu Bootstrap CSS load lỗi/chậm. -->
+                <div class="staff-shortcut-row">
+                    <a href="inventory/goods_receipt.php" class="staff-shortcut staff-shortcut-primary">
+                        <span class="staff-shortcut-icon">📦</span>
+                        <span class="staff-shortcut-text">
+                            <span class="staff-shortcut-title">Nhận hàng</span>
+                            <span class="staff-shortcut-desc">Xử lý đơn hàng vừa về (<?= $awaitingCount ?> đơn đang chờ)</span>
+                        </span>
+                    </a>
+                    <a href="inventory/stock_count.php" class="staff-shortcut">
+                        <span class="staff-shortcut-icon">🔢</span>
+                        <span class="staff-shortcut-text">
+                            <span class="staff-shortcut-title">Kiểm kê</span>
+                            <span class="staff-shortcut-desc">Bắt đầu phiên đếm hàng mới</span>
+                        </span>
+                    </a>
+                    <a href="customer_feedback.php" class="staff-shortcut">
+                        <span class="staff-shortcut-icon">⚠️</span>
+                        <span class="staff-shortcut-text">
+                            <span class="staff-shortcut-title">Ghi nhận sự cố</span>
+                            <span class="staff-shortcut-desc">Phản hồi khách hàng / thiếu hàng</span>
+                        </span>
+                    </a>
                 </div>
 
                 <div class="row g-3">

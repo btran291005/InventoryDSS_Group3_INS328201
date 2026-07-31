@@ -69,7 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $allOk = $allOk && $result['success'];
         }
 
-        $flashMessage = $allOk ? 'Đã lưu cấu hình phân quyền cho tất cả vai trò.' : 'Có lỗi xảy ra khi lưu 1 hoặc nhiều vai trò.';
+        $flashMessage = $allOk ? 'Permission configuration saved for all roles.' : 'An error occurred while saving one or more roles.';
         $flashIsError = !$allOk;
     }
 }
@@ -127,7 +127,7 @@ $breadcrumbs = ['Admin', 'Users & Roles', 'Permission Matrix'];
 $activeMenu  = 'permissions';
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

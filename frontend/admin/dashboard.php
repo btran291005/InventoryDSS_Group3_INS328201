@@ -229,7 +229,7 @@ foreach (array_slice($lowStockAlerts, 0, 3) as $item) {
         'severity' => $isCritical ? 'danger' : 'warning',
         'title'    => $isCritical ? 'Out of stock' : 'Low stock',
         'body'     => htmlspecialchars($item['product_name'], ENT_QUOTES, 'UTF-8')
-                    . ' — còn ' . (int) $item['current_stock'] . '/' . (int) $item['reorder_point'] . ' (reorder point)',
+                    . ' — ' . (int) $item['current_stock'] . '/' . (int) $item['reorder_point'] . ' remaining (reorder point)',
         'time'     => null,
         'link'     => 'dashboard.php#low-stock',
     ];
@@ -241,7 +241,7 @@ if (count($alertItems) < 3) {
             'severity' => 'warning',
             'title'    => 'PO awaiting approval',
             'body'     => 'PO #' . (int) $po['po_id'] . ' — ' . htmlspecialchars($po['supplier_name'], ENT_QUOTES, 'UTF-8')
-                        . ' (tạo bởi ' . htmlspecialchars($po['created_by_name'], ENT_QUOTES, 'UTF-8') . ')',
+                        . ' (created by ' . htmlspecialchars($po['created_by_name'], ENT_QUOTES, 'UTF-8') . ')',
             'time'     => formatDashboardDateTime($po['created_at']),
             'link'     => 'po_approval.php',
         ];
@@ -271,7 +271,7 @@ $breadcrumbs = ['Admin', 'Dashboard'];
 $activeMenu  = 'dashboard';
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">

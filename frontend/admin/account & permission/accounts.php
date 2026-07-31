@@ -141,7 +141,7 @@ $breadcrumbs = ['Admin', 'Accounts'];
 $activeMenu  = 'accounts';
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -467,7 +467,7 @@ $activeMenu  = 'accounts';
                             </form>
                         </div>
                         <div class="col-6">
-                            <form method="POST" id="udDeleteForm" onsubmit="return confirm('Xoá vĩnh viễn tài khoản này? Hành động này không thể hoàn tác.');">
+                            <form method="POST" id="udDeleteForm" onsubmit="return confirm('Permanently delete this account? This action cannot be undone.');">
                                 <input type="hidden" name="action" value="delete_account">
                                 <input type="hidden" name="account_id" id="udDeleteAccountId">
                                 <button type="submit" class="btn btn-outline-danger btn-sm w-100" id="udDeleteBtn">Delete</button>

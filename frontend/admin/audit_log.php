@@ -168,7 +168,7 @@ $breadcrumbs = ['Admin', 'Audit Log'];
 $activeMenu  = 'audit_log';
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -190,9 +190,9 @@ $activeMenu  = 'audit_log';
                     <div>
                         <h2 class="page-heading mb-1">
                             System Audit Log
-                            <span class="badge-count" title="Tổng số log đang lọc"><?= number_format($totalLogs) ?></span>
+                            <span class="badge-count" title="Total logs currently filtered"><?= number_format($totalLogs) ?></span>
                         </h2>
-                        <p class="page-subheading mb-0">Nhật ký toàn bộ hành động nhạy cảm trong hệ thống (FR-SYS-03).</p>
+                        <p class="page-subheading mb-0">Log of all sensitive actions across the system (FR-SYS-03).</p>
                     </div>
                 </div>
 
@@ -200,20 +200,20 @@ $activeMenu  = 'audit_log';
                 <div class="panel-card panel-card-compact mb-3">
                     <form method="get" class="filter-bar">
                         <div class="filter-bar-search">
-                            <input type="text" name="q" class="form-control form-control-sm" placeholder="Tìm kiếm: người dùng, hành động, bảng..."
-                                   aria-label="Tìm kiếm" value="<?= htmlspecialchars($searchKeyword, ENT_QUOTES, 'UTF-8') ?>">
+                            <input type="text" name="q" class="form-control form-control-sm" placeholder="Search: user, action, table..."
+                                   aria-label="Search" value="<?= htmlspecialchars($searchKeyword, ENT_QUOTES, 'UTF-8') ?>">
                         </div>
                         <div>
-                            <select name="range" class="form-select form-select-sm" aria-label="Khoảng thời gian" onchange="this.form.submit()">
-                                <option value="24h" <?= $filterRange === '24h' ? 'selected' : '' ?>>24 giờ qua</option>
-                                <option value="7d" <?= $filterRange === '7d' ? 'selected' : '' ?>>7 ngày qua</option>
-                                <option value="30d" <?= $filterRange === '30d' ? 'selected' : '' ?>>30 ngày qua</option>
-                                <option value="all" <?= $filterRange === 'all' ? 'selected' : '' ?>>Toàn bộ thời gian</option>
+                            <select name="range" class="form-select form-select-sm" aria-label="Time range" onchange="this.form.submit()">
+                                <option value="24h" <?= $filterRange === '24h' ? 'selected' : '' ?>>Last 24 hours</option>
+                                <option value="7d" <?= $filterRange === '7d' ? 'selected' : '' ?>>Last 7 days</option>
+                                <option value="30d" <?= $filterRange === '30d' ? 'selected' : '' ?>>Last 30 days</option>
+                                <option value="all" <?= $filterRange === 'all' ? 'selected' : '' ?>>All time</option>
                             </select>
                         </div>
                         <div>
-                            <select name="account_id" class="form-select form-select-sm" aria-label="Người thực hiện" onchange="this.form.submit()">
-                                <option value="">Tất cả người dùng</option>
+                            <select name="account_id" class="form-select form-select-sm" aria-label="Performed by" onchange="this.form.submit()">
+                                <option value="">All users</option>
                                 <?php foreach ($accounts as $acc): ?>
                                     <option value="<?= (int) $acc['account_id'] ?>" <?= $filterAccountId === (int) $acc['account_id'] ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($acc['full_name'], ENT_QUOTES, 'UTF-8') ?>
@@ -222,13 +222,13 @@ $activeMenu  = 'audit_log';
                             </select>
                         </div>
                         <div>
-                            <input type="text" name="action_type" class="form-control form-control-sm" placeholder="Hành động: APPROVE, CREATE..."
-                                   aria-label="Loại hành động" value="<?= htmlspecialchars($filterActionType, ENT_QUOTES, 'UTF-8') ?>">
+                            <input type="text" name="action_type" class="form-control form-control-sm" placeholder="Action: APPROVE, CREATE..."
+                                   aria-label="Action type" value="<?= htmlspecialchars($filterActionType, ENT_QUOTES, 'UTF-8') ?>">
                         </div>
                         <div class="filter-bar-actions d-flex gap-2">
-                            <button type="submit" class="btn btn-brand btn-sm">Lọc</button>
+                            <button type="submit" class="btn btn-brand btn-sm">Filter</button>
                             <?php if ($hasActiveFilter): ?>
-                                <a href="audit_log.php" class="btn btn-outline-secondary btn-sm">Xóa lọc</a>
+                                <a href="audit_log.php" class="btn btn-outline-secondary btn-sm">Clear filters</a>
                             <?php endif; ?>
                         </div>
                     </form>
@@ -237,17 +237,17 @@ $activeMenu  = 'audit_log';
                 <!-- Danh sách log -->
                 <div class="panel-card">
                     <?php if (empty($pagedLogs)): ?>
-                        <div class="empty-state">Không có log nào khớp bộ lọc.</div>
+                        <div class="empty-state">No logs match the current filters.</div>
                     <?php else: ?>
                         <div class="table-responsive">
                             <table class="table table-borderless align-middle mb-0 data-table">
                                 <thead>
                                     <tr>
-                                        <th>Thời gian</th>
-                                        <th>Người thực hiện</th>
+                                        <th>Time</th>
+                                        <th>Performed By</th>
                                         <th>Module</th>
-                                        <th>Hành động</th>
-                                        <th>Đối tượng</th>
+                                        <th>Action</th>
+                                        <th>Target</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -278,7 +278,7 @@ $activeMenu  = 'audit_log';
                         <!-- Pagination -->
                         <div class="d-flex justify-content-between align-items-center mt-3 px-1">
                             <span class="text-muted small">
-                                Hiển thị <?= ($currentPage - 1) * $perPage + 1 ?>–<?= min($currentPage * $perPage, $totalLogs) ?> / <?= number_format($totalLogs) ?> log
+                                Showing <?= ($currentPage - 1) * $perPage + 1 ?>–<?= min($currentPage * $perPage, $totalLogs) ?> of <?= number_format($totalLogs) ?> logs
                             </span>
                             <?php if ($totalPages > 1): ?>
                                 <nav>

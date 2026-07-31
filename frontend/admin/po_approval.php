@@ -85,7 +85,7 @@ $breadcrumbs = ['Admin', 'Approvals'];
 $activeMenu  = 'approvals';
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -105,7 +105,7 @@ $activeMenu  = 'approvals';
 
                 <div class="mb-4">
                     <h2 class="page-heading mb-1">Approval Queue</h2>
-                    <p class="page-subheading mb-0">Đơn đặt hàng đang chờ duyệt - Admin xem chi tiết rồi Duyệt hoặc Từ chối (BR-07).</p>
+                    <p class="page-subheading mb-0">Purchase orders awaiting approval - Admin reviews details then Approves or Rejects (BR-07).</p>
                 </div>
 
                 <?php if ($flashMessage !== ''): ?>
@@ -116,7 +116,7 @@ $activeMenu  = 'approvals';
 
                 <?php if (empty($pendingOrders)): ?>
                     <div class="panel-card">
-                        <div class="empty-state">Không có đơn đặt hàng nào đang chờ duyệt.</div>
+                        <div class="empty-state">No purchase orders are currently pending approval.</div>
                     </div>
                 <?php else: ?>
                     <div class="row g-3">
@@ -125,19 +125,19 @@ $activeMenu  = 'approvals';
                         <div class="col-12 col-xl-7">
                             <div class="panel-card">
                                 <div class="panel-card-header">
-                                    <h3 class="panel-card-title">Đang chờ duyệt</h3>
-                                    <span class="panel-card-note"><?= count($pendingOrders) ?> đơn</span>
+                                    <h3 class="panel-card-title">Pending Approval</h3>
+                                    <span class="panel-card-note"><?= count($pendingOrders) ?> orders</span>
                                 </div>
 
                                 <div class="table-responsive">
                                     <table class="table data-table align-middle mb-0">
                                         <thead>
                                             <tr>
-                                                <th>Mã PO</th>
-                                                <th>Nhà cung cấp</th>
-                                                <th>Người tạo</th>
-                                                <th>Ngày gửi</th>
-                                                <th class="text-end">Giá trị</th>
+                                                <th>PO Number</th>
+                                                <th>Supplier</th>
+                                                <th>Created By</th>
+                                                <th>Submitted Date</th>
+                                                <th class="text-end">Amount</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -162,7 +162,7 @@ $activeMenu  = 'approvals';
                         <div class="col-12 col-xl-5">
                             <?php if ($selectedPo === null): ?>
                                 <div class="panel-card">
-                                    <div class="empty-state">Chọn 1 đơn ở danh sách bên trái để xem chi tiết.</div>
+                                    <div class="empty-state">Select an order from the list on the left to view details.</div>
                                 </div>
                             <?php else: ?>
                                 <?php
@@ -182,7 +182,7 @@ $activeMenu  = 'approvals';
                                             <span class="fw-semibold">#PO-<?= (int) $selectedPo['po_id'] ?></span>
                                         </div>
                                         <div class="d-flex justify-content-between">
-                                            <span class="text-muted">Nhà cung cấp</span>
+                                            <span class="text-muted">Supplier</span>
                                             <span class="fw-semibold"><?= htmlspecialchars($selectedPo['supplier_name'], ENT_QUOTES, 'UTF-8') ?></span>
                                         </div>
                                     </div>
@@ -193,7 +193,7 @@ $activeMenu  = 'approvals';
                                             <div class="d-flex justify-content-between align-items-start py-2" style="border-bottom: 1px solid var(--surface-border-soft);">
                                                 <div>
                                                     <div class="fw-semibold"><?= htmlspecialchars($line['product_name'], ENT_QUOTES, 'UTF-8') ?></div>
-                                                    <div class="text-muted small">Đơn giá: <?= number_format((float) $line['unit_cost']) ?> đ &middot; SL: <?= number_format((int) $line['approved_qty']) ?></div>
+                                                    <div class="text-muted small">Unit price: <?= number_format((float) $line['unit_cost']) ?> đ &middot; Qty: <?= number_format((int) $line['approved_qty']) ?></div>
                                                 </div>
                                                 <div class="fw-semibold text-end"><?= number_format((float) $line['line_cost']) ?> đ</div>
                                             </div>
@@ -201,7 +201,7 @@ $activeMenu  = 'approvals';
                                     </div>
 
                                     <div class="d-flex justify-content-between align-items-center mb-3 pt-2" style="border-top: 1px solid var(--surface-border);">
-                                        <span class="fw-semibold">Tổng giá trị</span>
+                                        <span class="fw-semibold">Total Amount</span>
                                         <span class="fw-bold fs-5" style="color: var(--brand-primary);"><?= number_format($totalAmount) ?> đ</span>
                                     </div>
 
@@ -230,11 +230,11 @@ $activeMenu  = 'approvals';
 
                                         <div class="d-flex gap-2">
                                             <button type="submit" name="action" value="reject" class="btn btn-danger btn-sm flex-fill"
-                                                    onclick="return confirm('Từ chối PO #PO-<?= (int) $selectedPo['po_id'] ?>?');">
+                                                    onclick="return confirm('Reject PO #PO-<?= (int) $selectedPo['po_id'] ?>?');">
                                                 &times; Reject
                                             </button>
                                             <button type="submit" name="action" value="approve" class="btn btn-success btn-sm flex-fill"
-                                                    onclick="return confirm('Duyệt PO #PO-<?= (int) $selectedPo['po_id'] ?>? Đơn sẽ được coi là đã gửi cho nhà cung cấp (BR-07).');">
+                                                    onclick="return confirm('Approve PO #PO-<?= (int) $selectedPo['po_id'] ?>? The order will be considered sent to the supplier (BR-07).');">
                                                 &check; Approve Order
                                             </button>
                                         </div>
