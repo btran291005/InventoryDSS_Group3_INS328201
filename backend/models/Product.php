@@ -72,7 +72,7 @@ class Product
     {
         $unitCost = (float) ($data['unit_cost'] ?? 0);
         if ($unitCost < 0) {
-            return ['success' => false, 'message' => 'Giá nhập (unit_cost) không được là số âm.'];
+            return ['success' => false, 'message' => 'Purchase cost (unit_cost) cannot be negative.'];
         }
 
         $sql = "INSERT INTO {$this->table}
@@ -96,14 +96,14 @@ class Product
             return [
                 'success'    => true,
                 'product_id' => $this->conn->lastInsertId(),
-                'message'    => 'Tạo sản phẩm thành công.',
+                'message'    => 'Product created successfully.',
             ];
         } catch (PDOException $e) {
             if ((int) $e->getCode() === 23000) {
-                return ['success' => false, 'message' => "Mã SKU '{$data['sku_code']}' đã tồn tại."];
+                return ['success' => false, 'message' => "SKU code '{$data['sku_code']}' already exists."];
             }
             error_log('[Product::create] ' . $e->getMessage());
-            return ['success' => false, 'message' => 'Có lỗi xảy ra khi tạo sản phẩm.'];
+            return ['success' => false, 'message' => 'An error occurred while creating the product.'];
         }
     }
 
@@ -265,7 +265,7 @@ class Product
         $productId  = $target['product_id'] ?? null;
 
         if (($categoryId === null) === ($productId === null)) {
-            return ['success' => false, 'message' => 'Phải chỉ định đúng 1 trong 2: category_id hoặc product_id.'];
+            return ['success' => false, 'message' => 'You must specify exactly 1 of the 2: category_id or product_id.'];
         }
 
         try {
@@ -314,10 +314,10 @@ class Product
 
             Logger::log($updatedBy, 'UPDATE_REORDER_RULE', 'reorder_rules', (int) $ruleId);
 
-            return ['success' => true, 'rule_id' => $ruleId, 'message' => 'Đã lưu reorder rule.'];
+            return ['success' => true, 'rule_id' => $ruleId, 'message' => 'Reorder rule saved.'];
         } catch (PDOException $e) {
             error_log('[Product::upsertReorderRule] ' . $e->getMessage());
-            return ['success' => false, 'message' => 'Có lỗi xảy ra khi lưu reorder rule.'];
+            return ['success' => false, 'message' => 'An error occurred while saving the reorder rule.'];
         }
     }
 }
