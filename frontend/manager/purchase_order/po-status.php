@@ -66,7 +66,7 @@ $breadcrumbs = ['Manager', 'PO Status'];
 $activeMenu  = 'po_status';
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -87,15 +87,15 @@ $activeMenu  = 'po_status';
                 <div class="mb-4">
                     <h2 class="page-heading mb-1">PO Status</h2>
                     <p class="page-subheading mb-0">
-                        Trạng thái tổng hợp của mọi đơn đặt hàng bạn đã tạo (FR-MGR-06).
-                        Cần sửa số lượng hoặc nộp đơn Draft? Vào <a href="po_submit.php">Purchase Order (PO)</a>.
+                        Aggregate status of all purchase orders you have created (FR-MGR-06).
+                        Need to edit quantities or submit a Draft? Go to <a href="po_submit.php">Purchase Order (PO)</a>.
                     </p>
                 </div>
 
                 <form method="get" class="d-flex align-items-center gap-2 mb-3">
-                    <label class="form-label small mb-0 text-muted">Lọc theo trạng thái</label>
+                    <label class="form-label small mb-0 text-muted">Filter by status</label>
                     <select name="status" class="form-select form-select-sm" style="width:auto;" onchange="this.form.submit()">
-                        <option value="">Tất cả</option>
+                        <option value="">All</option>
                         <?php foreach ($statusOptions as $status): ?>
                             <option value="<?= $status ?>" <?= $filterStatus === $status ? 'selected' : '' ?>><?= $status ?></option>
                         <?php endforeach; ?>
@@ -106,23 +106,23 @@ $activeMenu  = 'po_status';
                     <div class="col-lg-7">
                         <div class="panel-card">
                             <div class="panel-card-header">
-                                <h3 class="panel-card-title">Đơn của tôi</h3>
-                                <span class="panel-card-note"><?= count($orders) ?> đơn</span>
+                                <h3 class="panel-card-title">My Orders</h3>
+                                <span class="panel-card-note"><?= count($orders) ?> orders</span>
                             </div>
 
                             <?php if (empty($orders)): ?>
-                                <div class="empty-state">Không có đơn nào khớp bộ lọc hiện tại.</div>
+                                <div class="empty-state">No orders match the current filter.</div>
                             <?php else: ?>
                                 <div class="table-responsive">
                                     <table class="table data-table align-middle mb-0">
                                         <thead>
                                             <tr>
-                                                <th>Mã PO</th>
-                                                <th>Nhà cung cấp</th>
-                                                <th>Trạng thái</th>
-                                                <th class="text-end">Tổng giá trị</th>
-                                                <th>Ngày tạo</th>
-                                                <th class="text-end">Thao tác</th>
+                                                <th>PO Number</th>
+                                                <th>Supplier</th>
+                                                <th>Status</th>
+                                                <th class="text-end">Total Amount</th>
+                                                <th>Created Date</th>
+                                                <th class="text-end">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -134,7 +134,7 @@ $activeMenu  = 'po_status';
                                                     <td class="text-end"><?= number_format((float) $po['total_amount']) ?> đ</td>
                                                     <td class="text-muted small"><?= htmlspecialchars(date('d/m/Y', strtotime($po['created_at'])), ENT_QUOTES, 'UTF-8') ?></td>
                                                     <td class="text-end">
-                                                        <a href="?view=<?= (int) $po['po_id'] ?><?= $filterStatus ? '&status=' . urlencode($filterStatus) : '' ?>" class="btn btn-outline-secondary btn-sm">Xem</a>
+                                                        <a href="?view=<?= (int) $po['po_id'] ?><?= $filterStatus ? '&status=' . urlencode($filterStatus) : '' ?>" class="btn btn-outline-secondary btn-sm">View</a>
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -148,7 +148,7 @@ $activeMenu  = 'po_status';
                     <div class="col-lg-5">
                         <?php if ($viewingPo === false): ?>
                             <div class="panel-card h-100 d-flex align-items-center justify-content-center">
-                                <div class="empty-state mb-0">Chọn 1 đơn ở danh sách bên trái để xem chi tiết.</div>
+                                <div class="empty-state mb-0">Select an order from the list on the left to view details.</div>
                             </div>
                         <?php else: ?>
                             <div class="panel-card">
@@ -160,16 +160,16 @@ $activeMenu  = 'po_status';
                                 </div>
 
                                 <div class="d-flex justify-content-between py-1" style="font-size:.87rem;">
-                                    <span class="text-muted">Nhà cung cấp</span>
+                                    <span class="text-muted">Supplier</span>
                                     <span class="fw-semibold"><?= htmlspecialchars($viewingPo['supplier_name'], ENT_QUOTES, 'UTF-8') ?></span>
                                 </div>
                                 <div class="d-flex justify-content-between py-1" style="font-size:.87rem;">
-                                    <span class="text-muted">Ngày tạo</span>
+                                    <span class="text-muted">Created Date</span>
                                     <span class="fw-semibold"><?= htmlspecialchars(date('d/m/Y H:i', strtotime($viewingPo['created_at'])), ENT_QUOTES, 'UTF-8') ?></span>
                                 </div>
                                 <?php if (!empty($viewingPo['approved_at'])): ?>
                                     <div class="d-flex justify-content-between py-1" style="font-size:.87rem;">
-                                        <span class="text-muted"><?= $viewingPo['status'] === 'Rejected' ? 'Ngày từ chối' : 'Ngày duyệt' ?></span>
+                                        <span class="text-muted"><?= $viewingPo['status'] === 'Rejected' ? 'Rejected Date' : 'Approved Date' ?></span>
                                         <span class="fw-semibold">
                                             <?= htmlspecialchars(date('d/m/Y H:i', strtotime($viewingPo['approved_at'])), ENT_QUOTES, 'UTF-8') ?>
                                             (<?= htmlspecialchars($viewingPo['approved_by_name'] ?? '—', ENT_QUOTES, 'UTF-8') ?>)
@@ -177,7 +177,7 @@ $activeMenu  = 'po_status';
                                     </div>
                                 <?php endif; ?>
                                 <div class="d-flex justify-content-between py-1 mb-3" style="font-size:.87rem;">
-                                    <span class="text-muted">Tổng giá trị</span>
+                                    <span class="text-muted">Total Amount</span>
                                     <span class="fw-bold"><?= number_format($viewingPoTotal) ?> đ</span>
                                 </div>
 
@@ -185,10 +185,10 @@ $activeMenu  = 'po_status';
                                     <table class="table data-table align-middle mb-0" style="font-size:.82rem;">
                                         <thead>
                                             <tr>
-                                                <th>Sản phẩm</th>
-                                                <th class="text-end">SL gợi ý</th>
-                                                <th class="text-end">SL đặt</th>
-                                                <th class="text-end">Thực nhận</th>
+                                                <th>Product</th>
+                                                <th class="text-end">Suggested Qty</th>
+                                                <th class="text-end">Ordered Qty</th>
+                                                <th class="text-end">Received</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -205,7 +205,7 @@ $activeMenu  = 'po_status';
                                                 <?php if (!empty($line['discrepancy_reason'])): ?>
                                                     <tr>
                                                         <td colspan="4" class="small" style="color: var(--color-warning); background: var(--color-warning-bg);">
-                                                            Sai lệch: <?= htmlspecialchars($line['discrepancy_reason'], ENT_QUOTES, 'UTF-8') ?>
+                                                            Discrepancy: <?= htmlspecialchars($line['discrepancy_reason'], ENT_QUOTES, 'UTF-8') ?>
                                                         </td>
                                                     </tr>
                                                 <?php endif; ?>
@@ -216,15 +216,15 @@ $activeMenu  = 'po_status';
 
                                 <?php if ($viewingPo['status'] === 'Rejected'): ?>
                                     <div class="alert alert-danger py-2 px-3 mt-3 mb-0" style="font-size: .82rem;">
-                                        Đơn đã bị Admin từ chối. Tạo lại đơn nháp mới ở <a href="../inventory/reorder_suggestions.php">Reorder Suggestions</a> nếu vẫn cần đặt hàng (BR-20).
+                                        This order was rejected by Admin. Create a new draft order at <a href="../inventory/reorder_suggestions.php">Reorder Suggestions</a> if you still need to place an order (BR-20).
                                     </div>
                                 <?php elseif ($viewingPo['status'] === 'Pending'): ?>
                                     <div class="alert alert-warning py-2 px-3 mt-3 mb-0" style="font-size: .82rem;">
-                                        Đang chờ Admin duyệt - không thể sửa số lượng ở giai đoạn này (BR-20).
+                                        Awaiting Admin approval - quantities cannot be edited at this stage (BR-20).
                                     </div>
                                 <?php elseif ($viewingPo['status'] === 'Draft'): ?>
                                     <div class="alert alert-info py-2 px-3 mt-3 mb-0" style="font-size: .82rem;">
-                                        Đơn còn ở dạng nháp - vào <a href="po_submit.php?po_id=<?= (int) $viewingPo['po_id'] ?>">Purchase Order (PO)</a> để sửa số lượng hoặc nộp Admin duyệt.
+                                        This order is still a draft - go to <a href="po_submit.php?po_id=<?= (int) $viewingPo['po_id'] ?>">Purchase Order (PO)</a> to edit quantities or submit for Admin approval.
                                     </div>
                                 <?php endif; ?>
                             </div>
