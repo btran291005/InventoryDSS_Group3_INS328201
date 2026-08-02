@@ -19,7 +19,7 @@ class Sales
     public function createTransaction(int $staffId, int $warehouseId, array $items): array
     {
         if (empty($items)) {
-            return ['success' => false, 'transaction_id' => null, 'message' => 'Giao dịch không có sản phẩm.'];
+            return ['success' => false, 'transaction_id' => null, 'message' => 'Transaction has no products.'];
         }
 
         try {
@@ -43,7 +43,7 @@ class Sales
                     $this->conn->rollBack();
                     return [
                         'success' => false, 'transaction_id' => null,
-                        'message' => "Sản phẩm ID {$item['product_id']} chưa có tồn kho tại kho này.",
+                        'message' => "Product ID {$item['product_id']} has no stock at this warehouse.",
                     ];
                 }
 
@@ -51,8 +51,8 @@ class Sales
                     $this->conn->rollBack();
                     return [
                         'success' => false, 'transaction_id' => null,
-                        'message' => "Sản phẩm ID {$item['product_id']} không đủ tồn kho "
-                                    . "(còn {$row['quantity_on_hand']}, cần bán {$item['quantity_sold']}).",
+                        'message' => "Product ID {$item['product_id']} has insufficient stock "
+                                    . "(available {$row['quantity_on_hand']}, needed {$item['quantity_sold']}).",
                     ];
                 }
             }
@@ -109,14 +109,14 @@ class Sales
 
             $this->conn->commit();
 
-            return ['success' => true, 'transaction_id' => $transactionId, 'message' => 'Giao dịch bán hàng thành công.'];
+            return ['success' => true, 'transaction_id' => $transactionId, 'message' => 'Sales transaction completed successfully.'];
         } catch (PDOException $e) {
             if ($this->conn->inTransaction()) {
                 $this->conn->rollBack();
             }
             // CHECK constraint vi phạm (mã 23000 ở MySQL 8) cũng rơi vào đây -> vẫn là BR-03
             error_log('[Sales::createTransaction] ' . $e->getMessage());
-            return ['success' => false, 'transaction_id' => null, 'message' => 'Có lỗi xảy ra, giao dịch đã được hủy.'];
+            return ['success' => false, 'transaction_id' => null, 'message' => 'An error occurred, the transaction has been cancelled.'];
         }
     }
 
