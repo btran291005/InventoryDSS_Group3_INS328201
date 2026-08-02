@@ -88,19 +88,19 @@ function formatBytes(?int $bytes): string
 function formatRelativeTime(?string $datetime): string
 {
     if ($datetime === null) {
-        return 'Chưa có';
+        return 'None yet';
     }
     $diffSeconds = time() - strtotime($datetime);
     if ($diffSeconds < 3600) {
         $mins = max(1, (int) floor($diffSeconds / 60));
-        return $mins . ' phút trước';
+        return $mins . ' minute' . ($mins === 1 ? '' : 's') . ' ago';
     }
     if ($diffSeconds < 86400) {
         $hours = (int) floor($diffSeconds / 3600);
-        return $hours . ' giờ trước';
+        return $hours . ' hour' . ($hours === 1 ? '' : 's') . ' ago';
     }
     $days = (int) floor($diffSeconds / 86400);
-    return $days . ' ngày trước';
+    return $days . ' day' . ($days === 1 ? '' : 's') . ' ago';
 }
 
 /** Badge màu theo status backup/restore. */
@@ -119,7 +119,7 @@ $breadcrumbs = ['Admin', 'Settings', 'System Backup'];
 $activeMenu  = 'system_backup';
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -190,7 +190,7 @@ $activeMenu  = 'system_backup';
 
                         <!-- Actions -->
                         <div class="d-flex flex-wrap gap-2 mb-4">
-                            <form method="POST" onsubmit="return confirm('Tạo bản sao lưu mới cho toàn bộ CSDL?');">
+                            <form method="POST" onsubmit="return confirm('Create a new backup of the entire database?');">
                                 <input type="hidden" name="action" value="create_backup">
                                 <button type="submit" class="btn btn-brand d-inline-flex align-items-center gap-2">Create Backup</button>
                             </form>
@@ -205,7 +205,7 @@ $activeMenu  = 'system_backup';
                             </div>
 
                             <?php if (empty($history)): ?>
-                                <div class="empty-state">Chưa có bản sao lưu nào. Bấm "Create Backup" để tạo bản đầu tiên.</div>
+                                <div class="empty-state">No backups yet. Click "Create Backup" to create the first one.</div>
                             <?php else: ?>
                                 <div class="table-responsive">
                                     <table class="table data-table align-middle mb-0">
@@ -288,9 +288,9 @@ $activeMenu  = 'system_backup';
                         );
                     ?>
                     <?php if (empty($restorableBackups)): ?>
-                        <p class="text-muted mb-0">Chưa có bản backup nào thành công để phục hồi.</p>
+                        <p class="text-muted mb-0">No successful backup is available to restore from.</p>
                     <?php else: ?>
-                        <label class="form-label small">Chọn bản backup để phục hồi</label>
+                        <label class="form-label small">Select a backup to restore</label>
                         <select name="source_backup_id" class="form-select" required>
                             <?php foreach ($restorableBackups as $r): ?>
                                 <option value="<?= (int) $r['backup_id'] ?>">
@@ -299,14 +299,14 @@ $activeMenu  = 'system_backup';
                             <?php endforeach; ?>
                         </select>
                         <div class="alert alert-warning py-2 px-3 mt-3 mb-0" style="font-size: .82rem;">
-                            ⚠️ Phục hồi sẽ GHI ĐÈ toàn bộ dữ liệu hiện tại bằng dữ liệu trong bản backup đã chọn. Hành động này không thể hoàn tác.
+                            ⚠️ Restoring will OVERWRITE all current data with the data from the selected backup. This action cannot be undone.
                         </div>
                     <?php endif; ?>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
                     <?php if (!empty($restorableBackups)): ?>
-                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('XÁC NHẬN LẦN CUỐI: phục hồi sẽ ghi đè toàn bộ dữ liệu hiện tại. Tiếp tục?');">Restore</button>
+                        <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('FINAL CONFIRMATION: restoring will overwrite all current data. Continue?');">Restore</button>
                     <?php endif; ?>
                 </div>
             </form>
