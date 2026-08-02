@@ -98,14 +98,14 @@ class Account
             return [
                 'success'    => true,
                 'account_id' => $this->conn->lastInsertId(),
-                'message'    => 'Tạo tài khoản thành công.',
+                'message'    => 'Account created successfully.',
             ];
         } catch (PDOException $e) {
             if ((int) $e->getCode() === 23000) {
-                return ['success' => false, 'message' => "Username '{$data['username']}' đã tồn tại."];
+                return ['success' => false, 'message' => "Username '{$data['username']}' already exists."];
             }
             error_log('[Account::create] ' . $e->getMessage());
-            return ['success' => false, 'message' => 'Có lỗi xảy ra khi tạo tài khoản.'];
+            return ['success' => false, 'message' => 'An error occurred while creating the account.'];
         }
     }
 
@@ -181,21 +181,21 @@ class Account
             $stmt->execute([':id' => $accountId]);
 
             if ($stmt->rowCount() === 0) {
-                return ['success' => false, 'message' => 'Không tìm thấy tài khoản.'];
+                return ['success' => false, 'message' => 'Account not found.'];
             }
 
-            return ['success' => true, 'message' => 'Đã xoá tài khoản.'];
+            return ['success' => true, 'message' => 'Account deleted.'];
         } catch (PDOException $e) {
             // 1451 = Cannot delete or update a parent row: a foreign key constraint fails
             if ((int) $e->errorInfo[1] === 1451 || (int) $e->getCode() === 23000) {
                 return [
                     'success' => false,
                     'blocked' => true,
-                    'message' => 'Không thể xoá: tài khoản này đã có dữ liệu liên quan trong hệ thống (Purchase Order, audit log, phiếu nhập/xuất...). Hãy dùng chức năng Khoá tài khoản thay thế.',
+                    'message' => 'Cannot delete: this account has related data in the system (Purchase Order, audit log, stock in/out records...). Please use the Lock Account feature instead.',
                 ];
             }
             error_log('[Account::delete] ' . $e->getMessage());
-            return ['success' => false, 'message' => 'Có lỗi xảy ra khi xoá tài khoản.'];
+            return ['success' => false, 'message' => 'An error occurred while deleting the account.'];
         }
     }
 
