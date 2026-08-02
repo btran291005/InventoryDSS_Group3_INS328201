@@ -122,7 +122,7 @@ class PurchaseOrderService
         ?string $discrepancyReason = null
     ): array {
         if ($receivedQty < 0) {
-            return ['success' => false, 'message' => 'Số lượng thực nhận không được là số âm.'];
+            return ['success' => false, 'message' => 'Received quantity cannot be negative.'];
         }
 
         // Bước 1: ghi nhận số lượng thực tế lên purchase_order_details (BR-08, BR-10).
@@ -139,7 +139,7 @@ class PurchaseOrderService
         if ($receivedQty === 0) {
             return [
                 'success' => true,
-                'message' => 'Đã ghi nhận dòng hàng (số lượng nhận = 0, không có gì để cộng vào tồn kho).',
+                'message' => 'Line recorded (received quantity = 0, nothing to add to stock).',
             ];
         }
 
@@ -162,12 +162,12 @@ class PurchaseOrderService
             );
             return [
                 'success' => false,
-                'message' => 'Đã ghi nhận số lượng thực nhận, nhưng có lỗi khi cập nhật tồn kho. '
-                            . 'Vui lòng liên hệ Quản lý/Admin để kiểm tra lại tồn kho thủ công.',
+                'message' => 'Received quantity recorded, but an error occurred while updating stock. '
+                            . 'Please contact the Manager/Admin to check the stock manually.',
             ];
         }
 
-        return ['success' => true, 'message' => 'Đã nhận hàng và cập nhật tồn kho thành công.'];
+        return ['success' => true, 'message' => 'Goods received and stock updated successfully.'];
     }
 
     /**
@@ -193,18 +193,18 @@ class PurchaseOrderService
     {
         $po = $this->orderModel->getById($poId);
         if ($po === false) {
-            return ['success' => false, 'results' => [], 'all_delivered' => false, 'message' => 'Không tìm thấy đơn đặt hàng.'];
+            return ['success' => false, 'results' => [], 'all_delivered' => false, 'message' => 'Purchase order not found.'];
         }
         if ($po['status'] !== 'Approved') {
             return [
                 'success' => false,
                 'results' => [],
                 'all_delivered' => false,
-                'message' => "Chỉ có thể nhận hàng cho đơn ở trạng thái 'Approved' (đơn hiện tại: '{$po['status']}').",
+                'message' => "Goods can only be received for orders with status 'Approved' (current status: '{$po['status']}').",
             ];
         }
         if (empty($lines)) {
-            return ['success' => false, 'results' => [], 'all_delivered' => false, 'message' => 'Không có dòng sản phẩm nào để nhận hàng.'];
+            return ['success' => false, 'results' => [], 'all_delivered' => false, 'message' => 'No product lines to receive.'];
         }
 
         $results = [];
@@ -220,7 +220,7 @@ class PurchaseOrderService
                 $results[] = [
                     'po_detail_id' => $poDetailId,
                     'success'      => false,
-                    'message'      => 'Dữ liệu dòng không hợp lệ (thiếu po_detail_id/product_id hoặc số lượng âm).',
+                    'message'      => 'Invalid line data (missing po_detail_id/product_id or negative quantity).',
                 ];
                 $hasFailure = true;
                 continue;
@@ -247,8 +247,8 @@ class PurchaseOrderService
             'results'       => $results,
             'all_delivered' => $allDelivered,
             'message'       => $hasFailure
-                ? 'Một số dòng sản phẩm gặp lỗi khi nhận hàng - xem chi tiết từng dòng.'
-                : ($allDelivered ? 'Đã nhận đủ toàn bộ đơn hàng, đơn chuyển sang trạng thái Delivered.' : 'Đã nhận hàng cho các dòng đã chọn.'),
+                ? 'Some product lines had errors while receiving - see details per line.'
+                : ($allDelivered ? 'Order fully received, order status changed to Delivered.' : 'Goods received for the selected lines.'),
         ];
     }
 
