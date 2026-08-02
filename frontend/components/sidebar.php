@@ -106,7 +106,7 @@ if ($roleId === ROLE_ADMIN) {
             // Replenishment/Stock Incidents), đổi href sang đó.
             // LƯU Ý: forecast/demand_trend KHÔNG còn thuộc nhóm này nữa - đã tách
             // thành mục 'forecast' riêng bên dưới theo yêu cầu.
-            'href'  => '/manager/reorder & forecast/reorder_suggestions.php',
+            'href'  => '/manager/inventory/reorder_suggestions.php',
             'icon'  => 'box',
             'activeAlso' => ['inventory_health', 'ai_replenishment', 'stock_incidents', 'reorder', 'shortage'],
         ],
@@ -116,7 +116,7 @@ if ($roleId === ROLE_ADMIN) {
             // Inventory lẫn Reports vì đây là công cụ tra cứu/dự báo theo TỪNG
             // sản phẩm, khác với Reports (KPI TỔNG toàn hệ thống).
             'label' => 'Demand & Forecast',
-            'href'  => '/manager/reorder & forecast/forecast.php',
+            'href'  => '/manager/forecast.php',
             'icon'  => 'trending-up',
             'activeAlso' => ['demand_trend'],
         ],
