@@ -55,7 +55,7 @@ if (empty($_SESSION['staff_count_id'])) {
     if ($sessionResult['success']) {
         $_SESSION['staff_count_id'] = (int) $sessionResult['count_id'];
     } else {
-        $errorMessage = 'Không thể bắt đầu phiên kiểm kê mới.';
+        $errorMessage = 'Cannot start a new stock count session.';
     }
 }
 $countId = (int) ($_SESSION['staff_count_id'] ?? 0);
@@ -76,8 +76,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'submi
     }
 
     $successMessage = $recordedCount > 0
-        ? "Đã ghi nhận {$recordedCount} sản phẩm vào phiên kiểm kê."
-        : 'Chưa có số liệu nào được nhập.';
+        ? "Recorded {$recordedCount} products in the stock count session."
+        : 'No data was entered.';
 }
 
 // --- Hoàn tất phiên (FR-STF-09) ---
@@ -85,7 +85,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'final
     $finalizeResult = $staffService->finalizeStockCount($countId, $staffId);
     if ($finalizeResult['success']) {
         unset($_SESSION['staff_count_id']);
-        $successMessage = "Đã hoàn tất phiên kiểm kê #{$countId} - {$finalizeResult['discrepancy_items']}/{$finalizeResult['total_items']} sản phẩm có chênh lệch.";
+        $successMessage = "Stock count session #{$countId} finalized - {$finalizeResult['discrepancy_items']}/{$finalizeResult['total_items']} products had discrepancies.";
         $countId = 0;
     } else {
         $errorMessage = $finalizeResult['message'];
@@ -145,11 +145,11 @@ $breadcrumbs = ['Staff', 'Inventory', 'Stock Count'];
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-3">
                     <div>
                         <h2 class="page-heading mb-1">Periodic Stock Count</h2>
-                        <p class="page-subheading mb-0">Đối chiếu tồn kho thực tế trên kệ với số liệu hệ thống. Phiên hiện tại: #<?= $countId ?: '—' ?></p>
+                        <p class="page-subheading mb-0">Reconcile physical shelf stock with system records. Current session: #<?= $countId ?: '—' ?></p>
                     </div>
-                    <form method="post" onsubmit="return confirm('Bắt đầu phiên kiểm kê mới? Phiên hiện tại vẫn còn hiệu lực nếu chưa Hoàn tất.');">
+                    <form method="post" onsubmit="return confirm('Start a new stock count session? Current session will remain active if not finalized.');">
                         <input type="hidden" name="action" value="start_new_session">
-                        <button type="submit" class="btn btn-outline-secondary btn-sm">Bắt đầu phiên mới</button>
+                        <button type="submit" class="btn btn-outline-secondary btn-sm">Start New Session</button>
                     </form>
                 </div>
 
@@ -172,8 +172,8 @@ $breadcrumbs = ['Staff', 'Inventory', 'Stock Count'];
 
                     <div class="panel-card mb-4">
                         <div class="panel-card-header">
-                            <h3 class="panel-card-title">Nhập số lượng đếm thực tế</h3>
-                            <span class="panel-card-note"><?= count($allProducts) ?> sản phẩm đang hoạt động</span>
+                            <h3 class="panel-card-title">Enter Physical Count (Shelf Qty)</h3>
+                            <span class="panel-card-note"><?= count($allProducts) ?> active products</span>
                         </div>
 
                         <div class="table-responsive">
@@ -181,10 +181,10 @@ $breadcrumbs = ['Staff', 'Inventory', 'Stock Count'];
                                 <thead>
                                     <tr>
                                         <th>SKU</th>
-                                        <th>Sản phẩm</th>
-                                        <th class="text-end">Số lượng đếm (Shelf Qty)</th>
-                                        <th class="text-end">System Qty (đã ghi)</th>
-                                        <th>Chênh lệch</th>
+                                        <th>Product</th>
+                                        <th class="text-end">Physical Count (Shelf Qty)</th>
+                                        <th class="text-end">System Qty (recorded)</th>
+                                        <th>Variance</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -205,7 +205,7 @@ $breadcrumbs = ['Staff', 'Inventory', 'Stock Count'];
                                             <td class="text-end text-muted"><?= $counted ? number_format((int) $counted['system_qty']) : '—' ?></td>
                                             <td>
                                                 <?php if ($counted === null): ?>
-                                                    <span class="text-muted small">Chưa đếm</span>
+                                                    <span class="text-muted small">Not counted</span>
                                                 <?php else: ?>
                                                     <?php $d = (int) $counted['discrepancy']; ?>
                                                     <span class="<?= $d > 0 ? 'sc-variance-pos' : ($d < 0 ? 'sc-variance-neg' : 'sc-variance-zero') ?>">
@@ -221,32 +221,32 @@ $breadcrumbs = ['Staff', 'Inventory', 'Stock Count'];
                     </div>
 
                     <div class="d-flex gap-2 mb-4">
-                        <button type="submit" class="btn btn-brand">Ghi nhận số đã nhập</button>
+                        <button type="submit" class="btn btn-brand">Save Counts</button>
                     </div>
                 </form>
 
-                <form method="post" onsubmit="return confirm('Hoàn tất phiên kiểm kê? Sau khi hoàn tất, chênh lệch sẽ được ghi vào lịch sử và không thể sửa lại phiên này.');" class="mb-4">
+                <form method="post" onsubmit="return confirm('Finalize stock count session? After finalization, discrepancies will be recorded in history and this session cannot be modified.');" class="mb-4">
                     <input type="hidden" name="action" value="finalize">
-                    <button type="submit" class="btn btn-success" <?= $totalCounted === 0 ? 'disabled' : '' ?>>Hoàn tất phiên kiểm kê</button>
+                    <button type="submit" class="btn btn-success" <?= $totalCounted === 0 ? 'disabled' : '' ?>>Finalize Stock Count</button>
                 </form>
 
                 <!-- KPI cards -->
                 <div class="row g-3">
                     <div class="col-6 col-xl-3">
                         <div class="kpi-card">
-                            <span class="kpi-label">Đã đếm</span>
+                            <span class="kpi-label">Counted</span>
                             <span class="kpi-value"><?= number_format($totalCounted) ?> / <?= number_format(count($allProducts)) ?></span>
                         </div>
                     </div>
                     <div class="col-6 col-xl-3">
                         <div class="kpi-card <?= $discrepancyCount > 0 ? 'kpi-card-warn' : '' ?>">
-                            <span class="kpi-label">Tỉ lệ chênh lệch</span>
+                            <span class="kpi-label">Variance Rate</span>
                             <span class="kpi-value"><?= number_format($discrepancyPercent, 2) ?>%</span>
                         </div>
                     </div>
                     <div class="col-6 col-xl-3">
                         <div class="kpi-card <?= $discrepancyValue < 0 ? 'kpi-card-warn' : '' ?>">
-                            <span class="kpi-label">Giá trị chênh lệch</span>
+                            <span class="kpi-label">Variance Value</span>
                             <span class="kpi-value">&#8363;<?= number_format($discrepancyValue, 0) ?></span>
                         </div>
                     </div>
@@ -254,7 +254,7 @@ $breadcrumbs = ['Staff', 'Inventory', 'Stock Count'];
 
                 <?php else: ?>
                     <div class="panel-card">
-                        <div class="empty-state">Không có phiên kiểm kê nào đang mở. Bấm "Bắt đầu phiên mới" để tiếp tục.</div>
+                        <div class="empty-state">No active stock count session. Click "Start New Session" to continue.</div>
                     </div>
                 <?php endif; ?>
 
