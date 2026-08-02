@@ -44,15 +44,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'adjus
     $notes = trim((string) ($_POST['notes'] ?? '')); // Ghi chú thêm - không có cột riêng trong stock_movements, gộp vào reason nếu có.
 
     if ($productId <= 0 || $warehouseId <= 0) {
-        $errorMessage = 'Vui lòng chọn sản phẩm và kho.';
+        $errorMessage = 'Please select a product and warehouse.';
     } elseif ($quantityChange === 0) {
-        $errorMessage = 'Số lượng điều chỉnh phải khác 0.';
+        $errorMessage = 'Quantity adjustment must be non-zero.';
     } else {
         $fullReason = $notes !== '' ? "{$reason} - {$notes}" : $reason;
         $result = $staffService->adjustStock($productId, $warehouseId, $quantityChange, $fullReason, $staffId);
 
         if ($result['success']) {
-            $successMessage = 'Đã cập nhật điều chỉnh tồn kho.';
+            $successMessage = 'Stock adjustment updated successfully.';
         } else {
             $errorMessage = $result['message'];
         }
@@ -103,7 +103,7 @@ $breadcrumbs = ['Staff', 'Inventory', 'Adjustment'];
 
                 <div class="mb-3">
                     <h2 class="page-heading mb-1">Inventory Adjustment</h2>
-                    <p class="page-subheading mb-0">Đối chiếu tồn kho thực tế và ghi nhận hao hụt (hư hỏng/hết hạn/thất thoát).</p>
+                    <p class="page-subheading mb-0">Reconcile physical inventory and record shrinkage (damage/expiration/loss).</p>
                 </div>
 
                 <nav class="inv-tab-nav">
@@ -131,9 +131,9 @@ $breadcrumbs = ['Staff', 'Inventory', 'Adjustment'];
                                 <input type="hidden" name="action" value="adjust_stock">
 
                                 <div class="mb-3">
-                                    <label class="form-label">Sản phẩm (SKU)</label>
+                                    <label class="form-label">Product (SKU)</label>
                                     <select name="product_id" class="form-select" required>
-                                        <option value="">-- Chọn sản phẩm --</option>
+                                        <option value="">-- Select product --</option>
                                         <?php foreach ($allProducts as $p): ?>
                                             <option value="<?= (int) $p['product_id'] ?>"><?= htmlspecialchars($p['sku_code'] . ' - ' . $p['product_name'], ENT_QUOTES, 'UTF-8') ?></option>
                                         <?php endforeach; ?>
@@ -141,9 +141,9 @@ $breadcrumbs = ['Staff', 'Inventory', 'Adjustment'];
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label">Kho</label>
+                                    <label class="form-label">Warehouse</label>
                                     <select name="warehouse_id" class="form-select" required>
-                                        <option value="">-- Chọn kho --</option>
+                                        <option value="">-- Select warehouse --</option>
                                         <?php foreach ($warehouses as $wh): ?>
                                             <option value="<?= (int) $wh['warehouse_id'] ?>"><?= htmlspecialchars($wh['warehouse_name'], ENT_QUOTES, 'UTF-8') ?></option>
                                         <?php endforeach; ?>
@@ -151,9 +151,9 @@ $breadcrumbs = ['Staff', 'Inventory', 'Adjustment'];
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label">Lý do điều chỉnh</label>
+                                    <label class="form-label">Adjustment Reason</label>
                                     <select name="reason" class="form-select" required>
-                                        <option value="">-- Chọn lý do (BR-11) --</option>
+                                        <option value="">-- Select reason (BR-11) --</option>
                                         <?php foreach ($reasons as $r): ?>
                                             <option value="<?= htmlspecialchars($r, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($r, ENT_QUOTES, 'UTF-8') ?></option>
                                         <?php endforeach; ?>
@@ -161,17 +161,17 @@ $breadcrumbs = ['Staff', 'Inventory', 'Adjustment'];
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label">Số lượng thay đổi (+/-)</label>
-                                    <input type="number" step="1" name="quantity_change" class="form-control" placeholder="VD: -3" required>
-                                    <div class="form-text">Số âm = giảm tồn kho (hư hỏng/mất), số dương = tăng (tìm lại hàng thất lạc...).</div>
+                                    <label class="form-label">Quantity Change (+/-)</label>
+                                    <input type="number" step="1" name="quantity_change" class="form-control" placeholder="E.g.: -3" required>
+                                    <div class="form-text">Negative = decrease (damage/loss), positive = increase (found missing stock).</div>
                                 </div>
 
                                 <div class="mb-3">
-                                    <label class="form-label">Ghi chú (tùy chọn)</label>
-                                    <textarea name="notes" class="form-control" rows="3" placeholder="Giải thích thêm về sai lệch..."></textarea>
+                                    <label class="form-label">Notes (optional)</label>
+                                    <textarea name="notes" class="form-control" rows="3" placeholder="Additional explanation about the discrepancy..."></textarea>
                                 </div>
 
-                                <button type="submit" class="btn btn-brand w-100">Cập nhật tồn kho</button>
+                                <button type="submit" class="btn btn-brand w-100">Update Stock</button>
                             </form>
                         </div>
                     </div>
@@ -181,19 +181,19 @@ $breadcrumbs = ['Staff', 'Inventory', 'Adjustment'];
                         <div class="row g-3">
                             <div class="col-12 col-md-4">
                                 <div class="kpi-card h-100">
-                                    <span class="kpi-label">Điều chỉnh hôm nay</span>
+                                    <span class="kpi-label">Today's Adjustments</span>
                                     <span class="kpi-value"><?= number_format(count($todayAdjustments)) ?></span>
                                 </div>
                             </div>
                             <div class="col-12 col-md-4">
                                 <div class="kpi-card h-100">
-                                    <span class="kpi-label">Tổng dòng lịch sử (gần đây)</span>
+                                    <span class="kpi-label">Total History (recent)</span>
                                     <span class="kpi-value"><?= number_format(count($history)) ?></span>
                                 </div>
                             </div>
                             <div class="col-12 col-md-4">
                                 <div class="kpi-card h-100">
-                                    <span class="kpi-label">Lý do khả dụng</span>
+                                    <span class="kpi-label">Available Reasons</span>
                                     <span class="kpi-value"><?= count($reasons) ?></span>
                                 </div>
                             </div>
@@ -201,14 +201,14 @@ $breadcrumbs = ['Staff', 'Inventory', 'Adjustment'];
 
                         <div class="panel-card mt-3">
                             <div class="panel-card-header">
-                                <h3 class="panel-card-title">Lý do điều chỉnh hợp lệ</h3>
+                                <h3 class="panel-card-title">Valid Adjustment Reasons</h3>
                             </div>
                             <div class="d-flex flex-wrap gap-2">
                                 <?php foreach ($reasons as $r): ?>
                                     <span class="status-badge status-badge-muted"><?= htmlspecialchars($r, ENT_QUOTES, 'UTF-8') ?></span>
                                 <?php endforeach; ?>
                             </div>
-                            <p class="text-muted small mt-3 mb-0">Mọi điều chỉnh đều bắt buộc chọn 1 trong các lý do trên (BR-11) và được ghi vào lịch sử để kiểm tra sau này (BR-12).</p>
+                            <p class="text-muted small mt-3 mb-0">All adjustments must select one of the above reasons (BR-11) and are recorded in history for audit purposes (BR-12).</p>
                         </div>
                     </div>
                 </div>
@@ -217,14 +217,14 @@ $breadcrumbs = ['Staff', 'Inventory', 'Adjustment'];
                 <div class="panel-card">
                     <div class="panel-card-header">
                         <h3 class="panel-card-title">Inventory Adjustment History</h3>
-                        <span class="panel-card-note">Xem các điều chỉnh đã thực hiện trước đó</span>
+                        <span class="panel-card-note">View previous adjustments</span>
                     </div>
 
                     <form method="get" class="filter-bar mb-3">
                         <div class="filter-bar-search">
-                            <label class="form-label">Sản phẩm</label>
+                            <label class="form-label">Product</label>
                             <select name="filter_product" class="form-select form-select-sm">
-                                <option value="">Tất cả sản phẩm</option>
+                                <option value="">All products</option>
                                 <?php foreach ($allProducts as $p): ?>
                                     <option value="<?= (int) $p['product_id'] ?>" <?= $filterProductId === (int) $p['product_id'] ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($p['sku_code'] . ' - ' . $p['product_name'], ENT_QUOTES, 'UTF-8') ?>
@@ -233,36 +233,36 @@ $breadcrumbs = ['Staff', 'Inventory', 'Adjustment'];
                             </select>
                         </div>
                         <div>
-                            <label class="form-label">Lý do</label>
+                            <label class="form-label">Reason</label>
                             <select name="filter_reason" class="form-select form-select-sm">
-                                <option value="">Tất cả lý do</option>
+                                <option value="">All reasons</option>
                                 <?php foreach ($reasons as $r): ?>
                                     <option value="<?= htmlspecialchars($r, ENT_QUOTES, 'UTF-8') ?>" <?= $filterReason === $r ? 'selected' : '' ?>><?= htmlspecialchars($r, ENT_QUOTES, 'UTF-8') ?></option>
                                 <?php endforeach; ?>
                             </select>
                         </div>
                         <div>
-                            <label class="form-label">Ngày</label>
+                            <label class="form-label">Date</label>
                             <input type="date" name="filter_date" class="form-control form-control-sm" value="<?= htmlspecialchars((string) $filterDate, ENT_QUOTES, 'UTF-8') ?>">
                         </div>
                         <div class="filter-bar-actions">
-                            <button type="submit" class="btn btn-brand btn-sm flex-fill">Lọc</button>
+                            <button type="submit" class="btn btn-brand btn-sm flex-fill">Filter</button>
                             <a href="adjustments.php" class="btn btn-outline-secondary btn-sm flex-fill">Reset</a>
                         </div>
                     </form>
 
                     <?php if (empty($history)): ?>
-                        <div class="empty-state">Không có điều chỉnh nào khớp bộ lọc.</div>
+                        <div class="empty-state">No adjustments match the current filters.</div>
                     <?php else: ?>
                         <div class="table-responsive">
                             <table class="table data-table align-middle mb-0">
                                 <thead>
                                     <tr>
-                                        <th>Ngày</th>
-                                        <th>Sản phẩm</th>
-                                        <th class="text-end">Số lượng</th>
-                                        <th>Lý do</th>
-                                        <th>Nhân viên</th>
+                                        <th>Date</th>
+                                        <th>Product</th>
+                                        <th class="text-end">Quantity</th>
+                                        <th>Reason</th>
+                                        <th>Staff</th>
                                     </tr>
                                 </thead>
                                 <tbody>
