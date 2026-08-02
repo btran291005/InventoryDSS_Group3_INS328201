@@ -277,8 +277,8 @@ $activeMenu  = 'dashboard';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>System Overview - InventoryDSS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="<?= BASE_URL ?>/assets/css/theme_variables.css" rel="stylesheet">
-    <link href="<?= BASE_URL ?>/assets/css/custom.css" rel="stylesheet">
+    <link href="<?= BASE_URL ?>/assets/css/theme_variables.css?v=20260802" rel="stylesheet">
+    <link href="<?= BASE_URL ?>/assets/css/custom.css?v=20260802" rel="stylesheet">
 </head>
 <body>
     <div class="app-shell">
