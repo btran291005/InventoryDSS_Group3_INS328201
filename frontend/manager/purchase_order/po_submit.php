@@ -79,7 +79,7 @@ $selectedPo = null;
 if ($selectedPoId !== null) {
     $selectedPo = $managerService->getPurchaseOrderDetail($selectedPoId);
     if ($selectedPo === false) {
-        $flashMessage = 'Không tìm thấy đơn đặt hàng.';
+        $flashMessage = 'Purchase order not found.';
         $flashIsError = true;
         $selectedPoId = null;
     }
@@ -170,7 +170,7 @@ if ($selectedPo !== null) {
     // thống này khác (FMCG/Fresh_Food/Imported_Korean).
     $categoryTotals = [];
     foreach ($selectedPo['details'] as $line) {
-        $cat = $line['category_name'] ?? 'Khác';
+        $cat = $line['category_name'] ?? 'Other';
         $categoryTotals[$cat] = ($categoryTotals[$cat] ?? 0) + (float) $line['line_cost'];
         $poTotalAmount += (float) $line['line_cost'];
     }
@@ -192,7 +192,7 @@ $breadcrumbs = ['Manager', 'Purchase Order'];
 $activeMenu  = 'po';
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -223,32 +223,32 @@ $activeMenu  = 'po';
                         <div>
                             <h2 class="page-heading mb-1">Purchase Orders</h2>
                             <p class="page-subheading mb-0">
-                                Đơn nháp (Draft) cần xử lý - sửa số lượng (BR-06) rồi gửi Admin duyệt.
-                                Xem tổng trạng thái mọi đơn tại <a href="po-status.php">PO Status</a>.
+                                Draft orders to process - edit quantities (BR-06) then submit for Admin approval.
+                                View the overall status of all orders at <a href="po-status.php">PO Status</a>.
                             </p>
                         </div>
-                        <a href="po_create.php" class="btn btn-brand btn-sm">+ Tạo PO thủ công</a>
+                        <a href="po_create.php" class="btn btn-brand btn-sm">+ Create Manual PO</a>
                     </div>
 
                     <div class="panel-card">
                         <div class="panel-card-header">
-                            <h3 class="panel-card-title">Đơn nháp của tôi</h3>
-                            <span class="panel-card-note"><?= count($myOrders) ?> đơn</span>
+                            <h3 class="panel-card-title">My Draft Orders</h3>
+                            <span class="panel-card-note"><?= count($myOrders) ?> orders</span>
                         </div>
 
                         <?php if (empty($myOrders)): ?>
-                            <div class="empty-state">Không có đơn nháp nào cần xử lý. Vào <a href="../reorder/reorder_suggestions.php">Reorder Suggestions</a> để tạo đơn theo gợi ý, <a href="po_create.php">tạo PO thủ công</a>, hoặc xem <a href="po-status.php">PO Status</a> cho các đơn đã nộp.</div>
+                            <div class="empty-state">No draft orders to process. Go to <a href="../reorder/reorder_suggestions.php">Reorder Suggestions</a> to create an order from suggestions, <a href="po_create.php">create a manual PO</a>, or view <a href="po-status.php">PO Status</a> for submitted orders.</div>
                         <?php else: ?>
                             <div class="table-responsive">
                                 <table class="table data-table align-middle mb-0">
                                     <thead>
                                         <tr>
-                                            <th>Mã PO</th>
-                                            <th>Nhà cung cấp</th>
-                                            <th>Trạng thái</th>
-                                            <th class="text-end">Tổng giá trị</th>
-                                            <th>Ngày tạo</th>
-                                            <th class="text-end">Thao tác</th>
+                                            <th>PO Number</th>
+                                            <th>Supplier</th>
+                                            <th>Status</th>
+                                            <th class="text-end">Total Amount</th>
+                                            <th>Created Date</th>
+                                            <th class="text-end">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -260,7 +260,7 @@ $activeMenu  = 'po';
                                                 <td class="text-end"><?= number_format((float) $po['total_amount']) ?> đ</td>
                                                 <td class="text-muted small"><?= htmlspecialchars(date('d/m/Y', strtotime($po['created_at'])), ENT_QUOTES, 'UTF-8') ?></td>
                                                 <td class="text-end">
-                                                    <a href="po_submit.php?po_id=<?= (int) $po['po_id'] ?>" class="btn btn-outline-secondary btn-sm">Xem chi tiết</a>
+                                                    <a href="po_submit.php?po_id=<?= (int) $po['po_id'] ?>" class="btn btn-outline-secondary btn-sm">View Details</a>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -275,7 +275,7 @@ $activeMenu  = 'po';
                     <!-- ================= CHI TIẾT PO ================= -->
                     <?php $isDraft = $selectedPo['status'] === 'Draft'; ?>
 
-                    <a href="po_submit.php" class="btn btn-outline-secondary btn-sm mb-3">&larr; Quay lại danh sách</a>
+                    <a href="po_submit.php" class="btn btn-outline-secondary btn-sm mb-3">&larr; Back to List</a>
 
                     <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
                         <div>
@@ -284,24 +284,24 @@ $activeMenu  = 'po';
                                 <span class="stock-pill ms-2" style="<?= poStatusBadgeStyle($selectedPo['status']) ?>"><?= htmlspecialchars($selectedPo['status'], ENT_QUOTES, 'UTF-8') ?></span>
                             </h2>
                             <p class="page-subheading mb-0">
-                                Nhà cung cấp: <strong><?= htmlspecialchars($selectedPo['supplier_name'], ENT_QUOTES, 'UTF-8') ?></strong>
-                                &middot; Tạo bởi <?= htmlspecialchars($selectedPo['created_by_name'], ENT_QUOTES, 'UTF-8') ?>
+                                Supplier: <strong><?= htmlspecialchars($selectedPo['supplier_name'], ENT_QUOTES, 'UTF-8') ?></strong>
+                                &middot; Created by <?= htmlspecialchars($selectedPo['created_by_name'], ENT_QUOTES, 'UTF-8') ?>
                                 &middot; <?= htmlspecialchars(date('d/m/Y H:i', strtotime($selectedPo['created_at'])), ENT_QUOTES, 'UTF-8') ?>
                             </p>
                         </div>
 
                         <?php if ($isDraft): ?>
-                            <form method="POST" onsubmit="return confirm('Gửi đơn PO #<?= (int) $selectedPo['po_id'] ?> cho Admin duyệt? Sau khi gửi, đơn sẽ bị khóa và không thể sửa (BR-20).');">
+                            <form method="POST" onsubmit="return confirm('Submit PO #<?= (int) $selectedPo['po_id'] ?> for Admin approval? Once submitted, the order will be locked and cannot be edited (BR-20).');">
                                 <input type="hidden" name="action" value="submit_po">
                                 <input type="hidden" name="po_id" value="<?= (int) $selectedPo['po_id'] ?>">
-                                <button type="submit" class="btn btn-brand btn-sm">Gửi Admin duyệt</button>
+                                <button type="submit" class="btn btn-brand btn-sm">Submit for Admin Approval</button>
                             </form>
                         <?php endif; ?>
                     </div>
 
                     <?php if (!$isDraft): ?>
                         <div class="alert alert-info py-2 px-3 mb-3" style="font-size: .82rem;">
-                            Đơn đã ở trạng thái <strong><?= htmlspecialchars($selectedPo['status'], ENT_QUOTES, 'UTF-8') ?></strong> - không thể sửa số lượng (BR-20: đơn Draft mới được chỉnh sửa).
+                            This order is in <strong><?= htmlspecialchars($selectedPo['status'], ENT_QUOTES, 'UTF-8') ?></strong> status - quantities cannot be edited (BR-20: only Draft orders can be edited).
                         </div>
                     <?php endif; ?>
 
@@ -345,26 +345,26 @@ $activeMenu  = 'po';
                                 <?php if ($supplierPerf !== false && $supplierPerf !== null): ?>
                                     <div class="d-flex justify-content-between py-1" style="font-size:.87rem;">
                                         <span class="text-muted">Avg. Lead Time</span>
-                                        <span class="fw-semibold"><?= number_format((float) $supplierPerf['avg_lead_time_days'], 1) ?> ngày</span>
+                                        <span class="fw-semibold"><?= number_format((float) $supplierPerf['avg_lead_time_days'], 1) ?> days</span>
                                     </div>
                                     <div class="d-flex justify-content-between py-1" style="font-size:.87rem;">
-                                        <span class="text-muted">Đơn đã giao</span>
+                                        <span class="text-muted">Orders Delivered</span>
                                         <span class="fw-semibold"><?= number_format((int) $supplierPerf['total_delivered_orders']) ?></span>
                                     </div>
                                     <div class="d-flex justify-content-between py-1" style="font-size:.87rem;">
-                                        <span class="text-muted">Tỉ lệ sai lệch</span>
-                                        <span class="fw-semibold"><?= $supplierPerf['discrepancy_rate_percent'] !== null ? number_format((float) $supplierPerf['discrepancy_rate_percent'], 1) . '%' : 'Chưa có dữ liệu' ?></span>
+                                        <span class="text-muted">Discrepancy Rate</span>
+                                        <span class="fw-semibold"><?= $supplierPerf['discrepancy_rate_percent'] !== null ? number_format((float) $supplierPerf['discrepancy_rate_percent'], 1) . '%' : 'No data yet' ?></span>
                                     </div>
                                 <?php else: ?>
-                                    <div class="text-muted small">Chưa có đơn 'Delivered' để đánh giá hiệu suất nhà cung cấp.</div>
+                                    <div class="text-muted small">No 'Delivered' orders yet to evaluate supplier performance.</div>
                                 <?php endif; ?>
 
                                 <?php $supplierPhone = $supplierPerf['contact_phone'] ?? null; ?>
                                 <div class="mt-3 pt-3" style="border-top:1px solid var(--surface-border-soft);">
                                     <?php if (!empty($supplierPhone)): ?>
-                                        <a href="tel:<?= htmlspecialchars($supplierPhone, ENT_QUOTES, 'UTF-8') ?>" class="btn btn-outline-secondary btn-sm w-100">Liên hệ NCC: <?= htmlspecialchars($supplierPhone, ENT_QUOTES, 'UTF-8') ?></a>
+                                        <a href="tel:<?= htmlspecialchars($supplierPhone, ENT_QUOTES, 'UTF-8') ?>" class="btn btn-outline-secondary btn-sm w-100">Contact Supplier: <?= htmlspecialchars($supplierPhone, ENT_QUOTES, 'UTF-8') ?></a>
                                     <?php else: ?>
-                                        <span class="text-muted small">Chưa có số điện thoại liên hệ.</span>
+                                        <span class="text-muted small">No contact phone number available.</span>
                                     <?php endif; ?>
                                 </div>
                             </div>
@@ -376,7 +376,7 @@ $activeMenu  = 'po';
                                     <h3 class="panel-card-title">Estimated PO Total</h3>
                                 </div>
                                 <div class="fw-bold" style="font-size:1.9rem; color: var(--brand-primary);"><?= number_format($poTotalAmount) ?> đ</div>
-                                <p class="text-muted small mb-0 mt-2">Tổng giá trị nhập hàng (approved_qty &times; unit_cost) của <?= count($selectedPo['details']) ?> dòng sản phẩm trong đơn.</p>
+                                <p class="text-muted small mb-0 mt-2">Total purchase value (approved_qty &times; unit_cost) of <?= count($selectedPo['details']) ?> product lines in this order.</p>
                             </div>
                         </div>
 
@@ -407,7 +407,7 @@ $activeMenu  = 'po';
                                         </div>
                                     </div>
                                 <?php else: ?>
-                                    <div class="empty-state">Chưa có dữ liệu sản phẩm.</div>
+                                    <div class="empty-state">No product data yet.</div>
                                 <?php endif; ?>
                             </div>
                         </div>
@@ -415,19 +415,19 @@ $activeMenu  = 'po';
 
                     <div class="panel-card">
                         <div class="panel-card-header">
-                            <h3 class="panel-card-title">Chi tiết sản phẩm</h3>
+                            <h3 class="panel-card-title">Product Details</h3>
                         </div>
 
                         <div class="table-responsive">
                             <table class="table data-table align-middle mb-0">
                                 <thead>
                                     <tr>
-                                        <th>Sản phẩm</th>
-                                        <th class="text-end">SL gợi ý</th>
-                                        <th class="text-end">SL đặt (BR-06)</th>
-                                        <th class="text-end">Đơn giá</th>
-                                        <th class="text-end">Thành tiền</th>
-                                        <?php if ($isDraft): ?><th class="text-end">Thao tác</th><?php endif; ?>
+                                        <th>Product</th>
+                                        <th class="text-end">Suggested Qty</th>
+                                        <th class="text-end">Ordered Qty (BR-06)</th>
+                                        <th class="text-end">Unit Price</th>
+                                        <th class="text-end">Line Total</th>
+                                        <?php if ($isDraft): ?><th class="text-end">Actions</th><?php endif; ?>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -450,7 +450,7 @@ $activeMenu  = 'po';
                                                             data-po-detail-id="<?= (int) $line['po_detail_id'] ?>"
                                                             data-product-name="<?= htmlspecialchars($line['product_name'], ENT_QUOTES, 'UTF-8') ?>"
                                                             data-current-qty="<?= (int) $line['approved_qty'] ?>">
-                                                        Sửa SL
+                                                        Edit Qty
                                                     </button>
                                                 </td>
                                             <?php endif; ?>
@@ -459,7 +459,7 @@ $activeMenu  = 'po';
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <td colspan="4" class="text-end fw-semibold">Tổng giá trị đơn</td>
+                                        <td colspan="4" class="text-end fw-semibold">Order Total</td>
                                         <td class="text-end fw-bold"><?= number_format($totalAmount) ?> đ</td>
                                         <?php if ($isDraft): ?><td></td><?php endif; ?>
                                     </tr>
@@ -483,17 +483,17 @@ $activeMenu  = 'po';
                 <input type="hidden" name="po_id" value="<?= (int) $selectedPo['po_id'] ?>">
                 <input type="hidden" name="po_detail_id" id="editPoDetailId" value="">
                 <div class="modal-header">
-                    <h5 class="modal-title">Sửa số lượng - <span id="editProductName"></span></h5>
+                    <h5 class="modal-title">Edit Quantity - <span id="editProductName"></span></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <label class="form-label small">Số lượng đặt mới</label>
+                    <label class="form-label small">New Order Quantity</label>
                     <input type="number" name="new_qty" id="editNewQty" class="form-control" min="1" required>
-                    <div class="form-text">Thay đổi được ghi lại vào Audit Log (BR-06).</div>
+                    <div class="form-text">Changes are recorded in the Audit Log (BR-06).</div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-brand btn-sm">Lưu số lượng</button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-brand btn-sm">Save Quantity</button>
                 </div>
             </form>
         </div>
