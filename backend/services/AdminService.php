@@ -79,15 +79,15 @@ class AdminService
         $roleId   = (int) ($data['role_id'] ?? 0);
 
         if ($username === '' || $fullName === '') {
-            return ['success' => false, 'message' => 'Tên đăng nhập và họ tên không được để trống.'];
+            return ['success' => false, 'message' => 'Username and full name cannot be empty.'];
         }
 
         if (!in_array($roleId, [ROLE_ADMIN, ROLE_MANAGER, ROLE_STAFF], true)) {
-            return ['success' => false, 'message' => 'Vai trò không hợp lệ.'];
+            return ['success' => false, 'message' => 'Invalid role.'];
         }
 
         if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            return ['success' => false, 'message' => 'Email không đúng định dạng.'];
+            return ['success' => false, 'message' => 'Invalid email format.'];
         }
 
         $strength = Auth::validatePasswordStrength($password);
@@ -125,7 +125,7 @@ class AdminService
         if (array_key_exists('full_name', $data)) {
             $fullName = trim((string) $data['full_name']);
             if ($fullName === '') {
-                return ['success' => false, 'message' => 'Họ tên không được để trống.'];
+                return ['success' => false, 'message' => 'Full name cannot be empty.'];
             }
             $payload['full_name'] = $fullName;
         }
@@ -133,7 +133,7 @@ class AdminService
         if (array_key_exists('email', $data)) {
             $email = trim((string) $data['email']);
             if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-                return ['success' => false, 'message' => 'Email không đúng định dạng.'];
+                return ['success' => false, 'message' => 'Invalid email format.'];
             }
             $payload['email'] = $email !== '' ? $email : null;
         }
@@ -146,13 +146,13 @@ class AdminService
         if (array_key_exists('role_id', $data)) {
             $roleId = (int) $data['role_id'];
             if (!in_array($roleId, [ROLE_ADMIN, ROLE_MANAGER, ROLE_STAFF], true)) {
-                return ['success' => false, 'message' => 'Vai trò không hợp lệ.'];
+                return ['success' => false, 'message' => 'Invalid role.'];
             }
             $payload['role_id'] = $roleId;
         }
 
         if (empty($payload)) {
-            return ['success' => false, 'message' => 'Không có dữ liệu để cập nhật.'];
+            return ['success' => false, 'message' => 'No data to update.'];
         }
 
         $ok = $this->accountModel->update($accountId, $payload);
@@ -161,7 +161,7 @@ class AdminService
             Logger::log($actorId, 'UPDATE_ACCOUNT', 'accounts', $accountId);
         }
 
-        return ['success' => $ok, 'message' => $ok ? 'Đã cập nhật tài khoản.' : 'Có lỗi xảy ra khi cập nhật.'];
+        return ['success' => $ok, 'message' => $ok ? 'Account updated.' : 'An error occurred while updating.'];
     }
 
     /** FR-ADM-02: Admin đặt lại mật khẩu cho 1 tài khoản (không cần biết mật khẩu cũ). */
@@ -178,7 +178,7 @@ class AdminService
             Logger::log($actorId, 'RESET_PASSWORD', 'accounts', $accountId);
         }
 
-        return ['success' => $ok, 'message' => $ok ? 'Đã đặt lại mật khẩu.' : 'Có lỗi xảy ra khi đặt lại mật khẩu.'];
+        return ['success' => $ok, 'message' => $ok ? 'Password reset.' : 'An error occurred while resetting the password.'];
     }
 
     /**
@@ -189,7 +189,7 @@ class AdminService
     public function lockAccount(int $accountId, int $actorId): array
     {
         if ($accountId === $actorId) {
-            return ['success' => false, 'message' => 'Không thể tự khóa chính tài khoản đang đăng nhập.'];
+            return ['success' => false, 'message' => 'Cannot lock the account you are currently logged in with.'];
         }
 
         $ok = $this->accountModel->lock($accountId);
@@ -198,7 +198,7 @@ class AdminService
             Logger::log($actorId, 'LOCK_ACCOUNT', 'accounts', $accountId);
         }
 
-        return ['success' => $ok, 'message' => $ok ? 'Đã khóa tài khoản.' : 'Có lỗi xảy ra khi khóa tài khoản.'];
+        return ['success' => $ok, 'message' => $ok ? 'Account locked.' : 'An error occurred while locking the account.'];
     }
 
     public function unlockAccount(int $accountId, int $actorId): array
@@ -209,7 +209,7 @@ class AdminService
             Logger::log($actorId, 'UNLOCK_ACCOUNT', 'accounts', $accountId);
         }
 
-        return ['success' => $ok, 'message' => $ok ? 'Đã mở khóa tài khoản.' : 'Có lỗi xảy ra khi mở khóa tài khoản.'];
+        return ['success' => $ok, 'message' => $ok ? 'Account unlocked.' : 'An error occurred while unlocking the account.'];
     }
 
     /**
@@ -223,7 +223,7 @@ class AdminService
     public function deleteAccount(int $accountId, int $actorId): array
     {
         if ($accountId === $actorId) {
-            return ['success' => false, 'message' => 'Không thể tự xoá chính tài khoản đang đăng nhập.'];
+            return ['success' => false, 'message' => 'Cannot delete the account you are currently logged in with.'];
         }
 
         $result = $this->accountModel->delete($accountId);
@@ -299,7 +299,7 @@ class AdminService
             Logger::log($actorId, 'UPDATE_ROLE_PERMISSIONS', 'role_permissions', $roleId);
         }
 
-        return ['success' => true, 'message' => 'Đã cập nhật quyền cho vai trò.'];
+        return ['success' => true, 'message' => 'Role permissions updated.'];
     }
 
     // =====================================================================
@@ -337,16 +337,16 @@ class AdminService
     public function createProduct(array $data, int $actorId): array
     {
         if (empty($data['sku_code']) || empty($data['product_name'])) {
-            return ['success' => false, 'message' => 'Mã SKU và tên sản phẩm không được để trống.'];
+            return ['success' => false, 'message' => 'SKU code and product name cannot be empty.'];
         }
         if (empty($data['category_id'])) {
-            return ['success' => false, 'message' => 'Sản phẩm phải được gán category_type trước khi lưu (FR-ADM-05).'];
+            return ['success' => false, 'message' => 'Product must be assigned a category_type before saving (FR-ADM-05).'];
         }
         if (empty($data['supplier_id'])) {
-            return ['success' => false, 'message' => 'Sản phẩm phải gán nhà cung cấp.'];
+            return ['success' => false, 'message' => 'Product must be assigned a supplier.'];
         }
         if (isset($data['unit_cost']) && (float) $data['unit_cost'] < 0) {
-            return ['success' => false, 'message' => 'Giá nhập (unit_cost) không được là số âm.'];
+            return ['success' => false, 'message' => 'Purchase cost (unit_cost) cannot be negative.'];
         }
 
         $result = $this->productModel->create($data);
@@ -365,7 +365,7 @@ class AdminService
     public function updateProduct(int $productId, array $data, int $actorId): array
     {
         if (isset($data['unit_cost']) && (float) $data['unit_cost'] < 0) {
-            return ['success' => false, 'message' => 'Giá nhập (unit_cost) không được là số âm.'];
+            return ['success' => false, 'message' => 'Purchase cost (unit_cost) cannot be negative.'];
         }
 
         $ok = $this->productModel->update($productId, $data);
@@ -374,7 +374,7 @@ class AdminService
             Logger::log($actorId, 'UPDATE_PRODUCT', 'products', $productId);
         }
 
-        return ['success' => $ok, 'message' => $ok ? 'Đã cập nhật sản phẩm.' : 'Có lỗi xảy ra hoặc không có gì thay đổi.'];
+        return ['success' => $ok, 'message' => $ok ? 'Product updated.' : 'An error occurred or nothing changed.'];
     }
 
     /**
@@ -389,7 +389,7 @@ class AdminService
             Logger::log($actorId, 'DEACTIVATE_PRODUCT', 'products', $productId);
         }
 
-        return ['success' => $ok, 'message' => $ok ? 'Đã ngừng kinh doanh sản phẩm.' : 'Có lỗi xảy ra.'];
+        return ['success' => $ok, 'message' => $ok ? 'Product discontinued.' : 'An error occurred.'];
     }
 
     public function activateProduct(int $productId, int $actorId): array
@@ -400,7 +400,7 @@ class AdminService
             Logger::log($actorId, 'ACTIVATE_PRODUCT', 'products', $productId);
         }
 
-        return ['success' => $ok, 'message' => $ok ? 'Đã kích hoạt lại sản phẩm.' : 'Có lỗi xảy ra.'];
+        return ['success' => $ok, 'message' => $ok ? 'Product reactivated.' : 'An error occurred.'];
     }
 
     // --- Suppliers ---
@@ -418,13 +418,13 @@ class AdminService
     public function createSupplier(array $data, int $actorId): array
     {
         if (empty($data['supplier_name'])) {
-            return ['success' => false, 'message' => 'Tên nhà cung cấp không được để trống.'];
+            return ['success' => false, 'message' => 'Supplier name cannot be empty.'];
         }
 
         $supplierId = $this->supplierModel->create($data);
         Logger::log($actorId, 'CREATE_SUPPLIER', 'suppliers', (int) $supplierId);
 
-        return ['success' => true, 'supplier_id' => $supplierId, 'message' => 'Đã tạo nhà cung cấp.'];
+        return ['success' => true, 'supplier_id' => $supplierId, 'message' => 'Supplier created.'];
     }
 
     public function updateSupplier(int $supplierId, array $data, int $actorId): array
@@ -435,7 +435,7 @@ class AdminService
             Logger::log($actorId, 'UPDATE_SUPPLIER', 'suppliers', $supplierId);
         }
 
-        return ['success' => $ok, 'message' => $ok ? 'Đã cập nhật nhà cung cấp.' : 'Có lỗi xảy ra hoặc không có gì thay đổi.'];
+        return ['success' => $ok, 'message' => $ok ? 'Supplier updated.' : 'An error occurred or nothing changed.'];
     }
 
     public function deleteSupplier(int $supplierId, int $actorId): array
@@ -449,8 +449,8 @@ class AdminService
         return [
             'success' => $ok,
             'message' => $ok
-                ? 'Đã xóa nhà cung cấp.'
-                : 'Không thể xóa: nhà cung cấp đang được sản phẩm hoặc đơn hàng tham chiếu.',
+                ? 'Supplier deleted.'
+                : 'Cannot delete: this supplier is still referenced by products or orders.',
         ];
     }
 
@@ -464,13 +464,13 @@ class AdminService
     public function createWarehouse(array $data, int $actorId): array
     {
         if (empty($data['warehouse_name'])) {
-            return ['success' => false, 'message' => 'Tên kho không được để trống.'];
+            return ['success' => false, 'message' => 'Warehouse name cannot be empty.'];
         }
 
         $warehouseId = $this->warehouseModel->create($data);
         Logger::log($actorId, 'CREATE_WAREHOUSE', 'warehouses', (int) $warehouseId);
 
-        return ['success' => true, 'warehouse_id' => $warehouseId, 'message' => 'Đã tạo kho.'];
+        return ['success' => true, 'warehouse_id' => $warehouseId, 'message' => 'Warehouse created.'];
     }
 
     public function updateWarehouse(int $warehouseId, array $data, int $actorId): array
@@ -481,7 +481,7 @@ class AdminService
             Logger::log($actorId, 'UPDATE_WAREHOUSE', 'warehouses', $warehouseId);
         }
 
-        return ['success' => $ok, 'message' => $ok ? 'Đã cập nhật kho.' : 'Có lỗi xảy ra hoặc không có gì thay đổi.'];
+        return ['success' => $ok, 'message' => $ok ? 'Warehouse updated.' : 'An error occurred or nothing changed.'];
     }
 
     public function deleteWarehouse(int $warehouseId, int $actorId): array
@@ -494,7 +494,7 @@ class AdminService
 
         return [
             'success' => $ok,
-            'message' => $ok ? 'Đã xóa kho.' : 'Không thể xóa: kho đang còn tồn kho hoặc bị tham chiếu.',
+            'message' => $ok ? 'Warehouse deleted.' : 'Cannot delete: this warehouse still has stock or is referenced.',
         ];
     }
 
@@ -524,7 +524,7 @@ class AdminService
     {
         foreach (['min_stock', 'max_stock', 'safety_stock', 'reorder_point'] as $field) {
             if (!isset($data[$field]) || (int) $data[$field] < 0) {
-                return ['success' => false, 'message' => "Giá trị '{$field}' phải là số nguyên không âm."];
+                return ['success' => false, 'message' => "Value '{$field}' must be a non-negative integer."];
             }
         }
 
@@ -534,13 +534,13 @@ class AdminService
         $reorderPoint = (int) $data['reorder_point'];
 
         if ($maxStock < $minStock) {
-            return ['success' => false, 'message' => 'max_stock phải lớn hơn hoặc bằng min_stock.'];
+            return ['success' => false, 'message' => 'max_stock must be greater than or equal to min_stock.'];
         }
         if ($reorderPoint < $safetyStock) {
-            return ['success' => false, 'message' => 'reorder_point phải lớn hơn hoặc bằng safety_stock.'];
+            return ['success' => false, 'message' => 'reorder_point must be greater than or equal to safety_stock.'];
         }
         if ($reorderPoint > $maxStock) {
-            return ['success' => false, 'message' => 'reorder_point không được vượt quá max_stock.'];
+            return ['success' => false, 'message' => 'reorder_point cannot exceed max_stock.'];
         }
 
         return $this->productModel->upsertReorderRule(
@@ -594,7 +594,7 @@ class AdminService
         $endpointUrl = trim($endpointUrl);
 
         if ($apiName === '' || $endpointUrl === '' || trim($apiKey) === '') {
-            return ['success' => false, 'message' => 'Tên API, endpoint và API key không được để trống.'];
+            return ['success' => false, 'message' => 'API name, endpoint and API key cannot be empty.'];
         }
 
         try {
@@ -633,10 +633,10 @@ class AdminService
 
             Logger::log($actorId, 'UPDATE_API_CONFIG', 'api_configs', $configId);
 
-            return ['success' => true, 'config_id' => $configId, 'message' => 'Đã lưu cấu hình API.'];
+            return ['success' => true, 'config_id' => $configId, 'message' => 'API configuration saved.'];
         } catch (PDOException $e) {
             error_log('[AdminService::upsertApiConfig] ' . $e->getMessage());
-            return ['success' => false, 'message' => 'Có lỗi xảy ra khi lưu cấu hình API.'];
+            return ['success' => false, 'message' => 'An error occurred while saving the API configuration.'];
         }
     }
 
@@ -679,7 +679,7 @@ class AdminService
     public function rejectPurchaseOrder(int $poId, string $reason, int $actorId): array
     {
         if (trim($reason) === '') {
-            return ['success' => false, 'message' => 'Vui lòng nhập lý do từ chối đơn hàng.'];
+            return ['success' => false, 'message' => 'Please enter a reason for rejecting the order.'];
         }
 
         $result = $this->orderModel->reject($poId, $actorId);
@@ -948,7 +948,7 @@ class AdminService
             if (!empty($otherRows)) {
                 $otherSkuCount = array_sum(array_map(fn($r) => (int) $r['sku_count'], $otherRows));
                 $productMix[] = [
-                    'category_name' => 'Khác (' . count($otherRows) . ' nhóm)',
+                    'category_name' => 'Other (' . count($otherRows) . ' groups)',
                     'sku_count'     => $otherSkuCount,
                     'percentage'    => round(($otherSkuCount / $totalProducts) * 100, 1),
                 ];
@@ -1118,9 +1118,9 @@ class AdminService
         return [
             'period_1' => $this->calculateKpisForPeriod($period1From, $period1To),
             'period_2' => $this->calculateKpisForPeriod($period2From, $period2To),
-            'note'     => 'Turnover tính theo GIÁ TRỊ (COGS = SL bán × unit_cost) / giá trị tồn kho '
-                        . 'trung bình hiện tại. Forecast MAE vẫn theo số lượng vì demand_forecasts '
-                        . 'không lưu giá trị tiền.',
+            'note'     => 'Turnover is calculated by VALUE (COGS = quantity sold × unit_cost) / current average '
+                        . 'stock value. Forecast MAE is still by quantity because demand_forecasts '
+                        . 'does not store monetary value.',
         ];
     }
 
@@ -1398,7 +1398,7 @@ class AdminService
     public function backupDatabase(int $actorId): array
     {
         if (!is_dir(BACKUP_STORAGE_DIR) && !mkdir(BACKUP_STORAGE_DIR, 0755, true) && !is_dir(BACKUP_STORAGE_DIR)) {
-            return ['success' => false, 'message' => 'Không thể tạo thư mục lưu backup (' . BACKUP_STORAGE_DIR . ') - kiểm tra quyền ghi.'];
+            return ['success' => false, 'message' => 'Cannot create backup storage directory (' . BACKUP_STORAGE_DIR . ') - check write permissions.'];
         }
 
         try {
@@ -1443,7 +1443,7 @@ class AdminService
             unlink($filePath); // dọn file rỗng/lỗi, không để lại rác trong thư mục backup
         }
 
-        $errorMessage = $success ? null : ($stderr !== '' ? $stderr : 'mysqldump kết thúc với exit code ' . $exitCode . ' nhưng không có thông báo lỗi chi tiết.');
+        $errorMessage = $success ? null : ($stderr !== '' ? $stderr : 'mysqldump finished with exit code ' . $exitCode . ' but no detailed error message.');
 
         $this->backupHistoryModel->markFinished(
             $backupId,
@@ -1457,7 +1457,7 @@ class AdminService
             Logger::log($actorId, 'CREATE_BACKUP', 'backup_history', $backupId);
             return [
                 'success'         => true,
-                'message'         => 'Đã sao lưu CSDL thành công.',
+                'message'         => 'Database backup completed successfully.',
                 'backup_id'       => $backupId,
                 'file_size_bytes' => (int) $fileSizeBytes,
             ];
@@ -1465,7 +1465,7 @@ class AdminService
 
         return [
             'success'   => false,
-            'message'   => 'Sao lưu thất bại: ' . $errorMessage,
+            'message'   => 'Backup failed: ' . $errorMessage,
             'backup_id' => $backupId,
         ];
     }
@@ -1485,12 +1485,12 @@ class AdminService
         $source = $this->backupHistoryModel->getById($sourceBackupId);
 
         if ($source === false || $source['backup_type'] !== 'full' || $source['status'] !== 'success') {
-            return ['success' => false, 'message' => 'Chỉ có thể phục hồi từ 1 bản backup đã tạo thành công trong danh sách.'];
+            return ['success' => false, 'message' => 'Can only restore from a backup that was created successfully in the list.'];
         }
 
         $filePath = $source['file_path'];
         if ($filePath === null || !file_exists($filePath)) {
-            return ['success' => false, 'message' => 'File backup không còn tồn tại trên server (có thể đã bị xóa thủ công).'];
+            return ['success' => false, 'message' => 'Backup file no longer exists on the server (it may have been manually deleted).'];
         }
 
         try {
@@ -1523,16 +1523,16 @@ class AdminService
         }
 
         $success = $exitCode === 0;
-        $errorMessage = $success ? null : ($stderr !== '' ? $stderr : 'mysql (restore) kết thúc với exit code ' . $exitCode);
+        $errorMessage = $success ? null : ($stderr !== '' ? $stderr : 'mysql (restore) finished with exit code ' . $exitCode);
 
         $this->backupHistoryModel->markFinished($restoreId, $success, $filePath, null, $errorMessage);
 
         if ($success) {
             Logger::log($actorId, 'RESTORE_BACKUP', 'backup_history', $sourceBackupId);
-            return ['success' => true, 'message' => 'Đã phục hồi CSDL từ bản backup #' . $sourceBackupId . '.'];
+            return ['success' => true, 'message' => 'Database restored from backup #' . $sourceBackupId . '.'];
         }
 
-        return ['success' => false, 'message' => 'Phục hồi thất bại: ' . $errorMessage];
+        return ['success' => false, 'message' => 'Restore failed: ' . $errorMessage];
     }
 
     /** FR-ADM-10: lịch sử backup/restore cho bảng "Recent Backups" trên UI. */
