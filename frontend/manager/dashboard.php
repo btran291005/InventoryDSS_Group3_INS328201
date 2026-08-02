@@ -69,15 +69,15 @@ foreach ($stockoutRiskTop as $risk) {
 function restockPriorityLabel(?float $riskHours): array
 {
     if ($riskHours === null) {
-        return ['Bình thường', 'status-badge-info'];
+        return ['Normal', 'status-badge-info'];
     }
     if ($riskHours <= DASHBOARD_URGENT_RISK_HOURS) {
-        return ['Khẩn cấp', 'status-badge-danger'];
+        return ['Urgent', 'status-badge-danger'];
     }
     if ($riskHours <= DASHBOARD_HIGH_PRIORITY_RISK_HOURS) {
-        return ['Ưu tiên cao', 'status-badge-warning'];
+        return ['High Priority', 'status-badge-warning'];
     }
-    return ['Bình thường', 'status-badge-info'];
+    return ['Normal', 'status-badge-info'];
 }
 
 /** Sparkline SVG đơn giản từ 1 mảng số nguyên - giống hệt bản dùng ở admin/dashboard.php. */
@@ -114,7 +114,7 @@ $breadcrumbs = ['Manager', 'Dashboard'];
 $activeMenu  = 'dashboard';
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -137,11 +137,11 @@ $activeMenu  = 'dashboard';
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
                     <div>
                         <h2 class="page-heading mb-1">Manager Dashboard</h2>
-                        <p class="page-subheading mb-0">Tổng quan tồn kho, gợi ý đặt hàng và trạng thái đơn hàng - cập nhật theo thời gian thực.</p>
+                        <p class="page-subheading mb-0">Overview of inventory, reorder suggestions, and order status - updated in real time.</p>
                     </div>
                     <div class="d-flex gap-2">
-                        <a href="purchase_order/po-status.php" class="btn btn-outline-secondary btn-sm">Theo dõi PO</a>
-                        <a href="reorder%20%26%20forecast/reorder_suggestions.php" class="btn btn-brand btn-sm">Gợi ý đặt hàng</a>
+                        <a href="purchase_order/po-status.php" class="btn btn-outline-secondary btn-sm">Track PO</a>
+                        <a href="reorder%20%26%20forecast/reorder_suggestions.php" class="btn btn-brand btn-sm">Reorder Suggestions</a>
                     </div>
                 </div>
 
@@ -150,7 +150,7 @@ $activeMenu  = 'dashboard';
                     <div class="col-6 col-xl">
                         <div class="kpi-card">
                             <div class="kpi-card-top">
-                                <span class="kpi-label">Tổng SKU đang theo dõi</span>
+                                <span class="kpi-label">Total SKUs Tracked</span>
                             </div>
                             <span class="kpi-value"><?= number_format($totalSkuCount) ?></span>
                         </div>
@@ -158,7 +158,7 @@ $activeMenu  = 'dashboard';
                     <div class="col-6 col-xl">
                         <div class="kpi-card <?= $lowStockCount > 0 ? 'kpi-card-warn' : '' ?>">
                             <div class="kpi-card-top">
-                                <span class="kpi-label">Cảnh báo tồn thấp</span>
+                                <span class="kpi-label">Low Stock Alerts</span>
                             </div>
                             <span class="kpi-value"><?= number_format($lowStockCount) ?></span>
                         </div>
@@ -166,7 +166,7 @@ $activeMenu  = 'dashboard';
                     <div class="col-6 col-xl">
                         <div class="kpi-card <?= $stockoutRiskCount > 0 ? 'kpi-card-warn' : '' ?>">
                             <div class="kpi-card-top">
-                                <span class="kpi-label">Rủi ro hết hàng (Top 10)</span>
+                                <span class="kpi-label">Stockout Risk (Top 10)</span>
                             </div>
                             <span class="kpi-value"><?= number_format($stockoutRiskCount) ?></span>
                         </div>
@@ -174,7 +174,7 @@ $activeMenu  = 'dashboard';
                     <div class="col-6 col-xl">
                         <div class="kpi-card">
                             <div class="kpi-card-top">
-                                <span class="kpi-label">Giao dịch bán (7 ngày)</span>
+                                <span class="kpi-label">Sales Transactions (7 days)</span>
                             </div>
                             <span class="kpi-value"><?= number_format(array_sum($salesTrendCounts)) ?></span>
                             <?= renderDashboardSparkline($salesTrendCounts, '#166534') ?>
@@ -183,7 +183,7 @@ $activeMenu  = 'dashboard';
                     <div class="col-6 col-xl">
                         <div class="kpi-card <?= $openShortageCount > 0 ? 'kpi-card-warn' : '' ?>">
                             <div class="kpi-card-top">
-                                <span class="kpi-label">Sự cố thiếu hàng đang mở</span>
+                                <span class="kpi-label">Open Shortage Incidents</span>
                             </div>
                             <span class="kpi-value"><?= number_format($openShortageCount) ?></span>
                         </div>
@@ -195,14 +195,14 @@ $activeMenu  = 'dashboard';
                     <div class="col-12 col-xl-8">
                         <div class="panel-card h-100">
                             <div class="panel-card-header">
-                                <h3 class="panel-card-title">Gợi ý bổ sung hàng</h3>
-                                <a href="reorder%20%26%20forecast/reorder_suggestions.php" class="panel-card-link">Xem tất cả &amp; tạo PO &rarr;</a>
+                                <h3 class="panel-card-title">Restock Suggestions</h3>
+                                <a href="reorder%20%26%20forecast/reorder_suggestions.php" class="panel-card-link">View all &amp; create PO &rarr;</a>
                             </div>
 
                             <?php if ($reorderSuggestions['success'] !== true): ?>
                                 <div class="empty-state"><?= htmlspecialchars($reorderSuggestions['message'], ENT_QUOTES, 'UTF-8') ?></div>
                             <?php elseif (empty($reorderSuggestions['suggestions'])): ?>
-                                <div class="empty-state">Không có sản phẩm nào cần bổ sung hàng lúc này.</div>
+                                <div class="empty-state">No products currently need restocking.</div>
                             <?php else: ?>
                                 <div class="restock-grid">
                                     <?php foreach (array_slice($reorderSuggestions['suggestions'], 0, 8) as $s): ?>
@@ -216,14 +216,14 @@ $activeMenu  = 'dashboard';
                                             </div>
                                             <div>
                                                 <span class="restock-card-qty"><?= number_format((int) $s['suggested_qty']) ?></span>
-                                                <span class="restock-card-qty-label"> đơn vị</span>
+                                                <span class="restock-card-qty-label"> units</span>
                                             </div>
                                             <span class="status-badge <?= $priorityClass ?>"><?= $priorityLabel ?></span>
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
                                 <?php if (count($reorderSuggestions['suggestions']) > 8): ?>
-                                    <div class="text-muted small mt-2">và <?= count($reorderSuggestions['suggestions']) - 8 ?> sản phẩm khác...</div>
+                                    <div class="text-muted small mt-2">and <?= count($reorderSuggestions['suggestions']) - 8 ?> more products...</div>
                                 <?php endif; ?>
                             <?php endif; ?>
                         </div>
@@ -232,24 +232,24 @@ $activeMenu  = 'dashboard';
                     <div class="col-12 col-xl-4">
                         <div class="panel-card h-100">
                             <div class="panel-card-header">
-                                <h3 class="panel-card-title">Thao tác nhanh</h3>
+                                <h3 class="panel-card-title">Quick Actions</h3>
                             </div>
                             <div class="quick-action-grid">
                                 <a href="reorder%20%26%20forecast/reorder_suggestions.php" class="quick-action-btn">
                                     <svg class="quick-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20a1 1 0 100-2 1 1 0 000 2zM20 20a1 1 0 100-2 1 1 0 000 2zM1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
-                                    Gợi ý đặt hàng
+                                    Reorder Suggestions
                                 </a>
                                 <a href="purchase_order/po-status.php" class="quick-action-btn">
                                     <svg class="quick-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/><path d="M9 13l2 2 4-4"/></svg>
-                                    Theo dõi PO
+                                    Track PO
                                 </a>
                                 <a href="shortage_incidents.php" class="quick-action-btn">
                                     <svg class="quick-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
-                                    Sự cố thiếu hàng
+                                    Shortage Incidents
                                 </a>
                                 <a href="vendor/product_pfm.php" class="quick-action-btn">
                                     <svg class="quick-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8l-5.1 5.1-2.8-2.8L7 14"/></svg>
-                                    Hiệu suất sản phẩm
+                                    Product Performance
                                 </a>
                             </div>
                         </div>
@@ -266,26 +266,26 @@ $activeMenu  = 'dashboard';
                         <div class="panel-card">
                             <div class="panel-card-header">
                                 <h3 class="panel-card-title">
-                                    Top 10 rủi ro hết hàng
+                                    Top 10 Stockout Risk
                                     <?php if (!empty($stockoutRiskTop)): ?>
                                         <span class="badge-count badge-count-warn"><?= count($stockoutRiskTop) ?></span>
                                     <?php endif; ?>
                                 </h3>
-                                <span class="panel-card-note">Xếp hạng theo tồn kho ÷ tốc độ bán trung bình 7 ngày</span>
+                                <span class="panel-card-note">Ranked by stock ÷ average 7-day sales velocity</span>
                             </div>
 
                             <?php if (empty($stockoutRiskTop)): ?>
-                                <div class="empty-state">Không có sản phẩm nào đang có nguy cơ hết hàng.</div>
+                                <div class="empty-state">No products are currently at risk of stockout.</div>
                             <?php else: ?>
                                 <div class="table-responsive">
                                     <table class="table table-borderless align-middle mb-0 data-table">
                                         <thead>
                                             <tr>
-                                                <th>Sản phẩm</th>
-                                                <th class="text-end">Tồn kho</th>
+                                                <th>Product</th>
+                                                <th class="text-end">Stock</th>
                                                 <th class="text-end">Reorder Point</th>
-                                                <th class="text-end">Bán TB/ngày</th>
-                                                <th>Mức độ rủi ro</th>
+                                                <th class="text-end">Avg Sold/Day</th>
+                                                <th>Risk Level</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -333,17 +333,17 @@ $activeMenu  = 'dashboard';
                         <div class="panel-card h-100">
                             <div class="panel-card-header">
                                 <div>
-                                    <h3 class="panel-card-title mb-0">Xu hướng bán hàng</h3>
+                                    <h3 class="panel-card-title mb-0">Sales Trend</h3>
                                     <?php if (array_sum($salesTrendCounts) > 0): ?>
                                         <span class="fw-bold" style="font-size: 1.05rem; color: var(--brand-primary);"><?= number_format(array_sum($salesTrendCounts)) ?></span>
-                                        <span class="text-muted small"> giao dịch trong 7 ngày</span>
+                                        <span class="text-muted small"> transactions in 7 days</span>
                                     <?php endif; ?>
                                 </div>
-                                <span class="panel-card-note">Số giao dịch/ngày, 7 ngày gần nhất</span>
+                                <span class="panel-card-note">Transactions/day, last 7 days</span>
                             </div>
 
                             <?php if (array_sum($salesTrendCounts) === 0): ?>
-                                <div class="empty-state">Chưa có giao dịch bán hàng nào trong 7 ngày qua.</div>
+                                <div class="empty-state">No sales transactions in the past 7 days yet.</div>
                             <?php else: ?>
                                 <?php
                                     $chartW = 700; $chartH = 220;
@@ -430,15 +430,15 @@ $activeMenu  = 'dashboard';
                         <div class="panel-card">
                             <div class="panel-card-header">
                                 <h3 class="panel-card-title">
-                                    Cảnh báo
+                                    Alerts
                                     <?php
                                         $alertItems = [];
                                         foreach (array_slice($openShortages, 0, 3) as $incident) {
                                             $alertItems[] = [
                                                 'severity' => 'danger',
-                                                'title'    => 'Sự cố thiếu hàng',
+                                                'title'    => 'Shortage Incident',
                                                 'body'     => htmlspecialchars($incident['product_name'], ENT_QUOTES, 'UTF-8')
-                                                            . (!empty($incident['resolution_action']) ? ' — ' . htmlspecialchars($incident['resolution_action'], ENT_QUOTES, 'UTF-8') : ' — chưa có hướng xử lý'),
+                                                            . (!empty($incident['resolution_action']) ? ' — ' . htmlspecialchars($incident['resolution_action'], ENT_QUOTES, 'UTF-8') : ' — no resolution yet'),
                                                 'link'     => 'shortage_incidents.php',
                                             ];
                                         }
@@ -446,7 +446,7 @@ $activeMenu  = 'dashboard';
                                             foreach (array_slice($myPendingOrders, 0, 3 - count($alertItems)) as $po) {
                                                 $alertItems[] = [
                                                     'severity' => 'warning',
-                                                    'title'    => 'PO đang chờ Admin duyệt',
+                                                    'title'    => 'PO Awaiting Admin Approval',
                                                     'body'     => 'PO #' . (int) $po['po_id'] . ' — ' . htmlspecialchars($po['supplier_name'], ENT_QUOTES, 'UTF-8'),
                                                     'link'     => 'purchase_order/po-status.php',
                                                 ];
@@ -459,8 +459,8 @@ $activeMenu  = 'dashboard';
                                                 }
                                                 $alertItems[] = [
                                                     'severity' => 'danger',
-                                                    'title'    => 'Sắp hết hàng',
-                                                    'body'     => htmlspecialchars($risk['product_name'], ENT_QUOTES, 'UTF-8') . ' — còn ' . number_format((float) $risk['risk_hours'], 1) . 'h',
+                                                    'title'    => 'Running Low',
+                                                    'body'     => htmlspecialchars($risk['product_name'], ENT_QUOTES, 'UTF-8') . ' — ' . number_format((float) $risk['risk_hours'], 1) . 'h left',
                                                     'link'     => '#',
                                                 ];
                                                 if (count($alertItems) >= 3) {
@@ -470,13 +470,13 @@ $activeMenu  = 'dashboard';
                                         }
                                     ?>
                                     <?php if (!empty($alertItems)): ?>
-                                        <span class="badge-count badge-count-warn"><?= count($alertItems) ?> MỚI</span>
+                                        <span class="badge-count badge-count-warn"><?= count($alertItems) ?> NEW</span>
                                     <?php endif; ?>
                                 </h3>
                             </div>
 
                             <?php if (empty($alertItems)): ?>
-                                <div class="empty-state">Không có cảnh báo nào.</div>
+                                <div class="empty-state">No alerts.</div>
                             <?php else: ?>
                                 <div class="alert-list">
                                     <?php foreach ($alertItems as $alert): ?>
@@ -497,8 +497,8 @@ $activeMenu  = 'dashboard';
                         <!-- PO status (chỉ PO của Manager hiện tại - khác PO Workflow bên Admin) -->
                         <div class="panel-card flex-fill">
                             <div class="panel-card-header">
-                                <h3 class="panel-card-title">Đơn đặt hàng của tôi</h3>
-                                <a href="purchase_order/po-status.php" class="panel-card-link">Xem tất cả &rarr;</a>
+                                <h3 class="panel-card-title">My Orders</h3>
+                                <a href="purchase_order/po-status.php" class="panel-card-link">View all &rarr;</a>
                             </div>
 
                             <?php
@@ -507,7 +507,7 @@ $activeMenu  = 'dashboard';
                                 $poAxisMax = max(4, (int) ceil($maxPoCount / 4) * 4);
                             ?>
                             <?php if ($totalPoCount === 0): ?>
-                                <div class="empty-state">Bạn chưa tạo đơn đặt hàng nào.</div>
+                                <div class="empty-state">You haven't created any purchase orders yet.</div>
                             <?php else: ?>
                                 <div class="po-workflow-chart" style="height: 140px;">
                                     <?php foreach ($poStatusDistribution as $col): ?>
