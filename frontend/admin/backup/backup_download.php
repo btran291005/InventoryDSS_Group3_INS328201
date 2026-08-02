@@ -43,14 +43,14 @@ foreach ($history as $row) {
 
 if ($target === null || $target['status'] !== 'success' || $target['file_path'] === null) {
     http_response_code(404);
-    echo 'Không tìm thấy bản backup hợp lệ để tải.';
+    echo 'No valid backup found to download.';
     exit;
 }
 
 $filePath = $target['file_path'];
 if (!file_exists($filePath)) {
     http_response_code(404);
-    echo 'File backup không còn tồn tại trên server.';
+    echo 'The backup file no longer exists on the server.';
     exit;
 }
 
