@@ -108,6 +108,12 @@ class StaffService
         return $alerts;
     }
 
+    /** Synonym for getUrgentRestockList() to support older page naming and low stock listing. */
+    public function getLowStockList(): array
+    {
+        return $this->getUrgentRestockList();
+    }
+
     private function getRecentSalesVolume(int $productId, int $days): int
     {
         $history = $this->salesModel->getSalesHistory($productId, $days);
@@ -135,7 +141,7 @@ class StaffService
     public function createSale(int $staffId, int $warehouseId, array $items): array
     {
         if (empty($items)) {
-            return ['success' => false, 'transaction_id' => null, 'message' => 'Giao dịch không có sản phẩm.'];
+            return ['success' => false, 'transaction_id' => null, 'message' => 'Transaction has no products.'];
         }
 
         foreach ($items as &$item) {
@@ -215,7 +221,7 @@ class StaffService
         if (!in_array($reason, self::ADJUSTMENT_REASONS, true)) {
             return [
                 'success' => false,
-                'message' => 'Lý do điều chỉnh không hợp lệ - vui lòng chọn từ danh sách quy định (BR-11).',
+                'message' => 'Invalid adjustment reason - please choose from the defined list (BR-11).',
             ];
         }
 
@@ -250,7 +256,7 @@ class StaffService
     public function startStockCountSession(int $staffId): array
     {
         $countId = $this->stockCountModel->createSession($staffId);
-        return ['success' => true, 'count_id' => $countId, 'message' => 'Đã bắt đầu phiên kiểm kê.'];
+        return ['success' => true, 'count_id' => $countId, 'message' => 'Stock count session started.'];
     }
 
     /**
@@ -261,7 +267,7 @@ class StaffService
     public function recordCountItem(int $countId, int $productId, int $actualQty): array
     {
         if ($actualQty < 0) {
-            return ['success' => false, 'message' => 'Số lượng đếm không được là số âm.'];
+            return ['success' => false, 'message' => 'Counted quantity cannot be negative.'];
         }
 
         return $this->stockCountModel->addCountItem($countId, $productId, $actualQty);
@@ -321,12 +327,12 @@ class StaffService
     public function logCustomerFeedback(?int $productId, int $staffId, string $feedbackText): array
     {
         if (trim($feedbackText) === '') {
-            return ['success' => false, 'message' => 'Nội dung phản hồi không được để trống.'];
+            return ['success' => false, 'message' => 'Feedback content cannot be empty.'];
         }
 
         $feedbackId = $this->stockCountModel->addCustomerFeedback($productId, $staffId, trim($feedbackText));
 
-        return ['success' => true, 'feedback_id' => $feedbackId, 'message' => 'Đã ghi nhận phản hồi khách hàng.'];
+        return ['success' => true, 'feedback_id' => $feedbackId, 'message' => 'Customer feedback recorded.'];
     }
 
     public function listCustomerFeedback(?int $productId = null): array
