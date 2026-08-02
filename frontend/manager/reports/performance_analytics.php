@@ -65,10 +65,10 @@ foreach ($radarCategories as $c) {
 }
 $radarMax = $radarMax > 0 ? $radarMax : 1.0;
 
-$pageSubtitle = 'Từ ' . date('d/m/Y', strtotime($fromDate)) . ' đến ' . date('d/m/Y', strtotime($toDate));
+$pageSubtitle = 'From ' . date('d/m/Y', strtotime($fromDate)) . ' to ' . date('d/m/Y', strtotime($toDate));
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -102,8 +102,8 @@ $pageSubtitle = 'Từ ' . date('d/m/Y', strtotime($fromDate)) . ' đến ' . dat
                         <p class="page-subheading mb-0"><?= htmlspecialchars($pageSubtitle, ENT_QUOTES, 'UTF-8') ?></p>
                     </div>
                     <div class="d-flex gap-2">
-                        <a href="product_pfm.php" class="btn btn-outline-secondary btn-sm">Xếp hạng sản phẩm chi tiết &rarr;</a>
-                        <a href="supplier_leadtime.php" class="btn btn-outline-secondary btn-sm">Lead-time nhà cung cấp &rarr;</a>
+                        <a href="product_pfm.php" class="btn btn-outline-secondary btn-sm">Detailed Product Ranking &rarr;</a>
+                        <a href="supplier_leadtime.php" class="btn btn-outline-secondary btn-sm">Supplier Lead-time &rarr;</a>
                     </div>
                 </div>
 
@@ -111,37 +111,37 @@ $pageSubtitle = 'Từ ' . date('d/m/Y', strtotime($fromDate)) . ' đến ' . dat
                 <div class="panel-card mb-3">
                     <form method="get" class="filter-bar p-1">
                         <div>
-                            <label class="form-label">Từ ngày</label>
+                            <label class="form-label">From date</label>
                             <input type="date" name="from_date" class="form-control form-control-sm" value="<?= htmlspecialchars($fromDate, ENT_QUOTES, 'UTF-8') ?>">
                         </div>
                         <div>
-                            <label class="form-label">Đến ngày</label>
+                            <label class="form-label">To date</label>
                             <input type="date" name="to_date" class="form-control form-control-sm" value="<?= htmlspecialchars($toDate, ENT_QUOTES, 'UTF-8') ?>">
                         </div>
                         <div>
-                            <button type="submit" class="btn btn-brand btn-sm">Áp dụng</button>
+                            <button type="submit" class="btn btn-brand btn-sm">Apply</button>
                         </div>
                     </form>
                 </div>
 
                 <div class="pa-note">
-                    Doanh thu và giá trị hao hụt tính bằng giá bán lẻ / giá nhập thật từ hệ thống.
-                    Không hiển thị "AI Demand Accuracy", "Sales vs Target" hay "Forecast Variance" vì
-                    hệ thống hiện chưa lưu dữ liệu dự báo-so-với-thực-tế theo ngày hay chỉ tiêu doanh số -
-                    thay bằng Top Suppliers và Waste theo ngành hàng, đều là số liệu thật.
+                    Revenue and waste values are calculated using actual retail / cost prices from the system.
+                    "AI Demand Accuracy", "Sales vs Target", and "Forecast Variance" are not shown because
+                    the system does not currently store daily forecast-vs-actual data or sales targets -
+                    these are replaced by Top Suppliers and Waste by Category, both backed by real data.
                 </div>
 
                 <!-- KPI cards hàng đầu -->
                 <div class="row g-3 mb-4">
                     <div class="col-6 col-xl-3">
                         <div class="kpi-card">
-                            <span class="kpi-label">Giá trị tồn kho</span>
+                            <span class="kpi-label">Inventory Value</span>
                             <span class="kpi-value">&#8363;<?= number_format($analytics['avg_inventory_value'], 0) ?></span>
                         </div>
                     </div>
                     <div class="col-6 col-xl-3">
                         <div class="kpi-card <?= ($analytics['waste']['waste_rate_percent'] ?? 0) > 2 ? 'kpi-card-warn' : '' ?>">
-                            <span class="kpi-label">Tỉ lệ hao hụt (Waste Rate)</span>
+                            <span class="kpi-label">Waste Rate</span>
                             <span class="kpi-value">
                                 <?= $analytics['waste']['waste_rate_percent'] !== null ? number_format($analytics['waste']['waste_rate_percent'], 2) . '%' : 'N/A' ?>
                             </span>
@@ -149,13 +149,13 @@ $pageSubtitle = 'Từ ' . date('d/m/Y', strtotime($fromDate)) . ' đến ' . dat
                     </div>
                     <div class="col-6 col-xl-3">
                         <div class="kpi-card">
-                            <span class="kpi-label">Doanh thu (kỳ này)</span>
+                            <span class="kpi-label">Revenue (This Period)</span>
                             <span class="kpi-value">&#8363;<?= number_format($analytics['revenue']['total_revenue'], 0) ?></span>
                         </div>
                     </div>
                     <div class="col-6 col-xl-3">
                         <div class="kpi-card">
-                            <span class="kpi-label">Giá trị hao hụt (kỳ này)</span>
+                            <span class="kpi-label">Waste Value (This Period)</span>
                             <span class="kpi-value">&#8363;<?= number_format($analytics['waste']['waste_value'], 0) ?></span>
                         </div>
                     </div>
@@ -166,12 +166,12 @@ $pageSubtitle = 'Từ ' . date('d/m/Y', strtotime($fromDate)) . ' đến ' . dat
                     <div class="col-12 col-xl-8">
                         <div class="panel-card h-100">
                             <div class="panel-card-header">
-                                <h3 class="panel-card-title">Xu hướng sự cố thiếu hàng</h3>
-                                <span class="panel-card-note">Số sự cố ghi nhận mỗi ngày (shortage_incidents)</span>
+                                <h3 class="panel-card-title">Shortage Incident Trend</h3>
+                                <span class="panel-card-note">Number of incidents logged per day (shortage_incidents)</span>
                             </div>
 
                             <?php if (array_sum($stockoutCounts) === 0): ?>
-                                <div class="empty-state">Không có sự cố thiếu hàng nào trong khoảng thời gian này.</div>
+                                <div class="empty-state">No shortage incidents in this time range.</div>
                             <?php else: ?>
                                 <?php
                                     $chartW = 900; $chartH = 220;
@@ -213,19 +213,19 @@ $pageSubtitle = 'Từ ' . date('d/m/Y', strtotime($fromDate)) . ' đến ' . dat
                     <div class="col-12 col-xl-4">
                         <div class="panel-card h-100">
                             <div class="panel-card-header">
-                                <h3 class="panel-card-title">Nhà cung cấp tin cậy nhất</h3>
+                                <h3 class="panel-card-title">Most Reliable Suppliers</h3>
                             </div>
                             <?php if (empty($analytics['top_suppliers'])): ?>
-                                <div class="empty-state">Chưa có đơn hàng "Delivered" để đánh giá.</div>
+                                <div class="empty-state">No "Delivered" orders yet to evaluate.</div>
                             <?php else: ?>
                                 <?php foreach ($analytics['top_suppliers'] as $s): ?>
                                     <div class="d-flex justify-content-between align-items-center mb-2 pb-2 border-bottom">
                                         <div>
                                             <div class="fw-semibold small"><?= htmlspecialchars($s['supplier_name'], ENT_QUOTES, 'UTF-8') ?></div>
-                                            <div class="text-muted" style="font-size: 12px;">Lead-time TB: <?= number_format((float) $s['avg_lead_time_days'], 1) ?> ngày</div>
+                                            <div class="text-muted" style="font-size: 12px;">Avg lead-time: <?= number_format((float) $s['avg_lead_time_days'], 1) ?> days</div>
                                         </div>
                                         <span class="stock-pill <?= (float) $s['discrepancy_rate_percent'] > 10 ? 'stock-pill-warn' : '' ?>">
-                                            <?= number_format((float) $s['discrepancy_rate_percent'], 1) ?>% sai lệch
+                                            <?= number_format((float) $s['discrepancy_rate_percent'], 1) ?>% discrepancy
                                         </span>
                                     </div>
                                 <?php endforeach; ?>
@@ -240,11 +240,11 @@ $pageSubtitle = 'Từ ' . date('d/m/Y', strtotime($fromDate)) . ' đến ' . dat
                         <div class="panel-card h-100">
                             <div class="panel-card-header">
                                 <h3 class="panel-card-title">Category Strength</h3>
-                                <span class="panel-card-note">Vòng quay tồn kho theo giá trị (COGS/Stock value)</span>
+                                <span class="panel-card-note">Inventory turnover by value (COGS/Stock value)</span>
                             </div>
 
                             <?php if (empty($radarCategories)): ?>
-                                <div class="empty-state">Không có dữ liệu.</div>
+                                <div class="empty-state">No data.</div>
                             <?php else: ?>
                                 <?php
                                     $cx = 150; $cy = 145; $r = 105;
@@ -286,10 +286,10 @@ $pageSubtitle = 'Từ ' . date('d/m/Y', strtotime($fromDate)) . ' đến ' . dat
                     <div class="col-12 col-xl-4">
                         <div class="panel-card h-100">
                             <div class="panel-card-header">
-                                <h3 class="panel-card-title">Doanh thu theo tháng</h3>
+                                <h3 class="panel-card-title">Revenue by Month</h3>
                             </div>
                             <?php if (empty($analytics['revenue']['by_month'])): ?>
-                                <div class="empty-state">Không có dữ liệu bán hàng.</div>
+                                <div class="empty-state">No sales data.</div>
                             <?php else: ?>
                                 <?php
                                     $maxRevenue = max(array_column($analytics['revenue']['by_month'], 'revenue')) ?: 1;
@@ -311,10 +311,10 @@ $pageSubtitle = 'Từ ' . date('d/m/Y', strtotime($fromDate)) . ' đến ' . dat
                     <div class="col-12 col-xl-4">
                         <div class="panel-card h-100">
                             <div class="panel-card-header">
-                                <h3 class="panel-card-title">Hao hụt theo ngành hàng</h3>
+                                <h3 class="panel-card-title">Waste by Category</h3>
                             </div>
                             <?php if (empty($analytics['waste']['by_category'])): ?>
-                                <div class="empty-state">Không có hao hụt nào ghi nhận trong khoảng thời gian này.</div>
+                                <div class="empty-state">No waste recorded in this time range.</div>
                             <?php else: ?>
                                 <?php
                                     $maxWaste = max(array_column($analytics['waste']['by_category'], 'waste_value')) ?: 1;
@@ -337,21 +337,21 @@ $pageSubtitle = 'Từ ' . date('d/m/Y', strtotime($fromDate)) . ' đến ' . dat
                 <div class="panel-card">
                     <div class="panel-card-header">
                         <h3 class="panel-card-title">Top Overstock Risks</h3>
-                        <span class="panel-card-note">Tồn kho cao nhưng bán chậm trong kỳ đã chọn</span>
+                        <span class="panel-card-note">High stock but slow sales in the selected period</span>
                     </div>
 
                     <?php if (empty($analytics['top_overstock_risks'])): ?>
-                        <div class="empty-state">Không có dữ liệu.</div>
+                        <div class="empty-state">No data.</div>
                     <?php else: ?>
                         <div class="table-responsive">
                             <table class="table data-table align-middle mb-0">
                                 <thead>
                                     <tr>
-                                        <th>Sản phẩm</th>
-                                        <th>Ngành hàng</th>
-                                        <th class="text-end">Tồn kho hiện tại</th>
-                                        <th class="text-end">SL bán (kỳ này)</th>
-                                        <th class="text-end">Chênh lệch</th>
+                                        <th>Product</th>
+                                        <th>Category</th>
+                                        <th class="text-end">Current Stock</th>
+                                        <th class="text-end">Qty Sold (This Period)</th>
+                                        <th class="text-end">Difference</th>
                                     </tr>
                                 </thead>
                                 <tbody>
