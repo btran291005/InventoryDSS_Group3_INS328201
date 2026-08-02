@@ -69,9 +69,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
     }
 
     if ($supplierId <= 0) {
-        $result = ['success' => false, 'message' => 'Vui lòng chọn nhà cung cấp.'];
+        $result = ['success' => false, 'message' => 'Please select a supplier.'];
     } elseif (empty($lines)) {
-        $result = ['success' => false, 'message' => 'Vui lòng chọn ít nhất 1 sản phẩm và nhập số lượng lớn hơn 0.'];
+        $result = ['success' => false, 'message' => 'Please select at least 1 product and enter a quantity greater than 0.'];
     } else {
         $result = $managerService->createPurchaseOrderDraft($supplierId, $actorId, $lines);
     }
@@ -111,16 +111,16 @@ if ($selectedSupplierId !== null) {
     }
 }
 
-$pageTitle   = 'Tạo PO thủ công';
-$breadcrumbs = ['Manager', 'Purchase Order', 'Tạo mới'];
+$pageTitle   = 'Create Manual PO';
+$breadcrumbs = ['Manager', 'Purchase Order', 'Create New'];
 $activeMenu  = 'po';
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tạo PO thủ công - InventoryDSS</title>
+    <title>Create Manual PO - InventoryDSS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="<?= BASE_URL ?>/assets/css/theme_variables.css" rel="stylesheet">
     <link href="<?= BASE_URL ?>/assets/css/custom.css" rel="stylesheet">
@@ -136,13 +136,13 @@ $activeMenu  = 'po';
 
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
                     <div>
-                        <h2 class="page-heading mb-1">Tạo PO thủ công</h2>
+                        <h2 class="page-heading mb-1">Create Manual PO</h2>
                         <p class="page-subheading mb-0">
-                            Tự chọn nhà cung cấp, sản phẩm và số lượng - không phụ thuộc vào danh sách gợi ý.
-                            Muốn dùng gợi ý theo Reorder Point? Vào <a href="../inventory/reorder_suggestions.php">Reorder Suggestions</a>.
+                            Manually choose the supplier, products, and quantities - not dependent on the suggestion list.
+                            Want to use Reorder Point suggestions instead? Go to <a href="../inventory/reorder_suggestions.php">Reorder Suggestions</a>.
                         </p>
                     </div>
-                    <a href="po_submit.php" class="btn btn-outline-secondary btn-sm">&larr; Quay lại danh sách PO</a>
+                    <a href="po_submit.php" class="btn btn-outline-secondary btn-sm">&larr; Back to PO List</a>
                 </div>
 
                 <?php if ($flashMessage !== ''): ?>
@@ -151,16 +151,16 @@ $activeMenu  = 'po';
                     </div>
                 <?php endif; ?>
 
-                <!-- Bước 1: Chọn nhà cung cấp -->
+                <!-- Step 1: Select supplier -->
                 <div class="panel-card mb-3">
                     <div class="panel-card-header">
-                        <h3 class="panel-card-title">Bước 1 - Chọn nhà cung cấp</h3>
+                        <h3 class="panel-card-title">Step 1 - Select Supplier</h3>
                     </div>
                     <form method="GET" class="d-flex flex-wrap gap-2 align-items-end">
                         <div style="min-width: 280px;">
-                            <label class="form-label small text-muted mb-1">Nhà cung cấp</label>
+                            <label class="form-label small text-muted mb-1">Supplier</label>
                             <select name="supplier_id" class="form-select" onchange="this.form.submit()">
-                                <option value="">-- Chọn nhà cung cấp --</option>
+                                <option value="">-- Select supplier --</option>
                                 <?php foreach ($suppliers as $s): ?>
                                     <option value="<?= (int) $s['supplier_id'] ?>" <?= $selectedSupplierId === (int) $s['supplier_id'] ? 'selected' : '' ?>>
                                         <?= htmlspecialchars($s['supplier_name'], ENT_QUOTES, 'UTF-8') ?>
@@ -168,30 +168,30 @@ $activeMenu  = 'po';
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <noscript><button type="submit" class="btn btn-outline-secondary btn-sm">Tải danh sách sản phẩm</button></noscript>
+                        <noscript><button type="submit" class="btn btn-outline-secondary btn-sm">Load product list</button></noscript>
                     </form>
                 </div>
 
-                <!-- Bước 2: Chọn sản phẩm + số lượng -->
+                <!-- Step 2: Select products + quantities -->
                 <?php if ($selectedSupplierId === null): ?>
                     <div class="panel-card">
-                        <div class="empty-state">Chọn nhà cung cấp ở Bước 1 để xem danh sách sản phẩm.</div>
+                        <div class="empty-state">Select a supplier in Step 1 to view the product list.</div>
                     </div>
                 <?php elseif (empty($supplierProducts)): ?>
                     <div class="panel-card">
-                        <div class="empty-state">Nhà cung cấp <strong><?= htmlspecialchars($selectedSupplierName ?? '', ENT_QUOTES, 'UTF-8') ?></strong> hiện chưa có sản phẩm active nào được gán trong hệ thống.</div>
+                        <div class="empty-state">Supplier <strong><?= htmlspecialchars($selectedSupplierName ?? '', ENT_QUOTES, 'UTF-8') ?></strong> does not have any active products assigned in the system yet.</div>
                     </div>
                 <?php else: ?>
                     <div class="panel-card">
-                        <form method="POST" onsubmit="return confirm('Tạo đơn đặt hàng nháp (Draft) cho <?= htmlspecialchars(addslashes($selectedSupplierName ?? ''), ENT_QUOTES, 'UTF-8') ?> với các dòng đã chọn?');">
+                        <form method="POST" onsubmit="return confirm('Create a draft purchase order for <?= htmlspecialchars(addslashes($selectedSupplierName ?? ''), ENT_QUOTES, 'UTF-8') ?> with the selected lines?');">
                             <input type="hidden" name="action" value="create_po">
                             <input type="hidden" name="supplier_id" value="<?= (int) $selectedSupplierId ?>">
 
                             <div class="panel-card-header">
                                 <h3 class="panel-card-title">
-                                    Bước 2 - Chọn sản phẩm của <?= htmlspecialchars($selectedSupplierName ?? '', ENT_QUOTES, 'UTF-8') ?>
+                                    Step 2 - Select products from <?= htmlspecialchars($selectedSupplierName ?? '', ENT_QUOTES, 'UTF-8') ?>
                                 </h3>
-                                <button type="submit" class="btn btn-brand btn-sm">Tạo PO nháp</button>
+                                <button type="submit" class="btn btn-brand btn-sm">Create Draft PO</button>
                             </div>
 
                             <div class="table-responsive">
@@ -201,10 +201,10 @@ $activeMenu  = 'po';
                                             <th style="width: 40px;">
                                                 <input type="checkbox" class="form-check-input" id="selectAllProducts">
                                             </th>
-                                            <th>Sản phẩm</th>
-                                            <th class="text-end">Tồn kho hiện tại</th>
-                                            <th class="text-end">Đơn giá</th>
-                                            <th class="text-end" style="width: 160px;">Số lượng đặt</th>
+                                            <th>Product</th>
+                                            <th class="text-end">Current Stock</th>
+                                            <th class="text-end">Unit Price</th>
+                                            <th class="text-end" style="width: 160px;">Order Quantity</th>
                                         </tr>
                                     </thead>
                                     <tbody>
