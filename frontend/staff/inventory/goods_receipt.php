@@ -50,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'recei
     $discrepancyReasons = $_POST['discrepancy_reason'] ?? [];
 
     if ($warehouseId <= 0) {
-        $errorMessage = 'Vui lòng chọn kho nhận hàng.';
+        $errorMessage = 'Please select a receiving warehouse.';
     } else {
         $lines = [];
         foreach ($poDetailIds as $i => $poDetailId) {
@@ -65,11 +65,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'recei
         $result = $staffService->receiveFullOrder($poId, $lines, $warehouseId, $staffId);
 
         if ($result['success']) {
-            $successMessage = "Đã xác nhận nhận hàng cho đơn #{$poId}.";
+            $successMessage = "Order #{$poId} receipt confirmed successfully.";
         } else {
             $failedLines = array_filter($result['results'] ?? [], fn($r) => !$r['success']);
-            $errorDetails = array_map(fn($r) => $r['message'] ?? 'Lỗi không xác định', $failedLines);
-            $errorMessage = ($result['message'] ?? 'Không thể hoàn tất nhận hàng.')
+            $errorDetails = array_map(fn($r) => $r['message'] ?? 'Unknown error', $failedLines);
+            $errorMessage = ($result['message'] ?? 'Cannot complete receipt.')
                 . (!empty($errorDetails) ? ' — ' . implode('; ', array_unique($errorDetails)) : '');
         }
     }
@@ -84,7 +84,7 @@ if ($selectedPoId > 0) {
     if ($order !== false) {
         $selectedPo = $order;
     } else {
-        $errorMessage = 'Không tìm thấy đơn đặt hàng này.';
+        $errorMessage = 'Purchase order not found.';
         $selectedPoId = 0;
     }
 }
@@ -124,7 +124,7 @@ $breadcrumbs = ['Staff', 'Inventory', 'Goods Receipt'];
 
                 <div class="mb-3">
                     <h2 class="page-heading mb-1">Quick Goods Receipt</h2>
-                    <p class="page-subheading mb-0">Nhận và xác minh lô hàng đến từ nhà cung cấp.</p>
+                    <p class="page-subheading mb-0">Receive and verify incoming shipments from suppliers.</p>
                 </div>
 
                 <nav class="inv-tab-nav">
@@ -144,21 +144,21 @@ $breadcrumbs = ['Staff', 'Inventory', 'Goods Receipt'];
                     <!-- ============ BƯỚC 1: CHỌN ĐƠN HÀNG ĐANG CHỜ NHẬN ============ -->
                     <div class="panel-card">
                         <div class="panel-card-header">
-                            <h3 class="panel-card-title">Đơn hàng đang chờ nhận</h3>
+                            <h3 class="panel-card-title">Orders Awaiting Receipt</h3>
                             <span class="badge-count"><?= count($pendingOrders) ?></span>
                         </div>
 
                         <?php if (empty($pendingOrders)): ?>
-                            <div class="empty-state">Không có đơn hàng nào đang chờ nhận (trạng thái "Approved").</div>
+                            <div class="empty-state">No orders awaiting receipt (status "Approved").</div>
                         <?php else: ?>
                             <div class="table-responsive">
                                 <table class="table data-table align-middle mb-0">
                                     <thead>
                                         <tr>
                                             <th>PO</th>
-                                            <th>Nhà cung cấp</th>
-                                            <th>Ngày duyệt</th>
-                                            <th class="text-end">Tổng giá trị</th>
+                                            <th>Supplier</th>
+                                            <th>Approved Date</th>
+                                            <th class="text-end">Total Value</th>
                                             <th></th>
                                         </tr>
                                     </thead>
@@ -170,7 +170,7 @@ $breadcrumbs = ['Staff', 'Inventory', 'Goods Receipt'];
                                                 <td class="text-muted"><?= htmlspecialchars((string) ($po['approved_at'] ?? $po['created_at'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></td>
                                                 <td class="text-end">&#8363;<?= number_format((float) ($po['total_amount'] ?? 0), 0) ?></td>
                                                 <td class="text-end">
-                                                    <a href="?po_id=<?= (int) $po['po_id'] ?>" class="btn btn-brand btn-sm">Nhận hàng</a>
+                                                    <a href="?po_id=<?= (int) $po['po_id'] ?>" class="btn btn-brand btn-sm">Receive</a>
                                                 </td>
                                             </tr>
                                         <?php endforeach; ?>
@@ -190,14 +190,14 @@ $breadcrumbs = ['Staff', 'Inventory', 'Goods Receipt'];
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                         <div>
                             <span class="text-muted small">PO: #<?= (int) $selectedPo['po_id'] ?></span>
-                            <span class="text-muted small ms-2">Nhà cung cấp: <?= htmlspecialchars($selectedPo['supplier_name'] ?? '—', ENT_QUOTES, 'UTF-8') ?></span>
+                            <span class="text-muted small ms-2">Supplier: <?= htmlspecialchars($selectedPo['supplier_name'] ?? '—', ENT_QUOTES, 'UTF-8') ?></span>
                         </div>
-                        <a href="goods_receipt.php" class="btn btn-outline-secondary btn-sm">&larr; Chọn đơn khác</a>
+                        <a href="goods_receipt.php" class="btn btn-outline-secondary btn-sm">&larr; Choose another order</a>
                     </div>
 
                     <?php if (empty($selectedPo['can_receive'])): ?>
                         <div class="alert alert-warning">
-                            Đơn hàng này ở trạng thái "<?= htmlspecialchars($selectedPo['status'], ENT_QUOTES, 'UTF-8') ?>" - chỉ có thể nhận hàng cho đơn "Approved".
+                            This order is in "<?= htmlspecialchars($selectedPo['status'], ENT_QUOTES, 'UTF-8') ?>" status - only "Approved" orders can be received.
                         </div>
                     <?php else: ?>
                         <form method="post">
@@ -206,11 +206,11 @@ $breadcrumbs = ['Staff', 'Inventory', 'Goods Receipt'];
 
                             <div class="panel-card mb-3">
                                 <div class="panel-card-header">
-                                    <h3 class="panel-card-title">Đối chiếu số lượng thực nhận</h3>
+                                    <h3 class="panel-card-title">Verify Received Quantities</h3>
                                     <div style="min-width: 220px;">
-                                        <label class="form-label small mb-1">Kho nhận hàng</label>
+                                        <label class="form-label small mb-1">Receiving Warehouse</label>
                                         <select name="warehouse_id" class="form-select form-select-sm" required>
-                                            <option value="">-- Chọn kho --</option>
+                                            <option value="">-- Select warehouse --</option>
                                             <?php foreach ($warehouses as $wh): ?>
                                                 <option value="<?= (int) $wh['warehouse_id'] ?>"><?= htmlspecialchars($wh['warehouse_name'], ENT_QUOTES, 'UTF-8') ?></option>
                                             <?php endforeach; ?>
@@ -223,10 +223,10 @@ $breadcrumbs = ['Staff', 'Inventory', 'Goods Receipt'];
                                         <thead>
                                             <tr>
                                                 <th>SKU</th>
-                                                <th>Sản phẩm</th>
+                                                <th>Product</th>
                                                 <th class="text-end">Expected</th>
                                                 <th class="text-end">Received</th>
-                                                <th>Lý do sai lệch (bắt buộc nếu khác Expected)</th>
+                                                <th>Discrepancy Reason (required if different)</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -247,7 +247,7 @@ $breadcrumbs = ['Staff', 'Inventory', 'Goods Receipt'];
                                                     <td>
                                                         <input type="text" name="discrepancy_reason[<?= $i ?>]"
                                                                class="form-control form-control-sm gr-reason-input"
-                                                               placeholder="VD: thùng bị móp, thiếu hàng khi giao...">
+                                                               placeholder="E.g.: damaged box, short shipment...">
                                                     </td>
                                                 </tr>
                                             <?php endforeach; ?>
@@ -256,20 +256,20 @@ $breadcrumbs = ['Staff', 'Inventory', 'Goods Receipt'];
                                 </div>
                             </div>
 
-                            <button type="submit" class="btn btn-success">Xác nhận & Hoàn tất nhận hàng</button>
+                            <button type="submit" class="btn btn-success">Confirm & Complete Receipt</button>
                         </form>
                     <?php endif; ?>
 
                     <div class="row g-3 mt-1">
                         <div class="col-6 col-xl-3">
                             <div class="kpi-card">
-                                <span class="kpi-label">Số dòng sản phẩm</span>
+                                <span class="kpi-label">Product Lines</span>
                                 <span class="kpi-value"><?= count($lines) ?></span>
                             </div>
                         </div>
                         <div class="col-6 col-xl-3">
                             <div class="kpi-card">
-                                <span class="kpi-label">Giá trị đơn hàng (đã duyệt)</span>
+                                <span class="kpi-label">Order Value (approved)</span>
                                 <span class="kpi-value">&#8363;<?= number_format($totalExpectedValue, 0) ?></span>
                             </div>
                         </div>
