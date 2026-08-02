@@ -64,7 +64,7 @@ class Inventory
         ?int $referenceId = null
     ): array {
         if ($quantity <= 0) {
-            return ['success' => false, 'message' => 'Số lượng nhập kho phải lớn hơn 0.'];
+            return ['success' => false, 'message' => 'Stock-in quantity must be greater than 0.'];
         }
 
         try {
@@ -86,13 +86,13 @@ class Inventory
             ]);
 
             $this->conn->commit();
-            return ['success' => true, 'message' => 'Đã cập nhật tồn kho (nhập hàng).'];
+            return ['success' => true, 'message' => 'Stock updated (goods received).'];
         } catch (PDOException $e) {
             if ($this->conn->inTransaction()) {
                 $this->conn->rollBack();
             }
             error_log('[Inventory::stockIn] ' . $e->getMessage());
-            return ['success' => false, 'message' => 'Có lỗi xảy ra khi ghi nhận nhập kho.'];
+            return ['success' => false, 'message' => 'An error occurred while recording the stock-in.'];
         }
     }
 
@@ -108,7 +108,7 @@ class Inventory
         int $performedBy
     ): array {
         if (trim($reason) === '') {
-            return ['success' => false, 'message' => 'Điều chỉnh tồn kho bắt buộc phải có lý do (BR-11).'];
+            return ['success' => false, 'message' => 'Stock adjustment requires a reason (BR-11).'];
         }
 
         try {
@@ -130,8 +130,8 @@ class Inventory
                 $this->conn->rollBack();
                 return [
                     'success' => false,
-                    'message' => "Không thể điều chỉnh: tồn kho hiện tại ({$currentQty}) "
-                                . "không đủ để trừ " . abs($quantityChange) . " (BR-03).",
+                    'message' => "Cannot adjust: current stock ({$currentQty}) "
+                                . "is not enough to subtract " . abs($quantityChange) . " (BR-03).",
                 ];
             }
 
@@ -151,13 +151,13 @@ class Inventory
             ]);
 
             $this->conn->commit();
-            return ['success' => true, 'message' => 'Đã ghi nhận điều chỉnh tồn kho.'];
+            return ['success' => true, 'message' => 'Stock adjustment recorded.'];
         } catch (PDOException $e) {
             if ($this->conn->inTransaction()) {
                 $this->conn->rollBack();
             }
             error_log('[Inventory::adjustStock] ' . $e->getMessage());
-            return ['success' => false, 'message' => 'Có lỗi xảy ra khi điều chỉnh tồn kho.'];
+            return ['success' => false, 'message' => 'An error occurred while adjusting stock.'];
         }
     }
 
@@ -270,7 +270,7 @@ class Inventory
         $batch = $stmt->fetch();
 
         if (!$batch || (int) $batch['quantity_remaining'] < $quantity) {
-            return ['success' => false, 'message' => 'Số lượng lô hàng không đủ để trừ.'];
+            return ['success' => false, 'message' => 'Batch quantity is not enough to subtract.'];
         }
 
         $update = $this->conn->prepare(
@@ -278,7 +278,7 @@ class Inventory
         );
         $update->execute([':qty' => $quantity, ':id' => $batchId]);
 
-        return ['success' => true, 'message' => 'Đã trừ lô hàng theo FEFO.'];
+        return ['success' => true, 'message' => 'Batch deducted according to FEFO.'];
     }
 
     /* Ghi nhận 1 lô hàng mới khi nhập kho - gọi từ Service nếu sản phẩm thuộc category requires_fefo. */
