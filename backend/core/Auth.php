@@ -7,7 +7,7 @@ require_once __DIR__ . '/Logger.php';
 
 class Auth
 {
-    /* Khởi động session nếu chưa có. PHẢI gọi hàm này (hoặc Auth::check()) ở đầu mọi file PHP cần biết trạng thái đăng nhập, trước khi có bất kỳ output HTML nào (session_start() yêu cầu chưa gửi header). */
+    /* Start session if not already started. MUST call this function (or Auth::check()) at the beginning of every PHP file that needs to know login status, before any HTML output (session_start() requires no headers to be sent). */
     public static function start(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
@@ -16,44 +16,44 @@ class Auth
             session_set_cookie_params([
                 'lifetime' => defined('SESSION_LIFETIME_SECONDS') ? SESSION_LIFETIME_SECONDS : 28800,
                 'path'     => '/',
-                'httponly' => true,   // Chặn JS đọc cookie session -> giảm rủi ro XSS đánh cắp session
-                'samesite' => 'Lax',  // Giảm rủi ro CSRF cơ bản
+                'httponly' => true,   // Prevent JS from reading session cookie -> reduce XSS session theft risk
+                'samesite' => 'Lax',  // Basic CSRF protection
             ]);
 
             session_start();
         }
     }
 
-    /* Kiểm tra độ mạnh mật khẩu khi TẠO MỚI hoặc ĐỔI mật khẩu (KHÔNG dùng ở login()).
-     * Rule: tối thiểu 8 ký tự, có ít nhất 1 chữ hoa, 1 chữ thường, 1 chữ số, và 1 ký tự đặc biệt.
-     * Dùng ở AdminService (FR-ADM-02: create/edit user) và bất kỳ chức năng đổi mật khẩu nào khác sau này - gọi hàm này TRƯỚC khi password_hash(). */
+    /* Check password strength when CREATING NEW or CHANGING password (NOT used in login()).
+     * Rule: minimum 8 characters, at least 1 uppercase, 1 lowercase, 1 number, and 1 special character.
+     * Used in AdminService (FR-ADM-02: create/edit user) and any other password change functionality later - call this function BEFORE password_hash(). */
     public static function validatePasswordStrength(string $password): array
     {
         if (mb_strlen($password) < 8) {
-            return ['valid' => false, 'message' => 'Mật khẩu phải có ít nhất 8 ký tự.'];
+            return ['valid' => false, 'message' => 'Password must be at least 8 characters long.'];
         }
 
         if (!preg_match('/[A-Z]/', $password)) {
-            return ['valid' => false, 'message' => 'Mật khẩu phải chứa ít nhất 1 chữ hoa.'];
+            return ['valid' => false, 'message' => 'Password must contain at least 1 uppercase letter.'];
         }
 
         if (!preg_match('/[a-z]/', $password)) {
-            return ['valid' => false, 'message' => 'Mật khẩu phải chứa ít nhất 1 chữ thường.'];
+            return ['valid' => false, 'message' => 'Password must contain at least 1 lowercase letter.'];
         }
 
         if (!preg_match('/[0-9]/', $password)) {
-            return ['valid' => false, 'message' => 'Mật khẩu phải chứa ít nhất 1 chữ số.'];
+            return ['valid' => false, 'message' => 'Password must contain at least 1 number.'];
         }
 
-        // Ký tự đặc biệt: bất kỳ ký tự nào không phải chữ/số (khớp @, #, $, %, !, ... )
+        // Special character: any character that is not a letter or number (matches @, #, $, %, !, etc.)
         if (!preg_match('/[^A-Za-z0-9]/', $password)) {
-            return ['valid' => false, 'message' => 'Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt (VD: @, #, $, !).'];
+            return ['valid' => false, 'message' => 'Password must contain at least 1 special character (e.g.: @, #, $, !).'];
         }
 
-        return ['valid' => true, 'message' => 'Mật khẩu hợp lệ.'];
+        return ['valid' => true, 'message' => 'Password is valid.'];
     }
 
-    /* Thực hiện đăng nhập - Role được chọn ở UI (tab Admin/Manager/Store Staff trên login.php - FR-SYS-01). Nếu truyền vào và KHÁC role_id thật của account trong DB -> từ chối đăng nhập, KHÔNG tạo session, dù username/password đúng. Truyền null (mặc định) để bỏ qua kiểm tra này. */
+    /* Perform login - Role selected in UI (Admin/Manager/Store Staff tabs on login.php - FR-SYS-01). If passed and DIFFERENT from the account's actual role_id in DB -> reject login, do NOT create session, even if username/password are correct. Pass null (default) to skip this check. */
     public static function login(string $username, string $password, ?int $expectedRoleId = null): array
     {
         self::start();
@@ -61,7 +61,7 @@ class Auth
         $username = trim($username);
 
         if ($username === '' || $password === '') {
-            return ['success' => false, 'message' => 'Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu.'];
+            return ['success' => false, 'message' => 'Please enter both username and password.'];
         }
 
         try {
@@ -76,21 +76,21 @@ class Auth
             $stmt->execute([':username' => $username]);
             $account = $stmt->fetch();
 
-            // Không tiết lộ "sai username" hay "sai password" riêng biệt -> tránh dò tài khoản tồn tại
+            // Do not reveal "wrong username" or "wrong password" separately -> prevent account enumeration
             if (!$account) {
-                return ['success' => false, 'message' => 'Tên đăng nhập hoặc mật khẩu không đúng.'];
+                return ['success' => false, 'message' => 'Username or password is incorrect.'];
             }
 
-            // FR-ADM-02: tài khoản bị khóa không được đăng nhập
+            // FR-ADM-02: locked accounts cannot login
             if ($account['status'] === 'locked') {
-                return ['success' => false, 'message' => 'Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin.'];
+                return ['success' => false, 'message' => 'Your account has been locked. Please contact Admin.'];
             }
 
             if (!password_verify($password, $account['password_hash'])) {
-                return ['success' => false, 'message' => 'Tên đăng nhập hoặc mật khẩu không đúng.'];
+                return ['success' => false, 'message' => 'Username or password is incorrect.'];
             }
 
-            // Đã xác thực đúng username/password ở trên -> giờ mới kiểm tra role đã chọn trên UI có khớp role thật của account không (BR-19, NFR-03).
+            // Username/password verified above -> now check if UI-selected role matches actual role (BR-19, NFR-03).
             if ($expectedRoleId !== null && (int) $account['role_id'] !== $expectedRoleId) {
                 Logger::log(
                     (int) $account['account_id'],
@@ -101,11 +101,11 @@ class Auth
 
                 return [
                     'success' => false,
-                    'message' => 'Tài khoản này không thuộc vai trò bạn đã chọn. Vui lòng chọn đúng vai trò hoặc liên hệ Admin.',
+                    'message' => 'This account does not belong to the role you selected. Please choose the correct role or contact Admin.',
                 ];
             }
 
-            // Chống session fixation: cấp session ID mới sau khi xác thực thành công
+            // Prevent session fixation: issue new session ID after successful authentication
             session_regenerate_id(true);
 
             $_SESSION['account_id'] = (int) $account['account_id'];
@@ -116,14 +116,14 @@ class Auth
 
             Logger::log((int) $account['account_id'], 'LOGIN', 'accounts', (int) $account['account_id']);
 
-            return ['success' => true, 'message' => 'Đăng nhập thành công.', 'role_id' => (int) $account['role_id']];
+            return ['success' => true, 'message' => 'Login successful.', 'role_id' => (int) $account['role_id']];
         } catch (PDOException $e) {
             error_log('[Auth] Login query failed: ' . $e->getMessage());
-            return ['success' => false, 'message' => 'Có lỗi xảy ra, vui lòng thử lại sau.'];
+            return ['success' => false, 'message' => 'An error occurred, please try again later.'];
         }
     }
 
-    /* Đăng xuất: ghi log rồi hủy toàn bộ session. */
+    /* Logout: log the action then destroy the entire session. */
     public static function logout(): void
     {
         self::start();
@@ -134,7 +134,7 @@ class Auth
 
         $_SESSION = [];
 
-        // Xóa cookie session ở phía trình duyệt
+        // Delete session cookie from browser
         if (ini_get('session.use_cookies')) {
             $params = session_get_cookie_params();
             setcookie(
@@ -151,35 +151,35 @@ class Auth
         session_destroy();
     }
 
-    /* Kiểm tra đã đăng nhập hay chưa. */
+    /* Check if user is logged in or not. */
     public static function check(): bool
     {
         self::start();
         return isset($_SESSION['account_id'], $_SESSION['role_id']);
     }
 
-    /* Lấy account_id của user hiện tại, null nếu chưa đăng nhập. */
+    /* Get account_id of current user, null if not logged in. */
     public static function id(): ?int
     {
         self::start();
         return $_SESSION['account_id'] ?? null;
     }
 
-    /* Lấy role_id của user hiện tại (1=Admin, 2=Manager, 3=Store Staff), null nếu chưa đăng nhập. */
+    /* Get role_id of current user (1=Admin, 2=Manager, 3=Store Staff), null if not logged in. */
     public static function roleId(): ?int
     {
         self::start();
         return $_SESSION['role_id'] ?? null;
     }
 
-    /* Lấy họ tên hiển thị của user hiện tại. */
+    /* Get display full name of current user. */
     public static function fullName(): ?string
     {
         self::start();
         return $_SESSION['full_name'] ?? null;
     }
 
-    /* Lấy tên role dạng chữ ('Admin' | 'Manager' | 'Store Staff'). */
+    /* Get role name as text ('Admin' | 'Manager' | 'Store Staff'). */
     public static function roleName(): ?string
     {
         $roleId = self::roleId();
@@ -191,14 +191,14 @@ class Auth
         return ROLE_NAMES[$roleId] ?? null;
     }
 
-    /* Kiểm tra user hiện tại có thuộc 1 trong các role được truyền vào không. Dùng ở Middleware và ở những nơi cần kiểm tra nhanh (VD: ẩn/hiện nút bấm trên UI). */
+    /* Check if current user has one of the specified roles. Used in Middleware and anywhere quick role checking is needed (e.g.: show/hide UI buttons). */
     public static function hasRole(int ...$roleIds): bool
     {
         $current = self::roleId();
         return $current !== null && in_array($current, $roleIds, true);
     }
 
-    /* Bắt buộc phải đăng nhập, nếu không thì redirect về trang login. Dùng ở đầu các file PHP thuộc khu vực cần xác thực.*/
+    /* Require login, redirect to login page if not authenticated. Used at the beginning of PHP files in protected areas. */
     public static function requireLogin(string $redirectTo = '/login.php'): void
     {
         if (!self::check()) {
