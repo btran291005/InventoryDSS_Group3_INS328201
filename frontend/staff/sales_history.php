@@ -5,7 +5,7 @@
  * biểu đồ + bảng số lượng bán theo từng ngày.
  *
  * Cùng kỹ thuật vẽ SVG line chart (PHP-side, không cần JS/API) đã dùng ở
- * frontend/manager/reorder & forecast/forecast.php (Phần 1: Demand Trend) -
+ * frontend/manager/forecast.php (Phần 1: Demand Trend) -
  * NHƯNG bản Staff KHÔNG có phần AI Forecast (đó là công cụ của Manager,
  * ngoài phạm vi FR-STF-13 - Staff chỉ xem lịch sử, không dự báo/đặt hàng).
  *
@@ -95,17 +95,17 @@ $breadcrumbs = ['Staff', 'Sales History'];
 
                 <div class="mb-4">
                     <h2 class="page-heading mb-1">Sales History</h2>
-                    <p class="page-subheading mb-0">Xem lịch sử bán hàng 7/30 ngày cho từng sản phẩm (FR-STF-13).</p>
+                    <p class="page-subheading mb-0">View 7/30-day sales history for each product (FR-STF-13).</p>
                 </div>
 
                 <!-- Chọn sản phẩm + khoảng ngày -->
                 <div class="panel-card mb-3">
                     <form method="get" class="filter-bar p-1">
                         <div style="min-width: 260px;">
-                            <label class="form-label">Sản phẩm</label>
+                            <label class="form-label">Product</label>
                             <select name="product_id" class="form-select form-select-sm" onchange="this.form.submit()">
                                 <?php if (empty($allProducts)): ?>
-                                    <option value="">Không có sản phẩm nào</option>
+                                    <option value="">No products available</option>
                                 <?php endif; ?>
                                 <?php foreach ($allProducts as $p): ?>
                                     <option value="<?= (int) $p['product_id'] ?>" <?= $selectedProductId === (int) $p['product_id'] ? 'selected' : '' ?>>
@@ -115,10 +115,10 @@ $breadcrumbs = ['Staff', 'Sales History'];
                             </select>
                         </div>
                         <div>
-                            <label class="form-label">Khoảng thời gian</label>
+                            <label class="form-label">Time Range</label>
                             <div class="btn-group" role="group">
-                                <a href="?product_id=<?= $selectedProductId ?>&days=7" class="btn btn-sm <?= $selectedDays === 7 ? 'btn-brand' : 'btn-outline-secondary' ?>">7 ngày</a>
-                                <a href="?product_id=<?= $selectedProductId ?>&days=30" class="btn btn-sm <?= $selectedDays === 30 ? 'btn-brand' : 'btn-outline-secondary' ?>">30 ngày</a>
+                                <a href="?product_id=<?= $selectedProductId ?>&days=7" class="btn btn-sm <?= $selectedDays === 7 ? 'btn-brand' : 'btn-outline-secondary' ?>">7 Days</a>
+                                <a href="?product_id=<?= $selectedProductId ?>&days=30" class="btn btn-sm <?= $selectedDays === 30 ? 'btn-brand' : 'btn-outline-secondary' ?>">30 Days</a>
                             </div>
                         </div>
                     </form>
@@ -126,7 +126,7 @@ $breadcrumbs = ['Staff', 'Sales History'];
 
                 <?php if ($selectedProduct === null): ?>
                     <div class="panel-card">
-                        <div class="empty-state">Chưa có sản phẩm nào để xem lịch sử bán hàng.</div>
+                        <div class="empty-state">No product selected to view sales history.</div>
                     </div>
                 <?php else: ?>
 
@@ -134,25 +134,25 @@ $breadcrumbs = ['Staff', 'Sales History'];
                     <div class="row g-3 mb-4">
                         <div class="col-6 col-xl-3">
                             <div class="kpi-card">
-                                <span class="kpi-label">Tổng bán (<?= $selectedDays ?> ngày)</span>
+                                <span class="kpi-label">Total Sold (<?= $selectedDays ?> days)</span>
                                 <span class="kpi-value"><?= number_format($totalSold) ?></span>
                             </div>
                         </div>
                         <div class="col-6 col-xl-3">
                             <div class="kpi-card">
-                                <span class="kpi-label">Trung bình / ngày</span>
+                                <span class="kpi-label">Average / Day</span>
                                 <span class="kpi-value"><?= number_format($avgPerDay, 1) ?></span>
                             </div>
                         </div>
                         <div class="col-6 col-xl-3">
                             <div class="kpi-card">
-                                <span class="kpi-label">Ngày bán nhiều nhất</span>
+                                <span class="kpi-label">Peak Day</span>
                                 <span class="kpi-value"><?= $peakDay ? number_format($peakDay['count']) : '—' ?></span>
                             </div>
                         </div>
                         <div class="col-6 col-xl-3">
                             <div class="kpi-card">
-                                <span class="kpi-label">Số ngày có bán</span>
+                                <span class="kpi-label">Days with Sales</span>
                                 <span class="kpi-value"><?= $daysWithSales ?> / <?= $selectedDays ?></span>
                             </div>
                         </div>
@@ -161,11 +161,11 @@ $breadcrumbs = ['Staff', 'Sales History'];
                     <div class="panel-card">
                         <div class="panel-card-header">
                             <h3 class="panel-card-title"><?= htmlspecialchars($selectedProduct['product_name'], ENT_QUOTES, 'UTF-8') ?></h3>
-                            <span class="panel-card-note"><?= htmlspecialchars($selectedProduct['sku_code'], ENT_QUOTES, 'UTF-8') ?> &middot; <?= $selectedDays ?> ngày gần nhất</span>
+                            <span class="panel-card-note"><?= htmlspecialchars($selectedProduct['sku_code'], ENT_QUOTES, 'UTF-8') ?> &middot; <?= $selectedDays ?> days</span>
                         </div>
 
                         <?php if ($totalSold === 0): ?>
-                            <div class="empty-state">Không có giao dịch bán nào trong khoảng thời gian này.</div>
+                            <div class="empty-state">No sales transactions in this time period.</div>
                         <?php else: ?>
                             <?php
                                 $chartW = 900; $chartH = 240;
@@ -220,8 +220,8 @@ $breadcrumbs = ['Staff', 'Sales History'];
                                 <table class="table data-table align-middle mb-0">
                                     <thead>
                                         <tr>
-                                            <th>Ngày</th>
-                                            <th class="text-end">Số lượng bán</th>
+                                            <th>Date</th>
+                                            <th class="text-end">Quantity Sold</th>
                                         </tr>
                                     </thead>
                                     <tbody>
