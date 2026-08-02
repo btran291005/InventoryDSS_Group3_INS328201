@@ -36,9 +36,9 @@ const URGENT_RISK_HOURS_THRESHOLD = 24;
 function formatRiskHours(float $hours): string
 {
     if ($hours < 48) {
-        return number_format($hours, 1) . ' giờ';
+        return number_format($hours, 1) . ' hours';
     }
-    return number_format($hours / 24, 1) . ' ngày';
+    return number_format($hours / 24, 1) . ' days';
 }
 
 $pageTitle   = 'Stock-out Risk';
@@ -46,7 +46,7 @@ $breadcrumbs = ['Manager', 'Reorder', 'Stock-out Risk'];
 $activeMenu  = 'reorder';
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -67,30 +67,30 @@ $activeMenu  = 'reorder';
                 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
                     <div>
                         <h2 class="page-heading mb-1">Top 10 Stock-out Risk</h2>
-                        <p class="page-subheading mb-0">Sản phẩm có nguy cơ hết hàng cao nhất, xếp theo tốc độ bán 7 ngày gần đây (FR-MGR-12).</p>
+                        <p class="page-subheading mb-0">Products with the highest stockout risk, ranked by recent 7-day sales velocity (FR-MGR-12).</p>
                     </div>
-                    <a href="reorder_suggestions.php" class="btn btn-brand btn-sm">Xem gợi ý đặt hàng &rarr;</a>
+                    <a href="reorder_suggestions.php" class="btn btn-brand btn-sm">View Reorder Suggestions &rarr;</a>
                 </div>
 
                 <div class="panel-card">
                     <div class="panel-card-header">
-                        <h3 class="panel-card-title">Danh sách rủi ro</h3>
-                        <span class="panel-card-note"><?= count($risks) ?>/10 sản phẩm có sales velocity &gt; 0</span>
+                        <h3 class="panel-card-title">Risk List</h3>
+                        <span class="panel-card-note"><?= count($risks) ?>/10 products with sales velocity &gt; 0</span>
                     </div>
 
                     <?php if (empty($risks)): ?>
-                        <div class="empty-state">Không có sản phẩm nào đang có nguy cơ hết hàng (hoặc chưa đủ dữ liệu bán hàng 7 ngày gần nhất).</div>
+                        <div class="empty-state">No products are currently at risk of stockout (or there isn't enough recent 7-day sales data yet).</div>
                     <?php else: ?>
                         <div class="table-responsive">
                             <table class="table data-table align-middle mb-0">
                                 <thead>
                                     <tr>
                                         <th>#</th>
-                                        <th>Sản phẩm</th>
-                                        <th class="text-end">Tồn kho hiện tại</th>
-                                        <th class="text-end">Bán TB/ngày (7d)</th>
-                                        <th class="text-end">Thời gian còn lại</th>
-                                        <th class="text-end">Mức độ</th>
+                                        <th>Product</th>
+                                        <th class="text-end">Current Stock</th>
+                                        <th class="text-end">Avg Sold/Day (7d)</th>
+                                        <th class="text-end">Time Remaining</th>
+                                        <th class="text-end">Level</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -107,9 +107,9 @@ $activeMenu  = 'reorder';
                                             <td class="text-end fw-semibold"><?= htmlspecialchars(formatRiskHours((float) $risk['risk_hours']), ENT_QUOTES, 'UTF-8') ?></td>
                                             <td class="text-end">
                                                 <?php if ($isUrgent): ?>
-                                                    <span class="stock-pill stock-pill-critical">Nguy cấp (&le;24h)</span>
+                                                    <span class="stock-pill stock-pill-critical">Urgent (&le;24h)</span>
                                                 <?php else: ?>
-                                                    <span class="stock-pill stock-pill-warn">Cần theo dõi</span>
+                                                    <span class="stock-pill stock-pill-warn">Needs Monitoring</span>
                                                 <?php endif; ?>
                                             </td>
                                         </tr>
