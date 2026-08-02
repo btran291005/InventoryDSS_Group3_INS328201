@@ -56,7 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'creat
     }
 
     if (empty($lines)) {
-        $result = ['success' => false, 'message' => 'Vui lòng chọn ít nhất 1 sản phẩm để đặt hàng.'];
+        $result = ['success' => false, 'message' => 'Please select at least 1 product to order.'];
     } else {
         $result = $managerService->createPurchaseOrderDraft($supplierId, $actorId, $lines);
     }
@@ -95,7 +95,7 @@ if ($suggestionResult['success']) {
         // nhưng gom vào nhóm "Chưa xác định" để Manager biết cần bổ sung dữ
         // liệu master thay vì bị ẩn đi âm thầm.
         $supplierId   = $supplierInfo['supplier_id'] ?? 0;
-        $supplierName = $supplierInfo['supplier_name'] ?? 'Chưa xác định nhà cung cấp';
+        $supplierName = $supplierInfo['supplier_name'] ?? 'Supplier not determined';
 
         $groupedBySupplier[$supplierId]['supplier_name'] = $supplierName;
         $groupedBySupplier[$supplierId]['items'][] = $item;
@@ -139,7 +139,7 @@ function reorderUrgency(array $item): array
 }
 ?>
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -161,13 +161,13 @@ function reorderUrgency(array $item): array
                     <div>
                         <h2 class="page-heading mb-1">Reorder Suggestions</h2>
                         <p class="page-subheading mb-0">
-                            Hệ thống đã phân tích tồn kho/doanh số và tạo gợi ý đặt hàng theo Reorder Point &amp; Safety Stock (BR-05).
-                            Chọn các dòng cần đặt bên dưới để tạo Purchase Order Draft.
+                            The system has analyzed stock/sales and generated reorder suggestions based on Reorder Point &amp; Safety Stock (BR-05).
+                            Select the lines to order below to create a Purchase Order Draft.
                         </p>
                     </div>
                     <div class="d-flex gap-2">
-                        <a href="../purchase_order/po_create.php" class="btn btn-brand btn-sm">+ Tạo PO thủ công</a>
-                        <a href="stockout_risk.php" class="btn btn-outline-secondary btn-sm">Xem Stock-out Risk</a>
+                        <a href="../purchase_order/po_create.php" class="btn btn-brand btn-sm">+ Create Manual PO</a>
+                        <a href="stockout_risk.php" class="btn btn-outline-secondary btn-sm">View Stock-out Risk</a>
                     </div>
                 </div>
 
@@ -183,32 +183,32 @@ function reorderUrgency(array $item): array
                     </div>
                 <?php elseif (empty($groupedBySupplier)): ?>
                     <div class="panel-card">
-                        <div class="empty-state">✅ Hiện không có sản phẩm nào chạm/dưới Reorder Point - chưa cần đặt hàng thêm.</div>
+                        <div class="empty-state">✅ No products are currently at or below the Reorder Point - no additional ordering needed.</div>
                     </div>
                 <?php else: ?>
 
                     <div class="row g-3 mb-4">
                         <div class="col-6 col-lg-3">
                             <div class="kpi-card">
-                                <span class="kpi-label">Tổng SP cần đặt</span>
+                                <span class="kpi-label">Total Products to Order</span>
                                 <span class="kpi-value"><?= number_format($totalItems) ?></span>
                             </div>
                         </div>
                         <div class="col-6 col-lg-3">
                             <div class="kpi-card kpi-card-warn">
-                                <span class="kpi-label">Critical (dưới Safety Stock)</span>
+                                <span class="kpi-label">Critical (Below Safety Stock)</span>
                                 <span class="kpi-value" style="color:#ae2e24;"><?= number_format($totalCritical) ?></span>
                             </div>
                         </div>
                         <div class="col-6 col-lg-3">
                             <div class="kpi-card">
-                                <span class="kpi-label">Low (dưới Reorder Point)</span>
+                                <span class="kpi-label">Low (Below Reorder Point)</span>
                                 <span class="kpi-value"><?= number_format($totalLow) ?></span>
                             </div>
                         </div>
                         <div class="col-6 col-lg-3">
                             <div class="kpi-card">
-                                <span class="kpi-label">Nhà cung cấp liên quan</span>
+                                <span class="kpi-label">Suppliers Involved</span>
                                 <span class="kpi-value"><?= number_format($totalSuppliers) ?></span>
                             </div>
                         </div>
@@ -220,7 +220,7 @@ function reorderUrgency(array $item): array
                                 type="search"
                                 id="reorderSearchInput"
                                 class="form-control form-control-sm"
-                                placeholder="Tìm theo tên sản phẩm, SKU hoặc nhà cung cấp..."
+                                placeholder="Search by product name, SKU, or supplier..."
                                 autocomplete="off"
                             >
                             <span class="panel-card-note text-nowrap" id="reorderSearchCount"></span>
@@ -231,7 +231,7 @@ function reorderUrgency(array $item): array
                         <?php foreach ($groupedBySupplier as $supplierId => $group): ?>
                             <?php $formId = 'poForm' . $supplierId; ?>
                             <div class="panel-card" data-supplier-group>
-                                <form method="POST" id="<?= $formId ?>" onsubmit="return confirm('Tạo đơn đặt hàng nháp (Draft) cho <?= htmlspecialchars(addslashes($group['supplier_name']), ENT_QUOTES, 'UTF-8') ?> với các dòng đã chọn?');">
+                                <form method="POST" id="<?= $formId ?>" onsubmit="return confirm('Create a draft purchase order for <?= htmlspecialchars(addslashes($group['supplier_name']), ENT_QUOTES, 'UTF-8') ?> with the selected lines?');">
                                     <input type="hidden" name="action" value="create_po">
                                     <input type="hidden" name="supplier_id" value="<?= (int) $supplierId ?>">
 
@@ -240,10 +240,10 @@ function reorderUrgency(array $item): array
                                             <h3 class="panel-card-title mb-0">
                                                 <?= htmlspecialchars($group['supplier_name'], ENT_QUOTES, 'UTF-8') ?>
                                             </h3>
-                                            <span class="panel-card-note"><?= count($group['items']) ?> sản phẩm cần đặt</span>
+                                            <span class="panel-card-note"><?= count($group['items']) ?> products to order</span>
                                         </div>
-                                        <button type="submit" class="btn btn-brand btn-sm" <?= $supplierId === 0 ? 'disabled title="Cần cập nhật nhà cung cấp cho sản phẩm trước"' : '' ?>>
-                                            Tạo PO Draft cho các dòng đã chọn
+                                        <button type="submit" class="btn btn-brand btn-sm" <?= $supplierId === 0 ? 'disabled title="Supplier must be assigned to the product first"' : '' ?>>
+                                            Create Draft PO for Selected Lines
                                         </button>
                                     </div>
 
@@ -254,12 +254,12 @@ function reorderUrgency(array $item): array
                                                     <th style="width: 40px;">
                                                         <input type="checkbox" class="form-check-input select-all-checkbox" data-form-id="<?= $formId ?>">
                                                     </th>
-                                                    <th>Sản phẩm</th>
-                                                    <th>Mức độ</th>
-                                                    <th class="text-end">Tồn kho</th>
+                                                    <th>Product</th>
+                                                    <th>Level</th>
+                                                    <th class="text-end">Stock</th>
                                                     <th class="text-end">Reorder Point</th>
-                                                    <th class="text-end">Bán TB/ngày (7d)</th>
-                                                    <th class="text-end">SL gợi ý</th>
+                                                    <th class="text-end">Avg Sold/Day (7d)</th>
+                                                    <th class="text-end">Suggested Qty</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -286,7 +286,7 @@ function reorderUrgency(array $item): array
                                     </div>
 
                                     <div class="empty-state d-none" data-group-empty-state style="padding: 12px 0 2px;">
-                                        Không có dòng nào khớp từ khóa tìm kiếm trong nhóm này.
+                                        No rows match the search keyword in this group.
                                     </div>
                                 </form>
                             </div>
@@ -294,7 +294,7 @@ function reorderUrgency(array $item): array
                     </div>
 
                     <div class="panel-card d-none" id="reorderNoResults">
-                        <div class="empty-state">Không tìm thấy sản phẩm/nhà cung cấp nào khớp với từ khóa.</div>
+                        <div class="empty-state">No products/suppliers found matching the keyword.</div>
                     </div>
 
                 <?php endif; ?>
@@ -354,7 +354,7 @@ function reorderUrgency(array $item): array
                 noResultsBox.classList.toggle('d-none', visibleGroupsTotal > 0 || term === '');
                 searchCount.textContent = term === ''
                     ? ''
-                    : visibleRowsTotal + ' san pham khop trong ' + visibleGroupsTotal + ' nha cung cap';
+                    : visibleRowsTotal + ' products matched in ' + visibleGroupsTotal + ' suppliers';
             });
         })();
     </script>
