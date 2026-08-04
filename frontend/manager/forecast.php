@@ -519,6 +519,8 @@ button?.addEventListener('click', async () => {
         renderResults(data);
     } catch (error) {
         console.error('[Forecast Error]', error);
+        resultBox.hidden = true;
+        emptyBox.hidden = false;
         setStatus(error.message || 'Could not generate forecast. Please try again.', 'error');
     } finally {
         button.disabled = false;

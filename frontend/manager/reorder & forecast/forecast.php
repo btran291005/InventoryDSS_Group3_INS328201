@@ -350,6 +350,8 @@ button?.addEventListener('click', async () => {
         renderResults(data);
     } catch (error) {
         console.error('[Forecast Error]', error);
+        resultBox.hidden = true;
+        emptyBox.hidden = false;
         setStatus(error.message || 'Không thể tạo dự báo. Vui lòng thử lại.', 'error');
     } finally {
         button.disabled = false;

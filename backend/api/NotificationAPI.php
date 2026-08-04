@@ -1,8 +1,6 @@
-/** demo code (not official) */
-
 <?php
-
 declare(strict_types=1);
+/** demo code (not official) */
 
 require_once __DIR__ . '/../config/app_config.php';
 require_once __DIR__ . '/../config/database.php';
