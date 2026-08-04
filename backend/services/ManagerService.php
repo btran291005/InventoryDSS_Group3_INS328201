@@ -749,7 +749,7 @@ class ManagerService
             "SELECT c.category_name,
                     COALESCE(SUM(std.quantity_sold), 0) AS total_quantity_sold,
                     COALESCE(SUM(std.quantity_sold * p.unit_cost), 0) AS cogs_value,
-                    COALESCE(stock_total.stock_value, 0) AS stock_value
+                    COALESCE(SUM(stock_total.stock_value), 0) AS stock_value
              FROM categories c
              JOIN products p ON p.category_id = c.category_id AND p.is_active = 1
              LEFT JOIN sales_transaction_details std ON std.product_id = p.product_id

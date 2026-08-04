@@ -17,7 +17,7 @@ define('API_PATH', BACKEND_PATH . '/api');
 
 // URL gốc của ứng dụng (dùng cho redirect, link tuyệt đối trong header/sidebar)
 // Điều chỉnh lại nếu deploy ngoài localhost.
-define('BASE_URL', '/InventoryDSS_Group3_INS328201/frontend');
+define('BASE_URL', '/PHP/InventoryDSS_Group3_INS328201/frontend');
 
 // 3. Cấu hình Session (đăng nhập/đăng xuất - FR-SYS-01)
 define('SESSION_NAME', 'INVENTORYDSS_SESSID');
