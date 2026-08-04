@@ -21,9 +21,48 @@ class BackupHistory
         $this->conn = Database::getConnection();
     }
 
+    private function tableExists(): bool
+    {
+        $stmt = $this->conn->prepare(
+            "SELECT COUNT(*) FROM information_schema.tables
+             WHERE table_schema = DATABASE() AND table_name = :table"
+        );
+        $stmt->execute([':table' => $this->table]);
+        return (int) $stmt->fetchColumn() > 0;
+    }
+
+    private function createTable(): void
+    {
+        $this->conn->exec(
+            "CREATE TABLE {$this->table} (
+                backup_id INT AUTO_INCREMENT PRIMARY KEY,
+                backup_type ENUM('full', 'restore') NOT NULL DEFAULT 'full',
+                file_path VARCHAR(255) NULL,
+                file_size_bytes BIGINT NULL,
+                status ENUM('running', 'success', 'failed') NOT NULL DEFAULT 'running',
+                error_message TEXT NULL,
+                started_by INT NOT NULL,
+                started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                finished_at DATETIME NULL,
+                FOREIGN KEY (started_by) REFERENCES accounts(account_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+        );
+    }
+
+    private function ensureTableExists(): void
+    {
+        if ($this->tableExists()) {
+            return;
+        }
+
+        $this->createTable();
+    }
+
     /** Tạo 1 dòng lịch sử mới ở trạng thái 'running' - gọi NGAY TRƯỚC KHI Service thực thi shell_exec(), để có bản ghi kể cả khi tiến trình OS bị crash giữa chừng. */
     public function createRunning(string $backupType, int $startedBy): int
     {
+        $this->ensureTableExists();
+
         $stmt = $this->conn->prepare(
             "INSERT INTO {$this->table} (backup_type, status, started_by, started_at)
              VALUES (:type, 'running', :started_by, NOW())"
@@ -58,6 +97,10 @@ class BackupHistory
     /* FR-ADM-10: danh sách lịch sử backup/restore, mới nhất trước - dùng cho bảng "Recent Backups". */
     public function getAll(int $limit = 50): array
     {
+        if (!$this->tableExists()) {
+            return [];
+        }
+
         $stmt = $this->conn->prepare(
             "SELECT bh.backup_id, bh.backup_type, bh.file_path, bh.file_size_bytes,
                     bh.status, bh.error_message, bh.started_at, bh.finished_at,
@@ -74,6 +117,9 @@ class BackupHistory
 
     public function getById(int $backupId): array|false
     {
+        if (!$this->tableExists()) {
+            return false;
+        }
         $stmt = $this->conn->prepare(
             "SELECT bh.backup_id, bh.backup_type, bh.file_path, bh.file_size_bytes,
                     bh.status, bh.error_message, bh.started_at, bh.finished_at,
@@ -95,13 +141,24 @@ class BackupHistory
      */
     public function getStats(): array
     {
+        if (!$this->tableExists()) {
+            return [
+                'total_backups'         => 0,
+                'storage_used_bytes'    => 0,
+                'success_rate_percent'  => null,
+                'latest_backup_at'      => null,
+                'latest_backup_status'  => null,
+                'latest_restore_at'     => null,
+            ];
+        }
+
         $stmt = $this->conn->query(
             "SELECT
                 COUNT(*) AS total_backups,
                 SUM(CASE WHEN status = 'success' THEN file_size_bytes ELSE 0 END) AS storage_used_bytes,
                 SUM(CASE WHEN backup_type = 'full' AND status IN ('success', 'failed') THEN 1 ELSE 0 END) AS total_finished_full,
                 SUM(CASE WHEN backup_type = 'full' AND status = 'success' THEN 1 ELSE 0 END) AS total_success_full
-             FROM backup_history
+             FROM {$this->table}
              WHERE backup_type = 'full'"
         );
         $row = $stmt->fetch();
@@ -110,14 +167,14 @@ class BackupHistory
         $totalSuccess  = (int) ($row['total_success_full'] ?? 0);
 
         $latestStmt = $this->conn->query(
-            "SELECT started_at, status FROM backup_history
+            "SELECT started_at, status FROM {$this->table}
              WHERE backup_type = 'full'
              ORDER BY started_at DESC LIMIT 1"
         );
         $latest = $latestStmt->fetch();
 
         $latestRestoreStmt = $this->conn->query(
-            "SELECT finished_at FROM backup_history
+            "SELECT finished_at FROM {$this->table}
              WHERE backup_type = 'restore' AND status = 'success'
              ORDER BY finished_at DESC LIMIT 1"
         );
