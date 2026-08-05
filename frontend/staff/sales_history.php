@@ -243,5 +243,47 @@ $breadcrumbs = ['Staff', 'Sales History'];
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        /* Realtime sync (New Sales Entry -> Sales History): lắng nghe sự kiện
+           NEW_SALE từ BroadcastChannel (ưu tiên) hoặc localStorage + polling
+           (fallback) rồi tự reload dữ liệu hiện tại - KHÔNG cần nhấn F5.
+           Chỉ thêm listener, không sửa thiết kế/chức năng trang có sẵn. */
+        (function () {
+            const CHANNEL = 'gs25_inventory_sales';
+            let debounce = null;
+
+            function refresh() {
+                if (debounce) return;
+                debounce = setTimeout(function () {
+                    debounce = null;
+                    location.reload();
+                }, 400);
+            }
+
+            try {
+                if (window.BroadcastChannel) {
+                    const bc = new BroadcastChannel(CHANNEL);
+                    bc.onmessage = function (e) {
+                        if (e.data && e.data.type === 'NEW_SALE') refresh();
+                    };
+                }
+            } catch (e) {}
+
+            // Fallback: sự kiện storage từ cùng origin
+            try {
+                window.addEventListener('storage', function (e) {
+                    if (e.key === CHANNEL && e.newValue) {
+                        try {
+                            const d = JSON.parse(e.newValue);
+                            if (d && d.type === 'NEW_SALE') refresh();
+                        } catch (err) {}
+                    }
+                });
+            } catch (e) {}
+
+            // Fallback cuối: polling 5s (nếu BroadcastChannel & storage đều không dùng được)
+            setInterval(refresh, 5000);
+        })();
+    </script>
     <?php require __DIR__ . '/../components/footer.php'; ?>

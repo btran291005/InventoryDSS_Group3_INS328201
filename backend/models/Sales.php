@@ -120,6 +120,144 @@ class Sales
         }
     }
 
+/**
+     * BR-02 / BR-03 / New Sales Entry (POS): tạo giao dịch bán hàng KÈM giá bán
+     * lẻ (unit_price) và giá vốn (unit_cost) tại thời điểm bán, atomic. Khác
+     * createTransaction() (chỉ ghi số lượng, để unit_price/unit_cost = 0) - đây
+     * là bản dùng cho màn "New Sales Entry" cần lưu đúng giá để tính tổng tiền.
+     *
+     * $items: [['product_id'=>int,'quantity_sold'=>int,'unit_price'=>float,
+     *           'unit_cost'=>float,'batch_id'=>int|null], ...]
+     *
+     * @return array{
+     *   success: bool,
+     *   transaction_id: int|null,
+     *   remaining_stock: int|null,
+     *   message: string
+     * }
+     */
+    public function createPosTransaction(int $staffId, int $warehouseId, array $items): array
+    {
+        if (empty($items)) {
+            return ['success' => false, 'transaction_id' => null, 'remaining_stock' => null, 'message' => 'Transaction has no products.'];
+        }
+
+        try {
+            $this->conn->beginTransaction();
+
+            // Khóa các dòng stock liên quan để tránh 2 giao dịch đồng thời cùng
+            // đọc thấy đủ hàng rồi cùng trừ âm (BR-03), giống createTransaction().
+            $lockStmt = $this->conn->prepare(
+                "SELECT quantity_on_hand FROM stock
+                 WHERE product_id = :product_id AND warehouse_id = :warehouse_id
+                 FOR UPDATE"
+            );
+
+            foreach ($items as $item) {
+                $lockStmt->execute([
+                    ':product_id'   => (int) $item['product_id'],
+                    ':warehouse_id' => $warehouseId,
+                ]);
+                $row = $lockStmt->fetch();
+
+                if (!$row) {
+                    $this->conn->rollBack();
+                    return [
+                        'success' => false, 'transaction_id' => null, 'remaining_stock' => null,
+                        'message' => "Product ID {$item['product_id']} has no stock at this warehouse.",
+                    ];
+                }
+
+                if ((int) $row['quantity_on_hand'] < (int) $item['quantity_sold']) {
+                    $this->conn->rollBack();
+                    return [
+                        'success' => false, 'transaction_id' => null, 'remaining_stock' => null,
+                        'message' => "Product ID {$item['product_id']} has insufficient stock "
+                                    . "(available {$row['quantity_on_hand']}, needed {$item['quantity_sold']}).",
+                    ];
+                }
+            }
+
+            // Đủ hàng -> tạo giao dịch
+            $stmt = $this->conn->prepare(
+                "INSERT INTO {$this->table} (performed_by, transaction_time) VALUES (:performed_by, NOW())"
+            );
+            $stmt->execute([':performed_by' => $staffId]);
+            $transactionId = $this->conn->lastInsertId();
+
+            $detailStmt = $this->conn->prepare(
+                "INSERT INTO sales_transaction_details
+                    (transaction_id, product_id, quantity_sold, unit_price, unit_cost, batch_id)
+                 VALUES
+                    (:transaction_id, :product_id, :quantity_sold, :unit_price, :unit_cost, :batch_id)"
+            );
+
+            $updateStockStmt = $this->conn->prepare(
+                "UPDATE stock SET quantity_on_hand = quantity_on_hand - :qty, last_updated = NOW()
+                 WHERE product_id = :product_id AND warehouse_id = :warehouse_id"
+            );
+
+            $movementStmt = $this->conn->prepare(
+                "INSERT INTO stock_movements
+                    (product_id, movement_type, quantity_change, reason, reference_id, performed_by, created_at)
+                 VALUES
+                    (:product_id, 'sale', :quantity_change, NULL, :reference_id, :performed_by, NOW())"
+            );
+
+            $remainingStock = null;
+
+            foreach ($items as $item) {
+                $productId = (int) $item['product_id'];
+                $qty       = (int) $item['quantity_sold'];
+
+                $detailStmt->execute([
+                    ':transaction_id' => $transactionId,
+                    ':product_id'     => $productId,
+                    ':quantity_sold'  => $qty,
+                    ':unit_price'     => (float) ($item['unit_price'] ?? 0),
+                    ':unit_cost'      => (float) ($item['unit_cost'] ?? 0),
+                    ':batch_id'       => $item['batch_id'] ?? null,
+                ]);
+
+                $updateStockStmt->execute([
+                    ':qty'          => $qty,
+                    ':product_id'   => $productId,
+                    ':warehouse_id' => $warehouseId,
+                ]);
+
+                $movementStmt->execute([
+                    ':product_id'      => $productId,
+                    ':quantity_change' => -$qty,
+                    ':reference_id'    => $transactionId,
+                    ':performed_by'    => $staffId,
+                ]);
+
+                // Lấy tồn kho còn lại sau khi trừ (dùng cho payload realtime broadcast).
+                $remainingStmt = $this->conn->prepare(
+                    "SELECT quantity_on_hand FROM stock
+                     WHERE product_id = :product_id AND warehouse_id = :warehouse_id"
+                );
+                $remainingStmt->execute([':product_id' => $productId, ':warehouse_id' => $warehouseId]);
+                $remainingStock = (int) $remainingStmt->fetchColumn();
+            }
+
+            $this->conn->commit();
+
+            return [
+                'success'         => true,
+                'transaction_id'  => (int) $transactionId,
+                'remaining_stock' => $remainingStock,
+                'message'         => 'Sales transaction completed successfully.',
+            ];
+        } catch (PDOException $e) {
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollBack();
+            }
+            error_log('[Sales::createPosTransaction] ' . $e->getMessage());
+            return ['success' => false, 'transaction_id' => null, 'remaining_stock' => null, 'message' => 'An error occurred, the transaction has been cancelled.'];
+        }
+    }
+
     public function getById(int $transactionId): array|false
     {
         $stmt = $this->conn->prepare("SELECT * FROM {$this->table} WHERE transaction_id = :id");

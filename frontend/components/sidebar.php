@@ -138,8 +138,9 @@ if ($roleId === ROLE_ADMIN) {
         ],
     ];
 } elseif ($roleId === ROLE_STAFF) {
-    $menuItems = [
+$menuItems = [
         'dashboard' => ['label' => 'Dashboard', 'href' => '/staff/dashboard.php', 'icon' => 'grid'],
+        'sales_entry' => ['label' => 'New Sales Entry', 'href' => '/staff/sales_entry.php', 'icon' => 'shopping-cart'],
         'inventory' => [
             'label' => 'Inventory',
             // Mặc định vào Goods Receipt trước - đúng thứ tự quy trình thật:
