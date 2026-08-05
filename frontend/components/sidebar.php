@@ -212,6 +212,10 @@ function sidebarHref(string $relativeHref): string
     </nav>
 
     <div class="sidebar-footer">
-        <a href="<?= BASE_URL ?>/logout.php" class="sidebar-logout">Log out</a>
+        <div class="sidebar-user-card">
+            <span class="sidebar-user-avatar" aria-hidden="true"><?= htmlspecialchars(strtoupper(substr((string) (Auth::fullName() ?? 'U'), 0, 1)), ENT_QUOTES, 'UTF-8') ?></span>
+            <span class="sidebar-user-details"><strong><?= htmlspecialchars((string) (Auth::fullName() ?? ''), ENT_QUOTES, 'UTF-8') ?></strong><small><?= htmlspecialchars((string) (Auth::roleName() ?? ''), ENT_QUOTES, 'UTF-8') ?></small></span>
+        </div>
+        <a href="<?= BASE_URL ?>/logout.php" class="sidebar-logout">← Log out</a>
     </div>
 </aside>
