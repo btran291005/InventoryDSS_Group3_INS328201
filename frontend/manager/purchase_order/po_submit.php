@@ -237,7 +237,7 @@ $activeMenu  = 'po';
                         </div>
 
                         <?php if (empty($myOrders)): ?>
-                            <div class="empty-state">No draft orders to process. Go to <a href="../reorder/reorder_suggestions.php">Reorder Suggestions</a> to create an order from suggestions, <a href="po_create.php">create a manual PO</a>, or view <a href="po-status.php">PO Status</a> for submitted orders.</div>
+                            <div class="empty-state">No draft orders to process. Go to <a href="../inventory/reorder_suggestions.php">Reorder Suggestions</a> to create an order from suggestions, <a href="po_create.php">create a manual PO</a>, or view <a href="po-status.php">PO Status</a> for submitted orders.</div>
                         <?php else: ?>
                             <div class="table-responsive">
                                 <table class="table data-table align-middle mb-0">

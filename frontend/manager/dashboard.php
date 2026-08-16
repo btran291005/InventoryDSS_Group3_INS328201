@@ -141,7 +141,7 @@ $activeMenu  = 'dashboard';
                     </div>
                     <div class="d-flex gap-2">
                         <a href="purchase_order/po-status.php" class="btn btn-outline-secondary btn-sm">Track PO</a>
-                        <a href="reorder%20%26%20forecast/reorder_suggestions.php" class="btn btn-brand btn-sm">Reorder Suggestions</a>
+                        <a href="inventory/reorder_suggestions.php" class="btn btn-brand btn-sm">Reorder Suggestions</a>
                     </div>
                 </div>
 
@@ -196,7 +196,7 @@ $activeMenu  = 'dashboard';
                         <div class="panel-card h-100">
                             <div class="panel-card-header">
                                 <h3 class="panel-card-title">Restock Suggestions</h3>
-                                <a href="reorder%20%26%20forecast/reorder_suggestions.php" class="panel-card-link">View all &amp; create PO &rarr;</a>
+                                <a href="inventory/reorder_suggestions.php" class="panel-card-link">View all &amp; create PO &rarr;</a>
                             </div>
 
                             <?php if ($reorderSuggestions['success'] !== true): ?>
@@ -235,13 +235,13 @@ $activeMenu  = 'dashboard';
                                 <h3 class="panel-card-title">Quick Actions</h3>
                             </div>
                             <div class="quick-action-grid">
-                                <a href="reorder%20%26%20forecast/reorder_suggestions.php" class="quick-action-btn">
+                                <a href="inventory/reorder_suggestions.php" class="quick-action-btn">
                                     <svg class="quick-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 20a1 1 0 100-2 1 1 0 000 2zM20 20a1 1 0 100-2 1 1 0 000 2zM1 1h4l2.68 13.39a2 2 0 002 1.61h9.72a2 2 0 002-1.61L23 6H6"/></svg>
                                     Reorder Suggestions
                                 </a>
                                 <a href="purchase_order/po-status.php" class="quick-action-btn">
                                     <svg class="quick-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v4a1 1 0 001 1h4"/><path d="M17 21H7a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z"/><path d="M9 13l2 2 4-4"/></svg>
-                                    Track PO
+                                    Track Purchase Order (PO)
                                 </a>
                                 <a href="shortage_incidents.php" class="quick-action-btn">
                                     <svg class="quick-action-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
