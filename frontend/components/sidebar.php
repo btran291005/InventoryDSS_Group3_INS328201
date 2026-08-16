@@ -194,10 +194,10 @@ function sidebarHref(string $relativeHref): string
 ?>
 <aside class="app-sidebar">
     <div class="sidebar-brand">
-        <img src="<?= BASE_URL ?>/assets/img/logo_GS25.png" alt="GS25" class="sidebar-logo">
+        <img src="<?= BASE_URL ?>/assets/img/gs25_luxury_logo.jpg" alt="Gs25IntelliStock" class="sidebar-logo" referrerpolicy="no-referrer">
         <div class="sidebar-brand-text">
-            <span class="sidebar-brand-title">InventoryDSS</span>
-            <span class="sidebar-brand-role"><?= htmlspecialchars(Auth::roleName() ?? '', ENT_QUOTES, 'UTF-8') ?></span>
+            <span class="sidebar-brand-title">Gs25IntelliStock</span>
+            <span class="sidebar-brand-subtitle">Smart Inventory System</span>
         </div>
     </div>
 
@@ -211,12 +211,4 @@ function sidebarHref(string $relativeHref): string
             </a>
         <?php endforeach; ?>
     </nav>
-
-    <div class="sidebar-footer">
-        <div class="sidebar-user-card">
-            <span class="sidebar-user-avatar" aria-hidden="true"><?= htmlspecialchars(strtoupper(substr((string) (Auth::fullName() ?? 'U'), 0, 1)), ENT_QUOTES, 'UTF-8') ?></span>
-            <span class="sidebar-user-details"><strong><?= htmlspecialchars((string) (Auth::fullName() ?? ''), ENT_QUOTES, 'UTF-8') ?></strong><small><?= htmlspecialchars((string) (Auth::roleName() ?? ''), ENT_QUOTES, 'UTF-8') ?></small></span>
-        </div>
-        <a href="<?= BASE_URL ?>/logout.php" class="sidebar-logout">← Log out</a>
-    </div>
 </aside>

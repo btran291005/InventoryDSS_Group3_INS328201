@@ -1,0 +1,6 @@
+{
+  "name": "GS25 IntelliStock",
+  "description": "Intelligent stock management and inventory forecasting system for GS25 convenience stores.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,82 +1,75 @@
 /**
  * File: frontend/assets/css/login.css
- * Purpose: Style riêng cho trang login. Chỉ chứa phần Bootstrap 5 KHÔNG có sẵn
- * (gradient thương hiệu, hiệu ứng "network node" trên hero panel, backdrop-blur
- * card). Layout, spacing, form control, button... dùng thẳng utility class của
- * Bootstrap ngay trong login.php, không lặp lại ở đây.
+ * Purpose: Luxury modern styling for Gs25IntelliStock Sign In portal
  */
 
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 :root {
-    --brand-primary: #1e3a5f;
-    --brand-primary-dark: #16304d;
+    --brand-primary: #0b1c38;
+    --brand-primary-dark: #071224;
+    --brand-cyan: #00a8e8;
+    --brand-cyan-glow: rgba(0, 168, 232, 0.3);
+    --brand-teal: #00c49f;
 }
 
 body {
-    background: radial-gradient(circle at 15% 15%, #eef2ff 0%, #f8fafc 45%, #eef2f7 100%);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background: radial-gradient(circle at 10% 20%, #e0f2fe 0%, #f8fafc 50%, #e2e8f0 100%);
     min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
 }
 
-/* Chấm trang trí rải rác trên nền - thuần CSS, không ảnh */
+/* Atmospheric subtle mesh background */
 body::before,
 body::after {
     content: '';
     position: fixed;
     inset: 0;
-    background-image: radial-gradient(circle, #c7d2fe 1.5px, transparent 1.5px);
-    background-size: 90px 90px;
-    opacity: .35;
+    background-image: radial-gradient(circle, rgba(0, 168, 232, 0.15) 1.5px, transparent 1.5px);
+    background-size: 80px 80px;
+    opacity: .4;
     pointer-events: none;
     z-index: 0;
 }
 body::after {
-    background-size: 130px 130px;
-    background-position: 45px 45px;
-    opacity: .2;
+    background-size: 140px 140px;
+    background-position: 50px 50px;
+    opacity: .25;
 }
 
 /* ---------------------------------------------------------- */
-/* Thương hiệu (logo mark) - gradient riêng, Bootstrap không có */
-/* ---------------------------------------------------------- */
-.brand-mark {
-    width: 52px;
-    height: 52px;
-    background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
-    box-shadow: 0 8px 18px -6px rgba(30, 58, 95, .5);
-}
-
-/* ---------------------------------------------------------- */
-/* Hero panel - gradient + hiệu ứng "network node" gợi AI/predictive  */
-/* analytics. Đây là phần signature, không có class Bootstrap tương  */
-/* đương nên giữ custom CSS.                                          */
+/* Hero panel - Luxury dark GS25 gradient with glowing mesh    */
 /* ---------------------------------------------------------- */
 .hero-panel {
     position: relative;
-    min-height: 420px;
+    min-height: 440px;
     overflow: hidden;
     background:
-        radial-gradient(circle at 78% 12%, rgba(125, 211, 252, .5), transparent 42%),
-        linear-gradient(160deg, rgba(30, 58, 95, .6), rgba(10, 16, 32, .85)),
-        linear-gradient(135deg, #7dd3fc 0%, #6d83c9 45%, #24345c 100%);
-    box-shadow: 0 30px 60px -20px rgba(30, 58, 95, .4);
+        radial-gradient(circle at 80% 15%, rgba(0, 168, 232, 0.6), transparent 45%),
+        radial-gradient(circle at 20% 85%, rgba(0, 196, 159, 0.35), transparent 45%),
+        linear-gradient(160deg, #091325 0%, #0d1e3d 60%, #060e1a 100%);
+    box-shadow: 0 30px 60px -15px rgba(7, 18, 36, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .hero-panel-glow {
     position: absolute;
     inset: 0;
     background:
-        radial-gradient(ellipse at 30% 18%, rgba(255, 255, 255, .4), transparent 52%),
-        radial-gradient(ellipse at 82% 70%, rgba(59, 130, 246, .3), transparent 50%);
+        radial-gradient(ellipse at 30% 20%, rgba(255, 255, 255, 0.25), transparent 50%),
+        radial-gradient(ellipse at 85% 75%, rgba(0, 168, 232, 0.4), transparent 50%);
 }
 
 .hero-panel-grid {
     position: absolute;
     inset: 0;
     background-image:
-        linear-gradient(rgba(255, 255, 255, .09) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, .09) 1px, transparent 1px);
-    background-size: 44px 44px;
-    mask-image: radial-gradient(ellipse 70% 55% at 50% 30%, #000 40%, transparent 85%);
-    -webkit-mask-image: radial-gradient(ellipse 70% 55% at 50% 30%, #000 40%, transparent 85%);
+        linear-gradient(rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px);
+    background-size: 40px 40px;
+    mask-image: radial-gradient(ellipse 75% 60% at 50% 35%, #000 45%, transparent 85%);
+    -webkit-mask-image: radial-gradient(ellipse 75% 60% at 50% 35%, #000 45%, transparent 85%);
 }
 
 .hero-panel-nodes {
@@ -85,91 +78,109 @@ body::after {
 }
 
 .hero-panel-nodes circle {
-    fill: #ffffff;
+    fill: #38bdf8;
+    filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.8));
 }
 
 .hero-card {
     position: absolute;
-    left: 20px;
-    right: 20px;
-    bottom: 20px;
-    background: rgba(255, 255, 255, .14);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    border: 1px solid rgba(255, 255, 255, .25);
+    left: 24px;
+    right: 24px;
+    bottom: 24px;
+    background: rgba(13, 30, 61, 0.65);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 18px;
+    box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.4);
 }
 
 .hero-card h2 {
-    text-shadow: 0 2px 14px rgba(0, 0, 0, .15);
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.3);
+    font-weight: 800;
 }
 
 .hero-badge {
-    background: rgba(255, 255, 255, .95);
-    color: var(--brand-primary);
-    box-shadow: 0 4px 10px -4px rgba(0, 0, 0, .25);
+    background: rgba(255, 255, 255, 0.95);
+    color: #0b1c38;
+    box-shadow: 0 4px 12px -2px rgba(0, 168, 232, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    font-weight: 700;
 }
 
 .hero-badge .dot-icon {
     width: 8px;
     height: 8px;
-    background: var(--brand-primary);
+    border-radius: 50%;
+    background: #00a8e8;
+    box-shadow: 0 0 8px #00a8e8;
 }
 
 /* ---------------------------------------------------------- */
-/* Form panel                                                   */
+/* Form panel & Segmented Control                               */
 /* ---------------------------------------------------------- */
 
-/* Bootstrap nav-pills không có sẵn kiểu "segmented control nền xám,
-   tab active nổi trắng + shadow" nên giữ lại phần này. */
 .role-tabs {
-    background: #eef2f7;
+    background: #e2e8f0;
+    padding: 4px;
+    border-radius: 12px;
 }
 
 .role-tab {
-    color: #6b7280;
-    transition: background .15s, color .15s, box-shadow .15s;
+    color: #64748b;
+    font-weight: 600;
+    font-size: .86rem;
+    padding: 8px 12px;
+    border-radius: 9px;
+    transition: all .2s ease;
 }
 
 .role-tab:hover {
-    color: var(--brand-primary);
+    color: #0f172a;
 }
 
 .role-tab.active {
     background: #ffffff;
-    color: var(--brand-primary);
-    box-shadow: 0 6px 16px -6px rgba(30, 58, 95, .35), 0 0 0 1px rgba(30, 58, 95, .06);
+    color: #0084c7;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(0, 168, 232, 0.15), 0 1px 2px rgba(15, 23, 42, 0.08);
 }
 
 .login-card {
-    box-shadow: 0 24px 48px -20px rgba(15, 23, 42, .22), 0 1px 2px rgba(15, 23, 42, .04);
+    background: #ffffff;
+    border-radius: 20px !important;
+    box-shadow: 0 20px 45px -15px rgba(15, 23, 42, 0.12), 0 1px 3px rgba(15, 23, 42, 0.05);
+    border: 1px solid rgba(226, 232, 240, 0.9) !important;
 }
 
-/* Input với icon lồng bên trong - Bootstrap input-group đổi border-radius
-   theo cách khác với thiết kế pill/rounded ở đây nên tự canh icon bằng absolute */
 .field-wrap {
     position: relative;
 }
 
 .field-wrap .field-icon {
     position: absolute;
-    left: 13px;
+    left: 14px;
     top: 50%;
     transform: translateY(-50%);
-    width: 17px;
-    height: 17px;
-    color: #9ca3af;
+    width: 18px;
+    height: 18px;
+    color: #94a3b8;
     pointer-events: none;
 }
 
 .field-wrap .form-control {
-    padding-left: 40px;
-    background: #f9fafb;
+    padding-left: 42px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    font-weight: 500;
+    transition: all .15s ease;
 }
 
 .field-wrap .form-control:focus {
     background: #ffffff;
-    box-shadow: 0 0 0 4px rgba(30, 58, 95, .1);
-    border-color: var(--brand-primary);
+    box-shadow: 0 0 0 4px rgba(0, 168, 232, 0.18);
+    border-color: #00a8e8;
 }
 
 .toggle-pw {
@@ -177,49 +188,51 @@ body::after {
     right: 12px;
     top: 50%;
     transform: translateY(-50%);
-    color: #9ca3af;
+    color: #94a3b8;
     background: none;
     border: none;
-    padding: 2px;
+    padding: 4px;
     line-height: 0;
+    cursor: pointer;
 }
 .toggle-pw:hover {
-    color: #374151;
+    color: #334155;
 }
 .toggle-pw svg {
     width: 18px;
     height: 18px;
 }
 
-/* Nút submit - gradient thương hiệu, Bootstrap btn-primary mặc định phẳng */
+/* Nút submit - gradient GS25 luxury */
 .btn-brand {
-    background: linear-gradient(135deg, var(--brand-primary), var(--brand-primary-dark));
+    background: linear-gradient(135deg, #00a8e8 0%, #0077b6 100%);
     color: #fff;
-    box-shadow: 0 10px 24px -10px rgba(30, 58, 95, .55);
-    transition: box-shadow .15s, transform .1s, filter .15s;
+    box-shadow: 0 8px 20px -6px rgba(0, 168, 232, 0.5);
+    transition: all .2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .btn-brand:hover {
     color: #fff;
-    filter: brightness(1.06);
-    box-shadow: 0 14px 28px -10px rgba(30, 58, 95, .6);
+    filter: brightness(1.08);
+    box-shadow: 0 12px 28px -6px rgba(0, 168, 232, 0.6);
     transform: translateY(-1px);
 }
 .btn-brand:active {
     transform: translateY(1px);
-    box-shadow: 0 6px 14px -8px rgba(30, 58, 95, .5);
+    box-shadow: 0 4px 12px -4px rgba(0, 168, 232, 0.5);
 }
 
 .demo-table code {
-    background: #f3f4f6;
+    background: #f1f5f9;
     font-family: "SFMono-Regular", Consolas, monospace;
+    color: #0f172a;
 }
 
-.role-admin { color: var(--brand-primary); }
-.role-manager { color: #166534; }
-.role-staff { color: #92400e; }
+.role-admin { color: #0284c7; }
+.role-manager { color: #059669; }
+.role-staff { color: #d97706; }
 
 @media (max-width: 767.98px) {
     .hero-panel {
-        min-height: 260px;
+        min-height: 280px;
     }
 }

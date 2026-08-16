@@ -210,13 +210,13 @@ $activeMenu  = 'dashboard';
                                             [$priorityLabel, $priorityClass] = restockPriorityLabel($riskHoursByProduct[(int) $s['product_id']] ?? null);
                                         ?>
                                         <div class="restock-card">
-                                            <div>
+                                            <div class="restock-card-info">
                                                 <div class="restock-card-name"><?= htmlspecialchars($s['product_name'], ENT_QUOTES, 'UTF-8') ?></div>
                                                 <div class="restock-card-sku"><?= htmlspecialchars($s['sku_code'], ENT_QUOTES, 'UTF-8') ?></div>
                                             </div>
-                                            <div>
+                                            <div class="restock-card-metrics">
                                                 <span class="restock-card-qty"><?= number_format((int) $s['suggested_qty']) ?></span>
-                                                <span class="restock-card-qty-label"> units</span>
+                                                <span class="restock-card-qty-label">units</span>
                                             </div>
                                             <span class="status-badge <?= $priorityClass ?>"><?= $priorityLabel ?></span>
                                         </div>

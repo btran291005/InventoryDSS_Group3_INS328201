@@ -26,21 +26,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password     = $_POST['password'] ?? '';
     $postedRoleId = (int) ($_POST['role_id'] ?? 0);
 
-    // Chặn giá trị role_id lạ bị POST thủ công
-    if (!array_key_exists($postedRoleId, $roleTabs)) {
-        $errorMessage = 'Please select a valid role before signing in.';
-    } else {
+    if (array_key_exists($postedRoleId, $roleTabs)) {
         $selectedRole = $postedRoleId;
+    }
 
-        $result = Auth::login($username, $password, $postedRoleId);
+    $result = Auth::login($username, $password, $postedRoleId > 0 ? $postedRoleId : null);
 
-        if ($result['success']) {
-            header('Location: index.php');
+    $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+              || (isset($_SERVER['CONTENT_TYPE']) && strpos($_SERVER['CONTENT_TYPE'], 'application/json') !== false)
+              || (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+
+    if ($result['success']) {
+        $roleId = Auth::roleId();
+        $dest = BASE_URL . '/index.php';
+        if ($roleId === ROLE_ADMIN) {
+            $dest = BASE_URL . '/admin/dashboard.php';
+        } elseif ($roleId === ROLE_MANAGER) {
+            $dest = BASE_URL . '/manager/dashboard.php';
+        } elseif ($roleId === ROLE_STAFF) {
+            $dest = BASE_URL . '/staff/dashboard.php';
+        }
+
+        if ($isAjax) {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode(['success' => true, 'redirect' => $dest, 'role_id' => $roleId]);
             exit;
         }
 
-        $errorMessage = $result['message'];
+        header('Location: ' . $dest);
+        exit;
     }
+
+    if ($isAjax) {
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode(['success' => false, 'message' => $result['message']]);
+        exit;
+    }
+
+    $errorMessage = $result['message'];
 }
 ?>
 <!DOCTYPE html>
@@ -48,7 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign In - InventoryDSS</title>
+    <title>Sign In - Gs25IntelliStock</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="<?= BASE_URL ?>/assets/css/login.css?v=20260802" rel="stylesheet">
 </head>
@@ -59,17 +82,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <!-- Cột trái: logo + hero panel -->
             <div class="col-12 col-lg-7 d-flex flex-column">
                 <div class="d-flex align-items-center gap-3 mb-4">
-                    <div class="brand-mark rounded-3 d-flex align-items-center justify-content-center flex-shrink-0">
-                        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <rect x="3" y="3" width="8" height="8" rx="1.5" fill="#ffffff"/>
-                            <rect x="13" y="3" width="8" height="8" rx="1.5" fill="#ffffff" opacity=".55"/>
-                            <rect x="3" y="13" width="8" height="8" rx="1.5" fill="#ffffff" opacity=".55"/>
-                            <rect x="13" y="13" width="8" height="8" rx="1.5" fill="#ffffff"/>
-                        </svg>
-                    </div>
+                    <img src="<?= BASE_URL ?>/assets/img/gs25_luxury_logo.jpg" alt="Gs25IntelliStock" class="rounded-3 shadow-sm border" style="width: 48px; height: 48px; object-fit: cover;" referrerpolicy="no-referrer">
                     <div>
-                        <div class="fs-4 fw-bold text-dark lh-sm" style="color: var(--brand-primary) !important;">InventoryDSS</div>
-                        <div class="text-uppercase text-muted fw-bold small" style="font-size: .78rem; letter-spacing: .08em;">DSS AI System</div>
+                        <div class="fs-4 fw-bold text-dark lh-sm" style="color: var(--brand-primary) !important;">Gs25IntelliStock</div>
+                        <div class="text-uppercase text-muted fw-bold small" style="font-size: .78rem; letter-spacing: .06em;">Smart Inventory System</div>
                     </div>
                 </div>
 
@@ -128,11 +144,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </div>
 
                 <div class="login-card bg-white rounded-4 p-4 border">
-                    <?php if ($errorMessage !== ''): ?>
-                        <div class="alert alert-danger py-2 small mb-3"><?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?></div>
-                    <?php endif; ?>
+                    <div id="alertContainer">
+                        <?php if ($errorMessage !== ''): ?>
+                            <div class="alert alert-danger py-2 small mb-3"><?= htmlspecialchars($errorMessage, ENT_QUOTES, 'UTF-8') ?></div>
+                        <?php endif; ?>
+                    </div>
 
-                    <form method="POST" action="login.php" autocomplete="off">
+                    <form id="loginForm" method="POST" action="login.php" autocomplete="off">
                         <input type="hidden" name="role_id" id="role_id" value="<?= (int) $selectedRole ?>">
 
                         <div class="mb-3">
@@ -171,39 +189,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <label for="remember" class="form-check-label small text-secondary" style="cursor: pointer;">Keep me signed in</label>
                         </div>
 
-                        <button type="submit" class="btn btn-brand w-100 fw-bold py-2 rounded-3 d-flex align-items-center justify-content-center gap-2">
-                            Sign In
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
+                        <button type="submit" id="submitBtn" class="btn btn-brand w-100 fw-bold py-2 rounded-3 d-flex align-items-center justify-content-center gap-2">
+                            <span id="submitBtnText">Sign In</span>
+                            <svg id="submitBtnIcon" width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2">
                                 <path d="M5 12h14M13 6l6 6-6 6"/>
                             </svg>
                         </button>
                     </form>
 
                     <div class="mt-4 pt-3 border-top border-dashed">
-                        <div class="text-center text-uppercase text-muted fw-bold small mb-3" style="letter-spacing: .06em; font-size: .68rem;">Demo Account</div>
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="text-uppercase text-muted fw-bold small" style="letter-spacing: .06em; font-size: .68rem;">Tài khoản mẫu (Click để điền nhanh)</div>
+                            <span class="badge bg-light text-primary border" style="font-size: .65rem;">1-Click Fill</span>
+                        </div>
                         <table class="table table-sm demo-table mb-0 align-middle">
                             <thead>
                                 <tr class="text-muted small">
                                     <th class="fw-semibold">Role</th>
                                     <th class="fw-semibold">Username</th>
                                     <th class="fw-semibold">Password</th>
+                                    <th class="text-end fw-semibold">Action</th>
                                 </tr>
                             </thead>
                             <tbody class="small">
-                                <tr>
+                                <tr style="cursor: pointer;" class="demo-account-row" data-role="1" data-user="admin" data-pw="Admin@123">
                                     <td class="fw-bold role-admin">Admin</td>
                                     <td><code>admin</code></td>
                                     <td><code>Admin@123</code></td>
+                                    <td class="text-end"><button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 rounded-2 btn-fill-demo">Chọn</button></td>
                                 </tr>
-                                <tr>
+                                <tr style="cursor: pointer;" class="demo-account-row" data-role="2" data-user="manager1" data-pw="Manager@123">
                                     <td class="fw-bold role-manager">Manager</td>
                                     <td><code>manager1</code></td>
                                     <td><code>Manager@123</code></td>
+                                    <td class="text-end"><button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 rounded-2 btn-fill-demo">Chọn</button></td>
                                 </tr>
-                                <tr>
+                                <tr style="cursor: pointer;" class="demo-account-row" data-role="3" data-user="staff1" data-pw="Staff@123">
                                     <td class="fw-bold role-staff">Store Staff</td>
                                     <td><code>staff1</code></td>
                                     <td><code>Staff@123</code></td>
+                                    <td class="text-end"><button type="button" class="btn btn-xs btn-outline-primary py-0 px-2 rounded-2 btn-fill-demo">Chọn</button></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -223,28 +248,124 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         (function () {
             var btn = document.getElementById('togglePasswordBtn');
             var input = document.getElementById('password');
-            if (!btn || !input) return;
-            btn.addEventListener('click', function () {
-                input.type = input.type === 'password' ? 'text' : 'password';
-            });
-        })();
+            if (btn && input) {
+                btn.addEventListener('click', function () {
+                    input.type = input.type === 'password' ? 'text' : 'password';
+                });
+            }
 
-        (function () {
             var tabs = document.querySelectorAll('.role-tab');
             var roleInput = document.getElementById('role_id');
-            if (!tabs.length || !roleInput) return;
+            var userInput = document.getElementById('username');
+            var passInput = document.getElementById('password');
 
-            tabs.forEach(function (tab) {
-                tab.addEventListener('click', function () {
-                    tabs.forEach(function (t) {
-                        t.classList.remove('active');
-                        t.setAttribute('aria-selected', 'false');
+            function setRole(roleId) {
+                if (roleInput) roleInput.value = roleId;
+                tabs.forEach(function (t) {
+                    var match = t.getAttribute('data-role-id') === String(roleId);
+                    t.classList.toggle('active', match);
+                    t.setAttribute('aria-selected', match ? 'true' : 'false');
+                });
+            }
+
+            if (tabs.length) {
+                tabs.forEach(function (tab) {
+                    tab.addEventListener('click', function () {
+                        setRole(tab.getAttribute('data-role-id'));
                     });
-                    tab.classList.add('active');
-                    tab.setAttribute('aria-selected', 'true');
-                    roleInput.value = tab.getAttribute('data-role-id');
+                });
+            }
+
+            // Auto switch role when typing standard usernames
+            if (userInput) {
+                userInput.addEventListener('input', function () {
+                    var val = userInput.value.trim().toLowerCase();
+                    if (val.startsWith('admin')) {
+                        setRole(1);
+                    } else if (val.startsWith('manager')) {
+                        setRole(2);
+                    } else if (val.startsWith('staff')) {
+                        setRole(3);
+                    }
+                });
+            }
+
+            // Click demo account row to fill
+            document.querySelectorAll('.demo-account-row').forEach(function (row) {
+                row.addEventListener('click', function () {
+                    var role = row.getAttribute('data-role');
+                    var user = row.getAttribute('data-user');
+                    var pw = row.getAttribute('data-pw');
+                    if (userInput) userInput.value = user;
+                    if (passInput) passInput.value = pw;
+                    setRole(role);
+                    if (userInput) userInput.focus();
                 });
             });
+
+            // Async form submit with visual state and robust redirect
+            var form = document.getElementById('loginForm');
+            var submitBtn = document.getElementById('submitBtn');
+            var submitBtnText = document.getElementById('submitBtnText');
+            var alertContainer = document.getElementById('alertContainer');
+
+            if (form && submitBtn) {
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
+
+                    var usernameVal = (userInput ? userInput.value : '').trim();
+                    var passwordVal = (passInput ? passInput.value : '');
+                    var roleVal = roleInput ? roleInput.value : '1';
+
+                    if (!usernameVal || !passwordVal) {
+                        if (alertContainer) {
+                            alertContainer.innerHTML = '<div class="alert alert-danger py-2 small mb-3">Vui lòng nhập đầy đủ Username và Mật khẩu.</div>';
+                        }
+                        return;
+                    }
+
+                    // Loading UI
+                    submitBtn.disabled = true;
+                    if (submitBtnText) submitBtnText.textContent = 'Signing in...';
+                    if (alertContainer) alertContainer.innerHTML = '';
+
+                    var formData = new FormData(form);
+
+                    fetch('login.php', {
+                        method: 'POST',
+                        body: formData,
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        },
+                        credentials: 'same-origin'
+                    })
+                    .then(function (response) {
+                        return response.json().catch(function () {
+                            // If response is HTML or redirect, fallback to standard redirect
+                            return { success: response.ok, redirect: 'index.php' };
+                        });
+                    })
+                    .then(function (data) {
+                        if (data && data.success) {
+                            if (submitBtnText) submitBtnText.textContent = 'Redirecting...';
+                            var target = data.redirect || 'index.php';
+                            window.location.href = target;
+                        } else {
+                            submitBtn.disabled = false;
+                            if (submitBtnText) submitBtnText.textContent = 'Sign In';
+                            var msg = (data && data.message) ? data.message : 'Đăng nhập không thành công. Vui lòng kiểm tra lại thông tin.';
+                            if (alertContainer) {
+                                alertContainer.innerHTML = '<div class="alert alert-danger py-2 small mb-3">' + msg + '</div>';
+                            }
+                        }
+                    })
+                    .catch(function (err) {
+                        console.warn('Fetch failed, submitting via standard POST:', err);
+                        form.submit();
+                    });
+                });
+            }
         })();
     </script>
 </body>

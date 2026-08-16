@@ -14,8 +14,11 @@
  */
 
 body {
-    background: var(--surface-page-bg);
+    background: var(--surface-page-gradient);
     color: var(--text-secondary);
+    font-family: var(--font-main);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 /* =========================================================================
@@ -31,12 +34,13 @@ body {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
-    min-width: 0; /* tránh tràn ngang khi bảng dữ liệu quá rộng */
+    min-width: 0;
     margin-left: var(--sidebar-width);
+    background: transparent;
 }
 
 /* =========================================================================
-   2. SIDEBAR
+   2. SIDEBAR - LUXURY MODERN DARK GS25
    ========================================================================= */
 
 .app-sidebar {
@@ -45,29 +49,37 @@ body {
     left: 0;
     bottom: 0;
     width: var(--sidebar-width);
-    background: var(--brand-primary);
+    background: var(--brand-sidebar-bg);
     display: flex;
     flex-direction: column;
     z-index: 100;
     overflow-y: auto;
+    border-right: 1px solid rgba(0, 168, 232, 0.15);
+    box-shadow: 4px 0 28px rgba(7, 18, 36, 0.4);
 }
 
 .sidebar-brand {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     padding: 22px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, .12);
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+    background: linear-gradient(180deg, rgba(0, 168, 232, 0.08) 0%, transparent 100%);
 }
 
 .sidebar-logo {
-    width: 34px;
-    height: 34px;
-    object-fit: contain;
-    border-radius: 8px;
-    background: #fff;
-    padding: 3px;
+    width: 42px;
+    height: 42px;
+    object-fit: cover;
+    border-radius: 11px;
+    box-shadow: 0 4px 14px rgba(0, 168, 232, 0.35);
+    border: 1.5px solid rgba(255, 255, 255, 0.25);
     flex-shrink: 0;
+    transition: transform .2s ease;
+}
+
+.sidebar-logo:hover {
+    transform: scale(1.04);
 }
 
 .sidebar-brand-text {
@@ -78,48 +90,72 @@ body {
 }
 
 .sidebar-brand-title {
-    color: #fff;
-    font-weight: 700;
-    font-size: .98rem;
+    color: #ffffff;
+    font-weight: 800;
+    font-size: 1.05rem;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, #ffffff 0%, #dbeafe 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
+.sidebar-brand-subtitle,
 .sidebar-brand-role {
-    color: rgba(255, 255, 255, .6);
-    font-size: .72rem;
+    color: #38bdf8;
+    font-size: .73rem;
+    font-weight: 600;
+    letter-spacing: .04em;
     text-transform: uppercase;
-    letter-spacing: .06em;
+    margin-top: 2px;
+    white-space: nowrap;
+    opacity: .95;
 }
 
 .sidebar-nav {
     flex: 1 1 auto;
-    padding: 14px 12px;
+    padding: 18px 14px;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 4px;
 }
 
 .sidebar-link {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 10px 12px;
+    padding: 10px 14px;
     border-radius: var(--radius-sm);
-    color: rgba(255, 255, 255, .72);
+    color: rgba(226, 232, 240, 0.72);
     text-decoration: none;
-    font-size: .89rem;
+    font-size: .88rem;
     font-weight: 500;
-    transition: background .15s, color .15s;
+    position: relative;
+    transition: all .2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .sidebar-link:hover {
-    background: rgba(255, 255, 255, .08);
-    color: #fff;
+    background: rgba(255, 255, 255, 0.07);
+    color: #ffffff;
+    transform: translateX(2px);
 }
 
 .sidebar-link.active {
-    background: rgba(255, 255, 255, .14);
-    color: #fff;
+    background: linear-gradient(90deg, rgba(0, 168, 232, 0.22) 0%, rgba(0, 168, 232, 0.05) 100%);
+    color: #ffffff;
     font-weight: 600;
+    box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+
+.sidebar-link.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 6px;
+    bottom: 6px;
+    width: 3.5px;
+    border-radius: 0 4px 4px 0;
+    background: #00a8e8;
+    box-shadow: 0 0 10px #00a8e8;
 }
 
 .sidebar-link-icon {
@@ -128,15 +164,14 @@ body {
     flex-shrink: 0;
     border-radius: 4px;
     background: currentColor;
-    opacity: .0; /* icon set thật (VD: lucide/feather) sẽ thay ở Phase sau; giữ chỗ layout trước */
+    opacity: .0;
     position: relative;
 }
 
-/* Chấm tròn nhỏ tạm thay icon thật, để menu không bị "trống" khi chưa gắn icon font/SVG */
 .sidebar-link-icon::before {
     content: '';
     position: absolute;
-    inset: 6px;
+    inset: 5px;
     border-radius: 3px;
     background: currentColor;
     opacity: .85;
@@ -150,22 +185,11 @@ body {
 
 .sidebar-footer {
     padding: 14px 20px;
-    border-top: 1px solid rgba(255, 255, 255, .12);
-}
-
-.sidebar-logout {
-    color: rgba(255, 255, 255, .6);
-    font-size: .82rem;
-    text-decoration: none;
-}
-
-.sidebar-logout:hover {
-    color: #fff;
-    text-decoration: underline;
+    border-top: 1px solid rgba(255, 255, 255, .08);
 }
 
 /* =========================================================================
-   3. HEADER
+   3. HEADER - GLASSMORPHIC LUXURY
    ========================================================================= */
 
 .app-header {
@@ -177,9 +201,12 @@ body {
     justify-content: space-between;
     gap: 16px;
     min-height: var(--header-height);
-    padding: 0 28px;
-    background: var(--surface-card-bg);
-    border-bottom: 1px solid var(--surface-border);
+    padding: 0 32px;
+    background: var(--surface-glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.85);
+    box-shadow: var(--shadow-subtle);
 }
 
 .app-header-left {
@@ -190,10 +217,11 @@ body {
 }
 
 .app-header-title {
-    font-size: 1.05rem;
+    font-size: 1.15rem;
     font-weight: 700;
     color: var(--text-primary);
     margin: 0;
+    letter-spacing: -0.01em;
 }
 
 .app-header-breadcrumbs {
@@ -209,46 +237,88 @@ body {
 }
 
 .app-header-breadcrumbs .crumb-current {
-    color: var(--brand-primary);
+    color: var(--brand-accent);
     font-weight: 600;
 }
 
 .app-header-right {
     display: flex;
     align-items: center;
-    gap: 18px;
+    gap: 14px;
     flex-shrink: 0;
+}
+
+.app-header-user-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 5px 12px 5px 5px;
+    border-radius: var(--radius-pill);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.app-header-user-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00a8e8 0%, #0077b6 100%);
+    color: #ffffff;
+    font-weight: 700;
+    font-size: .84rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(0, 168, 232, 0.35);
 }
 
 .app-header-user {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
-    line-height: 1.25;
+    align-items: flex-start;
+    line-height: 1.2;
+    padding-right: 4px;
 }
 
 .app-header-user-name {
-    font-size: .85rem;
-    font-weight: 600;
+    font-size: .84rem;
+    font-weight: 700;
     color: var(--text-primary);
-}
-
-.app-header-user-role {
-    font-size: .72rem;
-    color: var(--text-muted);
-    text-transform: uppercase;
-    letter-spacing: .04em;
-}
-
-.app-header-logout {
-    font-size: .82rem;
-    color: var(--color-danger);
-    text-decoration: none;
     white-space: nowrap;
 }
 
+.app-header-user-role {
+    font-size: .68rem;
+    font-weight: 600;
+    color: var(--brand-accent);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.app-header-logout {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: .8rem;
+    font-weight: 600;
+    color: #dc2626;
+    background: #fef2f2;
+    border: 1px solid #fee2e2;
+    padding: 7px 14px;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all .15s ease;
+}
+
 .app-header-logout:hover {
-    text-decoration: underline;
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #fca5a5;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.12);
 }
 
 /* =========================================================================
@@ -257,17 +327,18 @@ body {
 
 .app-main {
     flex: 1 1 auto;
-    padding: 28px;
+    padding: 32px;
 }
 
 .page-heading {
-    font-size: 1.5rem;
-    font-weight: 700;
+    font-size: 1.6rem;
+    font-weight: 800;
     color: var(--text-primary);
+    letter-spacing: -0.02em;
 }
 
 .page-subheading {
-    font-size: .9rem;
+    font-size: .92rem;
     color: var(--text-muted);
 }
 
@@ -280,11 +351,11 @@ body {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 16px 28px;
-    font-size: .78rem;
+    padding: 18px 32px;
+    font-size: .8rem;
     color: var(--text-muted);
     border-top: 1px solid var(--surface-border);
-    background: var(--surface-card-bg);
+    background: #ffffff;
 }
 
 .app-footer-sep {
@@ -292,19 +363,44 @@ body {
 }
 
 /* =========================================================================
-   6. KPI CARD (dashboard)
+   6. KPI CARD - LUXURY ELEVATED
    ========================================================================= */
 
 .kpi-card {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    padding: 18px 20px;
+    gap: 8px;
+    padding: 20px 22px;
     background: var(--surface-card-bg);
     border: 1px solid var(--surface-border);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-card);
     height: 100%;
+    position: relative;
+    overflow: hidden;
+    transition: all .2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, #00a8e8, #38bdf8);
+    opacity: 0;
+    transition: opacity .2s ease;
+}
+
+.kpi-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card-hover);
+    border-color: rgba(0, 168, 232, 0.3);
+}
+
+.kpi-card:hover::before {
+    opacity: 1;
 }
 
 .kpi-card-warn {
@@ -312,22 +408,35 @@ body {
     background: linear-gradient(180deg, #fffbeb 0%, var(--surface-card-bg) 60%);
 }
 
+.kpi-card-warn::before {
+    background: linear-gradient(90deg, #f59e0b, #fbbf24);
+    opacity: 1;
+}
+
 .kpi-label {
     font-size: .74rem;
-    font-weight: 600;
+    font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: .05em;
+    letter-spacing: .06em;
     color: var(--text-muted);
 }
 
 .kpi-value {
-    font-size: 1.7rem;
-    font-weight: 700;
+    font-size: 1.85rem;
+    font-weight: 800;
     color: var(--text-primary);
+    letter-spacing: -0.03em;
+    font-feature-settings: "tnum";
+}
+
+.kpi-delta {
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--text-muted);
 }
 
 /* =========================================================================
-   7. PANEL CARD (khối nội dung có tiêu đề - low stock, pending PO, activity...)
+   7. PANEL CARD (khối nội dung có tiêu đề)
    ========================================================================= */
 
 .panel-card {
@@ -335,7 +444,12 @@ body {
     border: 1px solid var(--surface-border);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-card);
-    padding: 20px 22px;
+    padding: 22px 24px;
+    transition: box-shadow .2s ease;
+}
+
+.panel-card:hover {
+    box-shadow: var(--shadow-card-hover);
 }
 
 .panel-card-header {
@@ -343,33 +457,36 @@ body {
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 14px;
+    gap: 10px;
+    margin-bottom: 16px;
 }
 
 .panel-card-title {
     display: flex;
     align-items: center;
     gap: 8px;
-    font-size: .98rem;
+    font-size: 1.02rem;
     font-weight: 700;
     color: var(--text-primary);
     margin: 0;
+    letter-spacing: -0.01em;
 }
 
 .panel-card-note {
-    font-size: .76rem;
+    font-size: .78rem;
     color: var(--text-muted);
 }
 
 .panel-card-link {
-    font-size: .8rem;
+    font-size: .82rem;
     font-weight: 600;
-    color: var(--brand-primary);
+    color: var(--brand-accent);
     text-decoration: none;
+    transition: color .15s;
 }
 
 .panel-card-link:hover {
+    color: #0369a1;
     text-decoration: underline;
 }
 
@@ -377,40 +494,74 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 22px;
-    height: 22px;
-    padding: 0 7px;
-    border-radius: 999px;
-    background: var(--color-info-bg);
-    color: var(--color-info);
+    min-width: 24px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: var(--radius-pill);
+    background: #f0f9ff;
+    color: #0284c7;
+    border: 1px solid #bae6fd;
     font-size: .74rem;
     font-weight: 700;
 }
 
 .badge-count-warn {
-    background: var(--color-warning-bg);
-    color: var(--color-warning);
+    background: #fffbeb;
+    color: #d97706;
+    border-color: #fde68a;
 }
 
-/* Nhãn trạng thái semantic (Active/Locked, action severity, PO status...) -
-   khác badge-count (chỉ dành cho SỐ ĐẾM) ở chỗ đây là nhãn TEXT có màu ngữ
-   nghĩa, dùng ở audit_log.php, accounts.php và bất kỳ đâu cần hiện trạng
-   thái/mức độ nghiêm trọng bằng màu thay vì chỉ chữ đen thông thường. */
 .status-badge {
     display: inline-flex;
     align-items: center;
-    padding: 3px 10px;
-    border-radius: var(--radius-sm);
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
     font-size: .72rem;
-    font-weight: 600;
+    font-weight: 700;
     white-space: nowrap;
+    border: 1px solid transparent;
 }
 
-.status-badge-success { background: var(--color-success-bg); color: var(--color-success); }
-.status-badge-warning { background: var(--color-warning-bg); color: var(--color-warning); }
-.status-badge-danger  { background: var(--color-danger-bg); color: var(--color-danger); }
-.status-badge-info    { background: var(--color-info-bg); color: var(--color-info); }
-.status-badge-muted   { background: var(--surface-border-soft); color: var(--text-muted); }
+.status-badge-success { background: #ecfdf5; color: #059669; border-color: #a7f3d0; }
+.status-badge-warning { background: #fffbeb; color: #d97706; border-color: #fde68a; }
+.status-badge-danger  { background: #fef2f2; color: #dc2626; border-color: #fecaca; }
+.status-badge-info    { background: #f0f9ff; color: #0284c7; border-color: #bae6fd; }
+.status-badge-muted   { background: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+
+/* Luxury Buttons & Controls */
+.btn-brand {
+    background: linear-gradient(135deg, #00a8e8 0%, #0077b6 100%);
+    border: none;
+    color: #ffffff !important;
+    font-weight: 600;
+    box-shadow: 0 4px 14px rgba(0, 168, 232, 0.3);
+    transition: all .2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-brand:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(0, 168, 232, 0.4);
+    filter: brightness(1.05);
+}
+
+.btn-outline-secondary {
+    border-color: #cbd5e1;
+    color: #475569;
+    background: #ffffff;
+    font-weight: 600;
+}
+
+.btn-outline-secondary:hover {
+    background: #f8fafc;
+    border-color: #94a3b8;
+    color: #1e293b;
+}
+
+.form-control:focus,
+.form-select:focus {
+    border-color: #00a8e8;
+    box-shadow: 0 0 0 3px rgba(0, 168, 232, 0.18);
+}
 
 /* Form filter ngắn gọn dùng ở đầu các trang danh sách (audit log, PO list,
    reorder rules...) - input/select nhỏ gọn, canh hàng ngang, tự xuống dòng
@@ -1041,13 +1192,9 @@ body {
    sung, kèm mức ưu tiên (status-badge dùng lại, không tạo màu mới). */
 .restock-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    /* KHÔNG dùng grid-auto-rows:1fr - nó ép MỌI hàng (kể cả hàng cuối chỉ có
-       1 card lẻ) cao bằng hàng cao nhất trong toàn lưới, tạo khoảng trống
-       thừa rất lớn phía dưới hàng cuối. align-content:start để mỗi hàng chỉ
-       cao đúng theo item của chính nó. */
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
     align-content: start;
-    gap: 12px;
+    gap: 14px;
 }
 
 .restock-card {
@@ -1055,59 +1202,70 @@ body {
     flex-direction: column;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 8px;
-    padding: 14px 16px;
+    gap: 12px;
+    padding: 16px 18px;
     background: var(--surface-card-bg);
     border: 1px solid var(--surface-border);
-    border-radius: var(--radius-sm);
-    transition: box-shadow .15s, border-color .15s;
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-subtle);
+    transition: all .2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .restock-card:hover {
     box-shadow: var(--shadow-card-hover);
-    border-color: var(--surface-border);
+    border-color: rgba(0, 168, 232, 0.35);
+    transform: translateY(-2px);
+}
+
+.restock-card-info {
+    width: 100%;
 }
 
 .restock-card-name {
-    font-size: .86rem;
+    font-size: .88rem;
     font-weight: 700;
     color: var(--text-primary);
-    line-height: 1.3;
-    /* Giới hạn 2 dòng - tên sản phẩm dài (VD "Tteokbokki Cay Ngọt Truyền
-       Thống") không còn kéo card đó cao hơn hẳn các card cùng hàng grid;
-       chiều cao mọi card trở nên đồng đều và dễ đoán. */
+    line-height: 1.4;
+    margin-bottom: 5px;
     display: -webkit-box;
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    letter-spacing: -0.01em;
 }
 
 .restock-card-sku {
-    font-size: .72rem;
+    font-size: .74rem;
+    font-weight: 600;
     color: var(--text-muted);
-    margin-top: -4px;
+    letter-spacing: 0.02em;
+}
+
+.restock-card-metrics {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
 }
 
 .restock-card-qty {
-    font-size: 1.15rem;
-    font-weight: 700;
+    font-size: 1.3rem;
+    font-weight: 800;
     color: var(--brand-primary);
+    letter-spacing: -0.02em;
+    line-height: 1;
 }
 
 .restock-card-qty-label {
-    font-size: .7rem;
-    font-weight: 600;
+    font-size: .72rem;
+    font-weight: 700;
     color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: .04em;
+    letter-spacing: .05em;
 }
 
-/* status-badge dùng lại ở đây với align-self:flex-start - mặc định
-   .restock-card là flex-column nên children full-width theo hàng ngang;
-   badge cần co lại đúng theo nội dung (pill nhỏ gọn) thay vì kéo dài hết
-   chiều rộng card như 1 thanh nền. */
 .restock-card .status-badge {
     align-self: flex-start;
+    margin-top: 2px;
 }
 
 /* Lưới nút Quick Actions (2 cột trên mobile, 2x2 mặc định) - mỗi nút dẫn

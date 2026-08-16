@@ -1,52 +1,67 @@
 /**
  * File: frontend/assets/css/theme_variables.css
- * Purpose: Design token dùng chung TOÀN HỆ THỐNG (Admin/Manager/Staff) - màu
- * thương hiệu, màu ngữ nghĩa (success/warning/danger), bo góc, đổ bóng, nền.
- *
- * Giữ đồng bộ với --brand-primary / --brand-primary-dark đã định nghĩa ở
- * login.css (trang login KHÔNG include file này vì đứng độc lập trước khi
- * đăng nhập - nhưng giá trị màu ở đây PHẢI khớp để toàn bộ app nhất quán).
- *
- * Mọi file CSS khác (custom.css, và CSS riêng theo trang nếu có sau này)
- * dùng lại các biến ở đây thay vì hardcode mã màu.
+ * Purpose: Design tokens & luxury modern styling for Gs25IntelliStock DSS
  */
 
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
 :root {
-    /* --- Thương hiệu --- */
-    --brand-primary: #1e3a5f;
-    --brand-primary-dark: #16304d;
-    --brand-primary-light: #eef2ff;
-    --brand-accent: #3b82f6;
+    /* --- GS25 Modern Luxury Brand Colors --- */
+    --brand-primary: #0b1c38;
+    --brand-primary-dark: #071224;
+    --brand-primary-light: #f0f7ff;
+    --brand-cyan: #00a8e8;
+    --brand-cyan-glow: rgba(0, 168, 232, 0.25);
+    --brand-accent: #0284c7;
+    --brand-teal: #00c49f;
+    --brand-gradient: linear-gradient(135deg, #00a8e8 0%, #0077b6 100%);
+    --brand-sidebar-bg: linear-gradient(180deg, #081326 0%, #0d1e3d 55%, #071122 100%);
 
-    /* --- Màu ngữ nghĩa (trạng thái) --- */
-    --color-success: #166534;
-    --color-success-bg: #dcfce7;
-    --color-warning: #92400e;
-    --color-warning-bg: #fef3c7;
-    --color-danger: #b91c1c;
-    --color-danger-bg: #fee2e2;
-    --color-info: #1d4ed8;
-    --color-info-bg: #dbeafe;
+    /* --- Semantic Colors --- */
+    --color-success: #059669;
+    --color-success-bg: #ecfdf5;
+    --color-success-border: #a7f3d0;
+    --color-warning: #d97706;
+    --color-warning-bg: #fffbeb;
+    --color-warning-border: #fde68a;
+    --color-danger: #dc2626;
+    --color-danger-bg: #fef2f2;
+    --color-danger-border: #fecaca;
+    --color-info: #0284c7;
+    --color-info-bg: #f0f9ff;
+    --color-info-border: #bae6fd;
 
-    /* --- Nền & bề mặt --- */
-    --surface-page-bg: #f3f4f6;
+    /* --- Surfaces & Backgrounds --- */
+    --surface-page-bg: #f8fafc;
+    --surface-page-gradient: radial-gradient(at 100% 0%, rgba(0, 168, 232, 0.04) 0px, transparent 45%),
+                              radial-gradient(at 0% 100%, rgba(11, 28, 56, 0.03) 0px, transparent 45%),
+                              #f8fafc;
     --surface-card-bg: #ffffff;
-    --surface-border: #e5e7eb;
-    --surface-border-soft: #f1f5f9;
+    --surface-card-hover: #ffffff;
+    --surface-border: #e2e8f0;
+    --surface-border-subtle: #edf2f7;
+    --surface-glass-bg: rgba(255, 255, 255, 0.88);
 
-    /* --- Chữ --- */
-    --text-primary: #111827;
-    --text-secondary: #374151;
-    --text-muted: #6b7280;
+    /* --- Typography --- */
+    --font-main: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    --text-primary: #0f172a;
+    --text-secondary: #334155;
+    --text-muted: #64748b;
+    --text-light: #94a3b8;
 
-    /* --- Bo góc & đổ bóng (đồng bộ độ "mềm" với login-card ở login.css) --- */
-    --radius-sm: 8px;
-    --radius-md: 12px;
-    --radius-lg: 16px;
-    --shadow-card: 0 2px 12px rgba(0, 0, 0, .06);
-    --shadow-card-hover: 0 8px 20px -6px rgba(15, 23, 42, .12);
+    /* --- Radii & Shadows --- */
+    --radius-xs: 6px;
+    --radius-sm: 10px;
+    --radius-md: 14px;
+    --radius-lg: 18px;
+    --radius-pill: 9999px;
 
-    /* --- Kích thước layout --- */
-    --sidebar-width: 260px;
-    --header-height: 68px;
+    --shadow-subtle: 0 1px 3px rgba(15, 23, 42, 0.04);
+    --shadow-card: 0 4px 20px -2px rgba(15, 23, 42, 0.05), 0 2px 6px -1px rgba(15, 23, 42, 0.02);
+    --shadow-card-hover: 0 12px 30px -4px rgba(15, 23, 42, 0.1), 0 4px 10px -2px rgba(0, 168, 232, 0.08);
+    --shadow-glow: 0 0 20px rgba(0, 168, 232, 0.2);
+
+    /* --- Dimensions --- */
+    --sidebar-width: 268px;
+    --header-height: 70px;
 }

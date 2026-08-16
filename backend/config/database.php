@@ -24,25 +24,23 @@ class Database
     public static function getConnection(): PDO
     {
         if (self::$instance === null) {
-            $portsToTry = array_values(array_unique([self::DB_PORT, '3306', '3307', '3308']));
+            $options = [
+                PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES   => false,
+                PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8mb4'",
+            ];
+
+            $dsns = [
+                sprintf('mysql:host=%s;port=%s;dbname=%s;charset=%s', self::DB_HOST, self::DB_PORT, self::DB_NAME, self::DB_CHARSET),
+                sprintf('mysql:host=localhost;dbname=%s;charset=%s', self::DB_NAME, self::DB_CHARSET),
+                sprintf('mysql:unix_socket=/run/mysqld/mysqld.sock;dbname=%s;charset=%s', self::DB_NAME, self::DB_CHARSET),
+                sprintf('mysql:unix_socket=/var/run/mysqld/mysqld.sock;dbname=%s;charset=%s', self::DB_NAME, self::DB_CHARSET),
+            ];
+
             $lastException = null;
 
-            foreach ($portsToTry as $port) {
-                $dsn = sprintf(
-                    'mysql:host=%s;port=%s;dbname=%s;charset=%s',
-                    self::DB_HOST,
-                    $port,
-                    self::DB_NAME,
-                    self::DB_CHARSET
-                );
-
-                $options = [
-                    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES   => false,
-                    PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8mb4'",
-                ];
-
+            foreach ($dsns as $dsn) {
                 try {
                     self::$instance = new PDO($dsn, self::DB_USER, self::DB_PASS, $options);
                     break;
