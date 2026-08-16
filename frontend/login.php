@@ -15,7 +15,7 @@ if (Auth::check()) {
     exit;
 }
 
-// 3 tab role hiển thị trên UI - dùng thẳng ROLE_NAMES đã định nghĩa ở app_config.php (single source of truth cho map role_id -> tên hiển thị, tránh duplicate dữ liệu giữa 2 nơi).
+// 3 tab role hiển thị trên UI
 $roleTabs = ROLE_NAMES;
 
 $errorMessage = '';
@@ -26,17 +26,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password     = $_POST['password'] ?? '';
     $postedRoleId = (int) ($_POST['role_id'] ?? 0);
 
-    // Chặn giá trị role_id lạ (không thuộc 3 role đã biết) bị POST thủ công
+    // Chặn giá trị role_id lạ bị POST thủ công
     if (!array_key_exists($postedRoleId, $roleTabs)) {
         $errorMessage = 'Please select a valid role before signing in.';
     } else {
         $selectedRole = $postedRoleId;
 
-        // Role đã chọn được truyền vào Auth::login() -> Auth.php tự so sánh với role_id thật trong DB SAU khi xác thực đúng mật khẩu, và từ chối nếu lệch (không tạo session trong trường hợp đó).
         $result = Auth::login($username, $password, $postedRoleId);
 
         if ($result['success']) {
-            // FR-SYS-01: redirect đúng dashboard theo role sau khi login
             header('Location: index.php');
             exit;
         }
@@ -52,7 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sign In - InventoryDSS</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="assets/css/login.css" rel="stylesheet">
+    <link href="<?= BASE_URL ?>/assets/css/login.css?v=20260802" rel="stylesheet">
 </head>
 <body>
     <div class="container-fluid px-4 px-xl-5 py-4 py-lg-5 position-relative" style="z-index: 1;">
@@ -144,7 +142,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <rect x="3" y="5" width="18" height="14" rx="2"/>
                                     <path d="M3 7l9 6 9-6"/>
                                 </svg>
-                                <input type="text" id="username" name="username" class="form-control rounded-3" required autofocus
+                                <input type="text" id="username" name="username" class="form-control rounded-3" required autofocus autocomplete="username"
                                        placeholder="name@gs25.com"
                                        value="<?= htmlspecialchars($_POST['username'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                             </div>
@@ -157,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <rect x="4" y="10" width="16" height="10" rx="2"/>
                                     <path d="M8 10V7a4 4 0 018 0v3"/>
                                 </svg>
-                                <input type="password" id="password" name="password" class="form-control rounded-3" required
+                                <input type="password" id="password" name="password" class="form-control rounded-3" required autocomplete="current-password"
                                        placeholder="••••••••">
                                 <button type="button" class="toggle-pw" id="togglePasswordBtn" aria-label="Show or hide password">
                                     <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="1.8">
@@ -222,7 +220,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Toggle hiện/ẩn mật khẩu - thuần JS, không đụng tới logic PHP submit
         (function () {
             var btn = document.getElementById('togglePasswordBtn');
             var input = document.getElementById('password');
@@ -232,7 +229,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             });
         })();
 
-        // Chọn tab role -> đồng bộ vào hidden input #role_id, gửi kèm khi submit form. Việc chọn sai role thật của account vẫn bị chặn ở server (Auth::login()) dù JS này có bị tắt hay bị can thiệp - đây chỉ là tiện ích UI.
         (function () {
             var tabs = document.querySelectorAll('.role-tab');
             var roleInput = document.getElementById('role_id');

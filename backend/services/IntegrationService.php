@@ -131,13 +131,17 @@ class IntegrationService
             . "fallback sang rule-based (BR-18). Lý do: " . ($apiResult['error'] ?? 'không rõ')
         );
 
-        $fallback = $this->reorderService->suggestQuantityForProduct($productId);
+        // Reuse the rule result gathered before the API call. This keeps the
+        // fallback decision consistent with the rule values sent to the API.
+        $fallback = $ruleBased;
 
         if (!$fallback['success']) {
             // Cả API lẫn rule-based đều không tính được (VD: chưa có reorder rule).
             return [
                 'success' => false,
                 'source'  => 'none',
+                'code'    => 'forecast_and_reorder_rule_unavailable',
+                'api_error' => $apiResult['error'] ?? null,
                 'message' => 'Forecast API unavailable and ' . lcfirst($fallback['message']),
             ];
         }

@@ -140,31 +140,30 @@ $activeMenu  = 'dashboard';
                     </div>
                 </div>
 
-                <!-- Quick Actions: lối tắt tới các trang thao tác hàng ngày đã có sẵn.
-                     Dùng class staff-shortcut-* (tự viết, không phụ thuộc Bootstrap .row/.col-*)
-                     để không bị ảnh hưởng nếu Bootstrap CSS load lỗi/chậm. -->
-                <div class="staff-shortcut-row">
-                    <a href="inventory/goods_receipt.php" class="staff-shortcut staff-shortcut-primary">
-                        <span class="staff-shortcut-icon">📦</span>
-                        <span class="staff-shortcut-text">
-                            <span class="staff-shortcut-title">Receive Goods</span>
-                            <span class="staff-shortcut-desc">Process incoming orders (<?= $awaitingCount ?> pending)</span>
-                        </span>
-                    </a>
-                    <a href="inventory/stock_count.php" class="staff-shortcut">
-                        <span class="staff-shortcut-icon">🔢</span>
-                        <span class="staff-shortcut-text">
-                            <span class="staff-shortcut-title">Stock Count</span>
-                            <span class="staff-shortcut-desc">Start a new counting session</span>
-                        </span>
-                    </a>
-                    <a href="customer_feedback.php" class="staff-shortcut">
-                        <span class="staff-shortcut-icon">⚠️</span>
-                        <span class="staff-shortcut-text">
-                            <span class="staff-shortcut-title">Log Incident</span>
-                            <span class="staff-shortcut-desc">Customer feedback / out-of-stock</span>
-                        </span>
-                    </a>
+<!-- Quick Actions: 3 card lối tắt tới các trang thao tác hàng ngày đã có sẵn.
+                     Mỗi action là 1 card riêng (icon + tiêu đề + mô tả + nút). -->
+                <div class="mb-4">
+                    <h3 class="quick-actions-heading">Quick Actions</h3>
+                    <div class="quick-actions-grid">
+                        <div class="quick-action-card">
+                            <span class="quick-action-card-icon">📦</span>
+                            <span class="quick-action-card-title">Receive Goods</span>
+                            <span class="quick-action-card-desc"><?= $awaitingCount ?> Pending Orders</span>
+                            <a href="inventory/goods_receipt.php" class="quick-action-card-btn">Open</a>
+                        </div>
+                        <div class="quick-action-card">
+                            <span class="quick-action-card-icon">🔢</span>
+                            <span class="quick-action-card-title">Stock Count</span>
+                            <span class="quick-action-card-desc">Start New Session</span>
+                            <a href="inventory/stock_count.php" class="quick-action-card-btn">Start</a>
+                        </div>
+                        <div class="quick-action-card">
+                            <span class="quick-action-card-icon">⚠️</span>
+                            <span class="quick-action-card-title">Incident Report</span>
+                            <span class="quick-action-card-desc">Customer Feedback</span>
+                            <a href="customer_feedback.php" class="quick-action-card-btn">Report</a>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="row g-3">

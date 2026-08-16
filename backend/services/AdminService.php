@@ -1401,7 +1401,11 @@ class AdminService
             return ['success' => false, 'message' => 'Cannot create backup storage directory (' . BACKUP_STORAGE_DIR . ') - check write permissions.'];
         }
 
-        $backupId = $this->backupHistoryModel->createRunning('full', $actorId);
+        try {
+            $backupId = $this->backupHistoryModel->createRunning('full', $actorId);
+        } catch (Throwable $e) {
+            return ['success' => false, 'message' => 'Không thể ghi lịch sử backup: ' . $e->getMessage()];
+        }
 
         $fileName = 'backup_' . date('Y-m-d_His') . '.sql';
         $filePath = BACKUP_STORAGE_DIR . DIRECTORY_SEPARATOR . $fileName;
@@ -1489,7 +1493,11 @@ class AdminService
             return ['success' => false, 'message' => 'Backup file no longer exists on the server (it may have been manually deleted).'];
         }
 
-        $restoreId = $this->backupHistoryModel->createRunning('restore', $actorId);
+        try {
+            $restoreId = $this->backupHistoryModel->createRunning('restore', $actorId);
+        } catch (Throwable $e) {
+            return ['success' => false, 'message' => 'Không thể ghi lịch sử restore: ' . $e->getMessage()];
+        }
 
         $mysqlBin = BACKUP_MYSQL_BIN_DIR . 'mysql';
         $passArg = BACKUP_DB_PASS !== '' ? '-p' . escapeshellarg(BACKUP_DB_PASS) : '';
